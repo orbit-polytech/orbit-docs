@@ -139,7 +139,7 @@ go test -v ./internal/config/...
 
 ### Шаг 5. Проброс переменной в Docker Compose
 
-Если переменная нужна сервису в общем стенде, обновите секцию сервиса в `orbit-infra/docker-compose.yml`:
+Если переменная нужна сервису в общем стенде, обновите секцию сервиса в `infra/docker-compose.yml`:
 
 ```yaml
   tasks-service:

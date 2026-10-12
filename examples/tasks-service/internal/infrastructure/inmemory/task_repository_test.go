@@ -37,6 +37,13 @@ func mustTitle(t *testing.T, raw string) domain.Title {
 	return title
 }
 
+func mustDescription(t *testing.T, raw string) domain.Description {
+	t.Helper()
+	desc, err := domain.NewDescription(raw)
+	require.NoError(t, err)
+	return desc
+}
+
 func mustDeadline(t *testing.T, target, now time.Time) domain.Deadline {
 	t.Helper()
 	dl, err := domain.NewDeadline(target, now)
@@ -46,19 +53,20 @@ func mustDeadline(t *testing.T, target, now time.Time) domain.Deadline {
 
 func TestInMemoryTaskRepository(t *testing.T) {
 	ctx := context.Background()
-	repo := inmemory.NewTaskRepository()
 	now := time.Now().UTC()
 
 	ownerID := mustOwnerID(t, "student-test")
 	title := mustTitle(t, "Задание 1")
+	desc := mustDescription(t, "Описание")
 	dl := mustDeadline(t, now.Add(5*time.Hour), now)
 	tID := mustTaskID(t, "t-1")
 
-	task, err := domain.NewTask(tID, ownerID, title, "Описание", dl, domain.TaskPriorityMedium, now)
-	require.NoError(t, err)
-
 	t.Run("Save and FindByID", func(t *testing.T) {
-		err := repo.Save(ctx, task)
+		repo := inmemory.NewTaskRepository()
+		task, err := domain.NewTask(tID, ownerID, title, desc, dl, domain.TaskPriorityMedium, now)
+		require.NoError(t, err)
+
+		err = repo.Save(ctx, task)
 		require.NoError(t, err)
 
 		found, err := repo.FindByID(ctx, tID)
@@ -68,13 +76,44 @@ func TestInMemoryTaskRepository(t *testing.T) {
 		assert.Equal(t, int64(1), found.Version())
 	})
 
-	t.Run("Optimistic locking version conflict", func(t *testing.T) {
-		// Попытка сохранить ту же версию снова возвращает конфликт
-		err := repo.Save(ctx, task)
+	t.Run("Optimistic locking version conflict with stale entity", func(t *testing.T) {
+		repo := inmemory.NewTaskRepository()
+		task, err := domain.NewTask(tID, ownerID, title, desc, dl, domain.TaskPriorityMedium, now)
+		require.NoError(t, err)
+		require.NoError(t, repo.Save(ctx, task))
+
+		staleTask := domain.ReconstituteTask(
+			task.ID(), task.OwnerID(), task.Title(), task.Description(),
+			task.Deadline(), task.Priority(), task.Status(), 0, task.CreatedAt(),
+		)
+		err = repo.Save(ctx, staleTask)
 		assert.ErrorIs(t, err, domain.ErrVersionConflict)
 	})
 
+	t.Run("Reschedule and Complete in one transaction succeeds", func(t *testing.T) {
+		repo := inmemory.NewTaskRepository()
+		id := mustTaskID(t, "t-multi")
+		tMulti, err := domain.NewTask(id, ownerID, title, desc, dl, domain.TaskPriorityMedium, now)
+		require.NoError(t, err)
+		require.NoError(t, repo.Save(ctx, tMulti))
+
+		fresh, err := repo.FindByID(ctx, id)
+		require.NoError(t, err)
+
+		newDL := mustDeadline(t, now.Add(10*time.Hour), now)
+		require.NoError(t, fresh.Reschedule(newDL, now))
+		require.NoError(t, fresh.Complete())
+
+		require.NoError(t, repo.Save(ctx, fresh), "множественные мутации перед сохранением не должны вызывать конфликт версий")
+		assert.Equal(t, int64(2), fresh.Version())
+	})
+
 	t.Run("Clone isolation", func(t *testing.T) {
+		repo := inmemory.NewTaskRepository()
+		task, err := domain.NewTask(tID, ownerID, title, desc, dl, domain.TaskPriorityMedium, now)
+		require.NoError(t, err)
+		require.NoError(t, repo.Save(ctx, task))
+
 		found, err := repo.FindByID(ctx, tID)
 		require.NoError(t, err)
 
@@ -89,10 +128,11 @@ func TestInMemoryTaskRepository(t *testing.T) {
 	})
 
 	t.Run("List with pagination", func(t *testing.T) {
-		for i := 2; i <= 3; i++ {
+		repo := inmemory.NewTaskRepository()
+		for i := 1; i <= 3; i++ {
 			id := mustTaskID(t, fmt.Sprintf("t-%d", i))
 			ttl := mustTitle(t, fmt.Sprintf("Задание %d", i))
-			tNew, err := domain.NewTask(id, ownerID, ttl, "", dl, domain.TaskPriorityLow, now.Add(time.Duration(i)*time.Minute))
+			tNew, err := domain.NewTask(id, ownerID, ttl, mustDescription(t, ""), dl, domain.TaskPriorityLow, now.Add(time.Duration(i)*time.Minute))
 			require.NoError(t, err)
 			require.NoError(t, repo.Save(ctx, tNew))
 		}
@@ -111,8 +151,9 @@ func TestInMemoryTaskRepository(t *testing.T) {
 	})
 
 	t.Run("Race condition: две параллельные горутины завершают одну задачу", func(t *testing.T) {
+		repo := inmemory.NewTaskRepository()
 		raceTaskID := mustTaskID(t, "race-task-1")
-		raceTask, err := domain.NewTask(raceTaskID, ownerID, title, "", dl, domain.TaskPriorityHigh, now)
+		raceTask, err := domain.NewTask(raceTaskID, ownerID, title, desc, dl, domain.TaskPriorityHigh, now)
 		require.NoError(t, err)
 		require.NoError(t, repo.Save(ctx, raceTask))
 
@@ -122,27 +163,36 @@ func TestInMemoryTaskRepository(t *testing.T) {
 
 		startSignal := make(chan struct{})
 
-		for i := 0; i < 2; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				<-startSignal
+		// Обе горутины получают исходный снимок задачи одной и той же версии (версия 1)
+		tCopy1, err := repo.FindByID(ctx, raceTaskID)
+		require.NoError(t, err)
+		tCopy2, err := repo.FindByID(ctx, raceTaskID)
+		require.NoError(t, err)
 
-				// Обе горутины берут текущую версию задачи из хранилища (версия 1)
-				tCopy, err := repo.FindByID(ctx, raceTaskID)
-				if err != nil {
-					return
-				}
-				_ = tCopy.Complete() // Версия становится 2
+		require.NoError(t, tCopy1.Complete())
+		require.NoError(t, tCopy2.Complete())
 
-				saveErr := repo.Save(ctx, tCopy)
-				if saveErr == nil {
-					atomic.AddInt64(&successCount, 1)
-				} else if errors.Is(saveErr, domain.ErrVersionConflict) {
-					atomic.AddInt64(&conflictCount, 1)
-				}
-			}()
-		}
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-startSignal
+			saveErr := repo.Save(ctx, tCopy1)
+			if saveErr == nil {
+				atomic.AddInt64(&successCount, 1)
+			} else if errors.Is(saveErr, domain.ErrVersionConflict) {
+				atomic.AddInt64(&conflictCount, 1)
+			}
+		}()
+		go func() {
+			defer wg.Done()
+			<-startSignal
+			saveErr := repo.Save(ctx, tCopy2)
+			if saveErr == nil {
+				atomic.AddInt64(&successCount, 1)
+			} else if errors.Is(saveErr, domain.ErrVersionConflict) {
+				atomic.AddInt64(&conflictCount, 1)
+			}
+		}()
 
 		close(startSignal)
 		wg.Wait()
@@ -153,6 +203,7 @@ func TestInMemoryTaskRepository(t *testing.T) {
 	})
 
 	t.Run("Concurrent access safety with result verification", func(t *testing.T) {
+		repo := inmemory.NewTaskRepository()
 		var wg sync.WaitGroup
 		const concTasksCount = 50
 
@@ -162,7 +213,7 @@ func TestInMemoryTaskRepository(t *testing.T) {
 				defer wg.Done()
 				id := mustTaskID(t, fmt.Sprintf("conc-%d", idx))
 				ttl := mustTitle(t, fmt.Sprintf("Конкурентная задача %d", idx))
-				tConcurrent, err := domain.NewTask(id, ownerID, ttl, "", dl, domain.TaskPriorityLow, now)
+				tConcurrent, err := domain.NewTask(id, ownerID, ttl, mustDescription(t, ""), dl, domain.TaskPriorityLow, now)
 				if err != nil {
 					t.Errorf("ошибка создания задачи: %v", err)
 					return
@@ -174,12 +225,10 @@ func TestInMemoryTaskRepository(t *testing.T) {
 
 		// Проверяем, что все 50 задач успешно сохранены и читаются
 		for i := 0; i < concTasksCount; i++ {
-			id := mustTaskID(t, fmt.Sprintf("conc-%d", idx(i)))
+			id := mustTaskID(t, fmt.Sprintf("conc-%d", i))
 			found, err := repo.FindByID(ctx, id)
 			require.NoError(t, err)
 			assert.Equal(t, id.String(), found.ID().String())
 		}
 	})
 }
-
-func idx(i int) int { return i }

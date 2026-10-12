@@ -25,7 +25,7 @@ go test -v -race -tags=integration -count=1 ./...
 
 ## 2. Настройка тестового окружения и очистка данных
 
-Интеграционные тесты подключаются к контейнерам, поднятым через `orbit-infra`:
+Интеграционные тесты подключаются к контейнерам, поднятым через `infra`:
 
 ```go
 // internal/infrastructure/postgres/task_repository_integration_test.go

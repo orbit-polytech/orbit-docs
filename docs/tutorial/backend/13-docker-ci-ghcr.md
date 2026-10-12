@@ -1,8 +1,8 @@
-# 13. Упаковка и CI/CD (Dockerfile, GHCR, orbit-infra)
+# 13. Упаковка и CI/CD (Dockerfile, GHCR, infra)
 
 Финальный этап разработки микросервиса — автоматизированная сборка контейнера, проверка безопасности и публикация в реестр контейнеров **GitHub Container Registry (GHCR)**.
 
-В этой главе мы разберём эталонный многоэтапный `Dockerfile`, пайплайн GitHub Actions и интеграцию готового образа со стеком `orbit-infra`.
+В этой главе мы разберём эталонный многоэтапный `Dockerfile`, пайплайн GitHub Actions и интеграцию готового образа со стеком `infra`.
 
 ---
 
@@ -123,18 +123,18 @@ jobs:
 
 ---
 
-## 3. Интеграция с `orbit-infra` (Docker Compose)
+## 3. Интеграция с `infra` (Docker Compose)
 
-После публикации образа в GHCR любой разработчик команды может запустить весь стек сервисов через центральный репозиторий **`orbit-infra`**:
+После публикации образа в GHCR любой разработчик команды может запустить весь стек сервисов через центральный репозиторий **`infra`**:
 
 ```yaml
-# orbit-infra/docker-compose.yml
+# infra/docker-compose.yml
 version: '3.8'
 
 services:
   tasks-service:
     image: ghcr.io/orbit-polytech/tasks-service:latest
-    container_name: orbit-tasks-service
+    container_name: tasks-service
     restart: unless-stopped
     ports:
       - "50051:50051"
@@ -188,4 +188,4 @@ FROM gcr.io/distroless/static-debian12:nonroot
 1. Dockerfile строится в два этапа (Multi-stage) на базе `gcr.io/distroless/static`.
 2. Контейнер выполняется под пользователем `nonroot:nonroot` без прав суперпользователя.
 3. CI/CD автоматически публикует образы в GHCR с семантическими тегами.
-4. Развертывание координируется через `orbit-infra/docker-compose.yml`.
+4. Развертывание координируется через `infra/docker-compose.yml`.

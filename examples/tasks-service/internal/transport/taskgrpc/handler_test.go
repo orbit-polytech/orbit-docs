@@ -200,6 +200,18 @@ func TestTaskHandler_ListTasks_OnlyOwnedTasksAndPagination(t *testing.T) {
 	assert.Equal(t, int32(1), listRespB.GetTotalCount())
 }
 
+func TestTaskHandler_ListTasks_ZeroLimitReturnsInvalidArgument(t *testing.T) {
+	now := time.Now().UTC()
+	handler, _ := setupHandler(now)
+	ctx := newActorContext("student-100")
+
+	_, err := handler.ListTasks(ctx, &tasksv1.ListTasksRequest{Limit: 0, Offset: 0})
+	require.Error(t, err)
+	st, ok := status.FromError(err)
+	require.True(t, ok)
+	assert.Equal(t, codes.InvalidArgument, st.Code())
+}
+
 func TestTaskHandler_CompleteTask_AccessControlAndState(t *testing.T) {
 	now := time.Now().UTC()
 	handler, _ := setupHandler(now)

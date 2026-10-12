@@ -1,6 +1,6 @@
 # tasks-service — Эталонный Go-микросервис Orbit AI
 
-Эталонный микросервис управления задачами и дедлайнами студентов, демонстрирующий применение принципов **Clean Architecture (Чистая архитектура)** и **Domain-Driven Design (DDD)** на Go 1.24+.
+Эталонный микросервис управления задачами и дедлайнами студентов, демонстрирующий применение принципов **Clean Architecture (Чистая архитектура)** и **Domain-Driven Design (DDD)** на Go 1.25+.
 
 Сервис служит кодовой основой для практических глав обучающего курса [Orbit AI Docs](https://orbit-polytech.github.io/orbit-docs/).
 
@@ -8,7 +8,7 @@
 
 ## 1. Архитектурные слои
 
-- **`internal/domain/`** — Чистый домен без внешних зависимостей (только стандартная библиотека Go). Содержит агрегат `Task`, Value Objects (`TaskID`, `OwnerID`, `Title`, `Deadline`), перечисления `TaskPriority` и `TaskStatus`, бизнес-инварианты и проверку версий оптимистичной блокировки.
+- **`internal/domain/`** — Чистый домен без внешних зависимостей (только стандартная библиотека Go). Содержит агрегат `Task`, Value Objects (`TaskID`, `OwnerID`, `Title`, `Description`, `Deadline`), перечисления `TaskPriority` и `TaskStatus`, бизнес-инварианты и проверку версий оптимистичной блокировки.
 - **`internal/usecase/`** — Сценарии приложения (`CreateTask`, `GetTask`, `ListTasks`, `CompleteTask`, `RescheduleTask`). Порты разделены по принципу ISP (`TaskSaver`, `TaskFinder`, `TaskLister`, `EventPublisher`, `IdempotencyStore`).
 - **`internal/infrastructure/inmemory/`** — Потокобезопасные in-memory реализации репозитория, кольцевого буфера событий и хранилища ключей идемпотентности.
 - **`internal/infrastructure/idgen/`** — Генераторы идентификаторов (`UUIDv4`) без паник.

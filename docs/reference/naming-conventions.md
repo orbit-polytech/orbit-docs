@@ -1,79 +1,26 @@
-# Соглашения об именовании и кодстайл
+# Соглашения об именовании в проекте
 
-Единообразие именования во всех сервисах Orbit AI позволяет любому разработчику команды мгновенно ориентироваться в чужих репозиториях.
-
----
-
-## 1. Git: Ветки и коммиты
-
-### Именование веток (Branch Naming)
-Формат: `<type>/<short-description>` (строго латиница в нижнем регистре через дефис).
-
-- `feature/add-complete-task` — новая функциональность;
-- `fix/deadline-utc-timezone` — исправление бага;
-- `refactor/inmemory-ring-buffer` — рефакторинг без изменения внешнего поведения;
-- `docs/howto-vscode-debug` — обновление документации;
-- `chore/bump-buf-version` — рутинные задачи, обновление зависимостей.
-
-### Сообщения коммитов (Conventional Commits)
-Формат: `<type>(<scope>): <краткое описание в повелительном наклонении>`
-
-Примеры:
-- `feat(tasks): implement CompleteTask gRPC handler`
-- `fix(auth): validate x-user-id length and control characters`
-- `test(config): add unit tests for TASK_MAX_LIMIT bounds`
-- `docs(adr): add ADR-006 regarding Redis and RabbitMQ roles`
+Единый стиль именования по всем технологиям проекта снижает когнитивную нагрузку и предотвращает хаос в кодовой базе.
 
 ---
 
-## 2. Архитектура и кодовая база
+## 1. Сводная таблица правил именования
 
-### Именование Go пакетов и файлов
-- Пакеты — короткие существительные в нижнем регистре без подчеркиваний и `mixedCaps`: `taskgrpc`, `inmemory`, `domain`, `usecase`.
-- Файлы — `snake_case`: `create_task.go`, `task_repository.go`, `handler_test.go`.
-
-### Protobuf и gRPC
-- **Пакеты:** `orbit.<service>.v<version>` (например, `orbit.tasks.v1`).
-- **Сервисы:** `PascalCase` с суффиксом `Service`: `TaskService`, `ScheduleService`.
-- **Методы (RPC):** `PascalCase`: `CreateTask`, `ListTasks`.
-- **Запросы / Ответы:** `<Method>Request` и `<Method>Response`.
-- **Поля сообщений:** `snake_case`: `task_id`, `idempotency_key`, `created_at`.
-- **Перечисления (Enums):** `PascalCase`, первое значение строго `0 = <ENUM_NAME>_UNSPECIFIED`:
-  ```protobuf
-  enum TaskStatus {
-    TASK_STATUS_UNSPECIFIED = 0;
-    TASK_STATUS_OPEN = 1;
-    TASK_STATUS_COMPLETED = 2;
-  }
-  ```
-
----
-
-## 3. Базы данных и очереди
-
-### PostgreSQL
-- Имена таблиц: во множественном числе, `snake_case`: `tasks`, `outbox_events`, `user_profiles`.
-- Имена колонок: `snake_case`: `owner_id`, `created_at`, `version`.
-- Первичные ключи: строго `id UUID PRIMARY KEY`.
-- Индексы: `idx_<table>_<columns>` (например, `idx_tasks_owner_status`).
-- Ограничения (Constraints): `chk_<table>_<field>` (например, `chk_tasks_status`).
-
-### Redis
-Формат ключей: `<service>:<entity>:<id>` (строго через двоеточие):
-- `schedule:group:261-334`
-- `auth:blacklist:018f2345-6789`
-- `gateway:ratelimit:ip:192.168.1.5`
-
-### RabbitMQ
-- Exchanges (Topic): `<domain>.events` (например, `tasks.events`, `schedule.events`).
-- Очереди: `<consumer_service>.<domain>_events` (например, `notification.task_events`).
-- Routing Keys: `<entity>.<action>` в настоящем или прошедшем времени (например, `task.created`, `task.completed`, `schedule.updated`).
-
----
-
-## 4. Переменные окружения (.env)
-
-Все переменные окружения пишутся строго заглавными буквами в `SCREAMING_SNAKE_CASE`:
-- Общие настройки: `APP_ENV`, `LOG_LEVEL`, `GRPC_PORT`, `HTTP_PORT`.
-- Настройки БД: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSLMODE`.
-- Брокер и кэш: `REDIS_ADDR`, `REDIS_PASSWORD`, `RABBITMQ_URL`.
+| Сущность | Стиль | Пример | Запрещено |
+|---|---|---|---|
+| **Репозитории GitHub** | `kebab-case` в нижнем регистре | `auth-service`, `gateway-service`, `contracts` | `AuthService`, `orbit_auth` |
+| **Ветки Git** | `<тип>/<номер>-<kebab-case>` | `feat/42-task-deadlines`, `fix/10-jwt-exp` | `feature/TaskDeadlines`, `Danil/fix` |
+| **Коммиты Git** | Conventional Commits в нижнем регистре | `feat(tasks): add deadline calculation` | `Fix bug`, `Update` |
+| **Файлы исходного кода Go** | `snake_case.go` | `task_repository.go`, `create_task.go` | `TaskRepository.go` |
+| **Пакеты Go** | Одно короткое слово в нижнем регистре | `package domain`, `package config` | `package task_domain`, `package myUtils` |
+| **Файлы Python** | `snake_case.py` | `pgvector_store.py`, `gemini_client.py` | `PgVectorStore.py` |
+| **Файлы Dart/Flutter** | `snake_case.dart` | `tasks_screen.dart`, `task_tile.dart` | `TasksScreen.dart` |
+| **Файлы Protobuf** | `snake_case.proto` | `auth_service.proto`, `task_events.proto` | `AuthService.proto` |
+| **Сообщения Protobuf** | `PascalCase` | `CreateTaskRequest`, `TaskResponse` | `create_task_request` |
+| **Поля Protobuf** | `snake_case` | `user_id`, `idempotency_key`, `due_at` | `userId`, `DueAt` |
+| **Перечисления Protobuf** | `UPPER_SNAKE_CASE` с префиксом | `TASK_STATUS_OPEN`, `TASK_STATUS_DONE` | `OPEN`, `STATUS_OPEN` |
+| **Таблицы PostgreSQL** | `snake_case` во множественном числе | `tasks`, `sessions`, `refresh_tokens` | `Task`, `TBL_TASKS` |
+| **Колонки PostgreSQL** | `snake_case` | `id`, `owner_id`, `created_at` | `ID`, `createdAt` |
+| **Ключи Redis** | Двоеточия `<сервис>:<сущность>:<id>` | `schedule:group:261-334`, `auth:blacklist:<jti>`| `scheduleGroup261334` |
+| **Очереди RabbitMQ** | Точки `<сервис>.<сущность>.<событие>` | `tasks.task.created`, `schedule.lesson.moved` | `TasksQueue` |
+| **Переменные окружения** | `UPPER_SNAKE_CASE` | `DATABASE_URL`, `GRPC_ADDR`, `APP_ENV` | `database_url`, `GrpcAddr` |

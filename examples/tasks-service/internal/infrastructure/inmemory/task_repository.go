@@ -33,10 +33,12 @@ func (r *TaskRepository) Save(ctx context.Context, task *domain.Task) error {
 
 	idStr := task.ID().String()
 	if existing, exists := r.tasks[idStr]; exists {
-		// Оптимистичная блокировка: версия обновляемой записи обязана быть ровно на 1 больше сохранённой в БД
-		if existing.Version() != task.Version()-1 {
+		// Оптимистичная блокировка (WHERE id=$1 AND version=$2):
+		// Версия в БД обязана совпадать с загруженной версией сущности
+		if existing.Version() != task.Version() {
 			return domain.ErrVersionConflict
 		}
+		task.IncrementVersion()
 	}
 
 	r.tasks[idStr] = cloneTask(task)

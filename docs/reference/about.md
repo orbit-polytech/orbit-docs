@@ -23,7 +23,7 @@
 Инженерная основа проекта построена по стандартам современной коммерческой разработки:
 - **Clean Architecture & Domain-Driven Design:** Строгая изоляция предметной области от инфраструктуры.
 - **Microservices Polyrepo:** 14 независимых репозиториев в организации [`orbit-polytech`](https://github.com/orbit-polytech).
-- **Schema-First API:** Все контракты фиксируются в Protobuf v3 через `Buf CLI` в `orbit-contracts`.
+- **Schema-First API:** Все контракты фиксируются в Protobuf v3 через `Buf CLI` в `contracts`.
 - **Гибридный транспорт:** Высокоскоростной бинарный gRPC/HTTP/2 во внутреннем контуре и REST/OpenAPI на внешнем шлюзе.
 - **Надежность доставки:** Transactional Outbox с RabbitMQ для гарантированной обработки асинхронных событий без потери данных.
 - **Современный стек:** Go 1.24+, Python 3.12 (pgvector, Google Gemini 2.0 Flash, aiogram 3), Flutter 3.x (BLoC, Dart 3).

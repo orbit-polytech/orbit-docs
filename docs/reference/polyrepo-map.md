@@ -1,66 +1,51 @@
-# Карта репозиториев организации
+# Карта репозиториев организации orbit-polytech
 
-Официальная GitHub-организация проекта: [`https://github.com/orbit-polytech`](https://github.com/orbit-polytech).
-
-Все репозитории публичны, имеют настроенные Branch Protection Rules для ветки `main` и запускают независимые CI/CD пайплайны GitHub Actions.
+Вся экосистема Orbit AI размещается в единой организации на GitHub: [**github.com/orbit-polytech**](https://github.com/orbit-polytech).
 
 ---
 
-## 1. Реестр репозиториев
+## 1. Репозитории микросервисов и модулей
 
-| № | Репозиторий | Назначение | Технологический стек | Ответственные |
-| :-: | :--- | :--- | :--- | :--- |
-| **1** | [`orbit-contracts`](https://github.com/orbit-polytech/orbit-contracts) | Единый источник схем API (.proto) и генерация кода | Protobuf v3, Buf v2, Go, Python, OpenAPI | Тимлид / Все |
-| **2** | [`orbit-service-template`](https://github.com/orbit-polytech/orbit-service-template) | Эталонный шаблон Go-микросервиса (Clean Arch) | Go 1.24, gRPC, slog, Goose, Docker | Backend Core |
-| **3** | [`gateway-service`](https://github.com/orbit-polytech/gateway-service) | Внешний API Gateway (REST $\leftrightarrow$ gRPC, JWT Ed25519) | Go 1.24, chi/fiber, gRPC-клиенты, Redis | Backend Gateway |
-| **4** | [`auth-service`](https://github.com/orbit-polytech/auth-service) | Аутентификация, выпуск JWT Ed25519, сессии | Go 1.24, PostgreSQL, bcrypt/argon2 | Backend Auth |
-| **5** | [`users-service`](https://github.com/orbit-polytech/users-service) | Профили студентов, группы, учебные роли | Go 1.24, PostgreSQL, gRPC | Backend Core |
-| **6** | [`schedule-service`](https://github.com/orbit-polytech/schedule-service) | Расписание пар, сессий, числитель/знаменатель | Go 1.24, PostgreSQL, Redis кэш, gRPC | Backend Core |
-| **7** | [`navigation-service`](https://github.com/orbit-polytech/navigation-service) | Корпуса Политеха (БС, АВ, ПР), аудитории, карты | Go 1.24, PostgreSQL, gRPC | Backend Core |
-| **8** | [`tasks-service`](https://github.com/orbit-polytech/tasks-service) | Задачи студентов, дедлайны лаб, приоритеты | Go 1.24, PostgreSQL, RabbitMQ Outbox | Backend Core |
-| **9** | [`notification-service`](https://github.com/orbit-polytech/notification-service) | Отправка Push- и Telegram-уведомлений по событиям | Go 1.24, RabbitMQ Consumer | Backend Core |
-| **10** | [`ai-service`](https://github.com/orbit-polytech/ai-service) | RAG-поиск по регламентам вуза, Gemini API | Python 3.12, gRPC, pgvector, google-genai | AI & ML Team |
-| **11** | [`bot-service`](https://github.com/orbit-polytech/bot-service) | Telegram-бот для студентов и старост | Python 3.12, aiogram 3, REST к Gateway | Bot Team |
-| **12** | [`client-mobile`](https://github.com/orbit-polytech/client-mobile) | Кроссплатформенное мобильное приложение | Flutter 3.x, Dart 3, BLoC, Dio, SecureStorage | Mobile Team |
-| **13** | [`orbit-infra`](https://github.com/orbit-polytech/orbit-infra) | Локальный запуск (Docker Compose, Postgres, RMQ) | Docker, Compose v2, Nginx, Prometheus | DevOps / Infra |
-| **14** | [`orbit-docs`](https://github.com/orbit-polytech/orbit-docs) | Официальная документация и обучающий учебник | MkDocs Material, Markdown, GitHub Pages | Тимлид / Все |
+Префикс `orbit-` в названиях репозиториев **не используется**, так как они уже живут внутри пространства имён организации `orbit-polytech`:
+
+| Репозиторий | Назначение | Технологический стек |
+|---|---|---|
+| [`contracts`](https://github.com/orbit-polytech/contracts) | Централизованные Protobuf v3 контракты и сгенерированный код | Buf CLI, Protobuf v3, Go, Python, Dart |
+| [`infra`](https://github.com/orbit-polytech/infra) | Docker Compose для локальной разработки, схемы БД | Docker Compose, PostgreSQL 16 + pgvector, Redis 7, RabbitMQ, Jaeger |
+| [`gateway-service`](https://github.com/orbit-polytech/gateway-service) | Единый публичный HTTP API шлюз для внешних клиентов | Go 1.25, HTTP/REST, gRPC клиенты, Ed25519 JWT Verifier |
+| [`auth-service`](https://github.com/orbit-polytech/auth-service) | Аутентификация через Telegram, сессии, выпуск JWT | Go 1.25, gRPC, PostgreSQL, Redis |
+| [`users-service`](https://github.com/orbit-polytech/users-service) | Профили студентов, группы, права доступа и роли | Go 1.25, gRPC, PostgreSQL |
+| [`schedule-service`](https://github.com/orbit-polytech/schedule-service) | Расписание пар, аудиторий, преподавателей, парсинг | Go 1.25, gRPC, Redis Cache, PostgreSQL |
+| [`navigation-service`](https://github.com/orbit-polytech/navigation-service) | Корпуса Политеха (БС, АВ, ПР), аудитории, построение маршрутов | Go 1.25, gRPC, PostgreSQL |
+| [`tasks-service`](https://github.com/orbit-polytech/tasks-service) | Задачи, дедлайны лабораторных (эталонный Go-сервис) | Go 1.25, gRPC, Clean Architecture, PostgreSQL |
+| [`notification-service`](https://github.com/orbit-polytech/notification-service) | Очередь отправки Push и Telegram-уведомлений | Go 1.25, gRPC, RabbitMQ Consumer |
+| [`ai-service`](https://github.com/orbit-polytech/ai-service) | RAG поиск по базе знаний, Gemini API, векторный поиск | Python 3.12, FastAPI, gRPC, pgvector, uv |
+| [`bot-service`](https://github.com/orbit-polytech/bot-service) | Официальный Telegram-бот для студентов Политеха | Python 3.12, aiogram 3 |
+| [`mobile`](https://github.com/orbit-polytech/mobile) | Кроссплатформенное мобильное приложение | Flutter 3.x, Dart, MVVM / BLoC |
+| [`orbit-docs`](https://github.com/orbit-polytech/orbit-docs) | Центральная инженерная база знаний и документация | MkDocs Material, Markdown |
 
 ---
 
-## 2. Граф зависимостей между репозиториями
+## 2. Схема взаимодействия репозиториев
 
-```mermaid
-flowchart TD
-    CONTRACTS["orbit-contracts<br/>(Protobuf)"]
-    INFRA["orbit-infra<br/>(Docker / Compose)"]
-    
-    subgraph Backends ["Go & Python бэкенды"]
-        GW["gateway-service"]
-        AUTH["auth-service"]
-        TASKS["tasks-service"]
-        SCHED["schedule-service"]
-        AI["ai-service"]
-    end
-
-    subgraph Clients ["Клиенты"]
-        MOBILE["client-mobile (Flutter)"]
-        BOT["bot-service (aiogram)"]
-    end
-
-    CONTRACTS -->|go get| GW
-    CONTRACTS -->|go get| AUTH
-    CONTRACTS -->|go get| TASKS
-    CONTRACTS -->|go get| SCHED
-    CONTRACTS -->|pip install| AI
-    CONTRACTS -.->|OpenAPI DTO| MOBILE
-
-    MOBILE -->|REST HTTP| GW
-    BOT -->|REST HTTP| GW
-
-    GW -->|gRPC| AUTH
-    GW -->|gRPC| TASKS
-    GW -->|gRPC| SCHED
-    GW -->|gRPC| AI
-
-    INFRA -.->|Оркестрирует запуск| Backends
+```text
+[ mobile (Flutter) ]       [ bot-service (Python) ]
+         │                            │
+         └─────────────┬──────────────┘
+                       │ HTTP/JSON (:8080)
+                       ▼
+             [ gateway-service ]
+                       │
+       ┌───────────────┼───────────────┬───────────────┐
+       │ gRPC (:50051) │ gRPC (:50053) │ gRPC (:50055) │ gRPC (:50057)
+       ▼               ▼               ▼               ▼
+ [ auth-service ] [ schedule-svc ] [ tasks-service ] [ ai-service ]
+       │                               │               │
+       │                               ▼               ▼
+       │                          [ RabbitMQ ]   [ pgvector ]
+       │                               │
+       │                               ▼
+       └────────────────────> [ notification-service ]
 ```
+
+Все микросервисы зависят от единого репозитория контрактов `contracts` и запускаются через репозиторий `infra`.

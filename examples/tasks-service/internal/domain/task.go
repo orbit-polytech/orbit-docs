@@ -12,12 +12,12 @@ import (
 var (
 	ErrEmptyTaskID          = errors.New("идентификатор задачи не может быть пустым")
 	ErrEmptyOwnerID         = errors.New("идентификатор владельца (студента) не может быть пустым")
-	ErrEmptyTitle           = errors.New("название задачи не может быть пустым (минимум 3 символа)")
+	ErrEmptyTitle           = errors.New("название задачи не может быть пустым")
+	ErrTitleTooShort        = errors.New("название задачи слишком короткое (минимум 3 символа)")
 	ErrTitleTooLong         = errors.New("название задачи не может превышать 200 символов")
 	ErrDescriptionTooLong   = errors.New("описание задачи не может превышать 2000 символов")
 	ErrInvalidDeadline      = errors.New("дедлайн задачи должен быть строго в будущем")
 	ErrInvalidPriority      = errors.New("указан некорректный или неопределённый приоритет задачи")
-	ErrInvalidPagination    = errors.New("некорректные параметры пагинации (лимит от 1 до 100, смещение >= 0)")
 	ErrTaskNotFound         = errors.New("учебная задача не найдена")
 	ErrTaskAlreadyCompleted = errors.New("нельзя изменить уже завершённую задачу")
 	ErrVersionConflict      = errors.New("конфликт параллельного изменения задачи (оптимистичная блокировка)")
@@ -66,8 +66,11 @@ type Title struct {
 func NewTitle(raw string) (Title, error) {
 	trimmed := strings.TrimSpace(raw)
 	count := utf8.RuneCountInString(trimmed)
-	if count < 3 {
+	if count == 0 {
 		return Title{}, ErrEmptyTitle
+	}
+	if count < 3 {
+		return Title{}, ErrTitleTooShort
 	}
 	if count > 200 {
 		return Title{}, ErrTitleTooLong
@@ -77,6 +80,22 @@ func NewTitle(raw string) (Title, error) {
 
 func (t Title) String() string { return t.value }
 func (t Title) IsZero() bool   { return t.value == "" }
+
+// Description — Value Object описания задачи с контролем бизнес-инвариантов.
+type Description struct {
+	value string
+}
+
+func NewDescription(raw string) (Description, error) {
+	trimmed := strings.TrimSpace(raw)
+	if utf8.RuneCountInString(trimmed) > 2000 {
+		return Description{}, ErrDescriptionTooLong
+	}
+	return Description{value: trimmed}, nil
+}
+
+func (d Description) String() string { return d.value }
+func (d Description) IsZero() bool   { return d.value == "" }
 
 // Deadline — Value Object дедлайна, нормализованный в UTC.
 type Deadline struct {
@@ -169,20 +188,21 @@ type Task struct {
 	id          TaskID
 	ownerID     OwnerID
 	title       Title
-	description string
+	description Description
 	deadline    Deadline
 	priority    TaskPriority
 	status      TaskStatus
 	version     int64
 	createdAt   time.Time
+	events      []TaskCreated
 }
 
-// NewTask создаёт новую задачу. Проверяет все Value Objects на IsZero.
+// NewTask создаёт новую задачу. Проверяет обязательные Value Objects на IsZero.
 func NewTask(
 	id TaskID,
 	ownerID OwnerID,
 	title Title,
-	description string,
+	description Description,
 	deadline Deadline,
 	priority TaskPriority,
 	now time.Time,
@@ -203,22 +223,29 @@ func NewTask(
 		return nil, ErrInvalidPriority
 	}
 
-	trimmedDesc := strings.TrimSpace(description)
-	if utf8.RuneCountInString(trimmedDesc) > 2000 {
-		return nil, ErrDescriptionTooLong
-	}
-
-	return &Task{
+	utcNow := now.UTC()
+	t := &Task{
 		id:          id,
 		ownerID:     ownerID,
 		title:       title,
-		description: trimmedDesc,
+		description: description,
 		deadline:    deadline,
 		priority:    priority,
 		status:      TaskStatusPending,
 		version:     1,
-		createdAt:   now.UTC(),
-	}, nil
+		createdAt:   utcNow,
+	}
+
+	t.events = append(t.events, TaskCreated{
+		TaskID:     id,
+		OwnerID:    ownerID,
+		Title:      title,
+		Deadline:   deadline,
+		Priority:   priority,
+		OccurredAt: utcNow,
+	})
+
+	return t, nil
 }
 
 // ReconstituteTask вызывается исключительно адаптерами инфраструктуры для восстановления из БД.
@@ -226,7 +253,7 @@ func ReconstituteTask(
 	id TaskID,
 	ownerID OwnerID,
 	title Title,
-	description string,
+	description Description,
 	deadline Deadline,
 	priority TaskPriority,
 	status TaskStatus,
@@ -246,32 +273,43 @@ func ReconstituteTask(
 	}
 }
 
-func (t *Task) ID() TaskID             { return t.id }
-func (t *Task) OwnerID() OwnerID       { return t.ownerID }
-func (t *Task) Title() Title           { return t.title }
-func (t *Task) Description() string    { return t.description }
-func (t *Task) Deadline() Deadline     { return t.deadline }
-func (t *Task) Priority() TaskPriority { return t.priority }
-func (t *Task) Status() TaskStatus     { return t.status }
-func (t *Task) Version() int64         { return t.version }
-func (t *Task) CreatedAt() time.Time   { return t.createdAt }
+func (t *Task) ID() TaskID               { return t.id }
+func (t *Task) OwnerID() OwnerID         { return t.ownerID }
+func (t *Task) Title() Title             { return t.title }
+func (t *Task) Description() Description { return t.description }
+func (t *Task) Deadline() Deadline       { return t.deadline }
+func (t *Task) Priority() TaskPriority   { return t.priority }
+func (t *Task) Status() TaskStatus       { return t.status }
+func (t *Task) Version() int64           { return t.version }
+func (t *Task) CreatedAt() time.Time     { return t.createdAt }
+
+// IncrementVersion увеличивает номер версии сущности при успешном сохранении в репозитории.
+func (t *Task) IncrementVersion() {
+	t.version++
+}
+
+// PullEvents возвращает накопленные доменные события и очищает внутренний буфер.
+func (t *Task) PullEvents() []TaskCreated {
+	events := t.events
+	t.events = nil
+	return events
+}
 
 // IsOwnedBy проверяет принадлежность задачи указанному пользователю.
 func (t *Task) IsOwnedBy(actor OwnerID) bool {
 	return t.ownerID == actor
 }
 
-// Complete переводит задачу в статус завершённой и увеличивает версию (без actor).
+// Complete переводит задачу в статус завершённой (версия инкрементируется репозиторием при сохранении).
 func (t *Task) Complete() error {
 	if t.status == TaskStatusCompleted {
 		return ErrTaskAlreadyCompleted
 	}
 	t.status = TaskStatusCompleted
-	t.version++
 	return nil
 }
 
-// Reschedule переносит дедлайн задачи и увеличивает версию (без actor).
+// Reschedule переносит дедлайн задачи (версия инкрементируется репозиторием при сохранении).
 func (t *Task) Reschedule(newDeadline Deadline, now time.Time) error {
 	if t.status == TaskStatusCompleted {
 		return ErrTaskAlreadyCompleted
@@ -280,7 +318,6 @@ func (t *Task) Reschedule(newDeadline Deadline, now time.Time) error {
 		return ErrInvalidDeadline
 	}
 	t.deadline = newDeadline
-	t.version++
 	return nil
 }
 

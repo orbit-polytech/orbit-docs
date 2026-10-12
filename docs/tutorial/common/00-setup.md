@@ -79,7 +79,7 @@ ssh -T git@github.com
 
 ## 3. Docker и Docker Compose
 
-Все внешние зависимости (PostgreSQL, Redis, RabbitMQ, pgvector) разворачиваются локально в изолированных контейнерах через репозиторий `orbit-infra`.
+Все внешние зависимости (PostgreSQL, Redis, RabbitMQ, pgvector) разворачиваются локально в изолированных контейнерах через репозиторий `infra`.
 
 * **Linux**: установите [Docker Engine и Docker Compose v2](https://docs.docker.com/engine/install/ubuntu/) через официальный репозиторий Docker. Обязательно добавьте пользователя в группу `docker`:
     ```bash

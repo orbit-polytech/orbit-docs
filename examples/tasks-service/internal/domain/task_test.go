@@ -31,6 +31,13 @@ func mustTitle(t *testing.T, raw string) domain.Title {
 	return title
 }
 
+func mustDescription(t *testing.T, raw string) domain.Description {
+	t.Helper()
+	desc, err := domain.NewDescription(raw)
+	require.NoError(t, err)
+	return desc
+}
+
 func mustDeadline(t *testing.T, target, now time.Time) domain.Deadline {
 	t.Helper()
 	dl, err := domain.NewDeadline(target, now)
@@ -42,8 +49,11 @@ func TestValueObjects(t *testing.T) {
 	now := time.Now().UTC()
 
 	t.Run("Title validation", func(t *testing.T) {
-		_, err := domain.NewTitle("ab")
+		_, err := domain.NewTitle("")
 		require.ErrorIs(t, err, domain.ErrEmptyTitle)
+
+		_, err = domain.NewTitle("ab")
+		require.ErrorIs(t, err, domain.ErrTitleTooShort)
 
 		_, err = domain.NewTitle("   ")
 		require.ErrorIs(t, err, domain.ErrEmptyTitle)
@@ -54,6 +64,20 @@ func TestValueObjects(t *testing.T) {
 		title := mustTitle(t, "Корректный заголовок")
 		assert.Equal(t, "Корректный заголовок", title.String())
 		assert.False(t, title.IsZero())
+	})
+
+	t.Run("Description validation and IsZero", func(t *testing.T) {
+		_, err := domain.NewDescription(strings.Repeat("x", 2001))
+		require.ErrorIs(t, err, domain.ErrDescriptionTooLong)
+
+		desc, err := domain.NewDescription("Корректное описание")
+		require.NoError(t, err)
+		assert.Equal(t, "Корректное описание", desc.String())
+		assert.False(t, desc.IsZero())
+
+		emptyDesc, err := domain.NewDescription("   ")
+		require.NoError(t, err)
+		assert.True(t, emptyDesc.IsZero())
 	})
 
 	t.Run("Deadline validation and IsZero", func(t *testing.T) {
@@ -99,10 +123,11 @@ func TestTask_OwnershipAndLifecycle(t *testing.T) {
 	ownerID := mustOwnerID(t, "student-42")
 	foreignOwner := mustOwnerID(t, "student-99")
 	title := mustTitle(t, "Лабораторная работа 1")
+	desc := mustDescription(t, "Описание")
 	deadline := mustDeadline(t, now.Add(48*time.Hour), now)
 
-	t.Run("успешное создание с начальной версией 1", func(t *testing.T) {
-		task, err := domain.NewTask(taskID, ownerID, title, "Описание", deadline, domain.TaskPriorityHigh, now)
+	t.Run("успешное создание с начальной версией 1 и регистрацией события", func(t *testing.T) {
+		task, err := domain.NewTask(taskID, ownerID, title, desc, deadline, domain.TaskPriorityHigh, now)
 		require.NoError(t, err)
 		require.NotNil(t, task)
 
@@ -110,21 +135,28 @@ func TestTask_OwnershipAndLifecycle(t *testing.T) {
 		assert.Equal(t, domain.TaskStatusPending, task.Status())
 		assert.True(t, task.IsOwnedBy(ownerID))
 		assert.False(t, task.IsOwnedBy(foreignOwner))
+
+		// Доменное событие собрано агрегатом
+		events := task.PullEvents()
+		require.Len(t, events, 1)
+		assert.Equal(t, taskID, events[0].TaskID)
+		assert.Equal(t, ownerID, events[0].OwnerID)
+		assert.Equal(t, title, events[0].Title)
+
+		// Повторный вызов возвращает пустой срез
+		assert.Empty(t, task.PullEvents())
 	})
 
-	t.Run("ошибка при слишком длинном описании (>2000 символов)", func(t *testing.T) {
-		tooLongDesc := strings.Repeat("x", 2001)
-		_, err := domain.NewTask(taskID, ownerID, title, tooLongDesc, deadline, domain.TaskPriorityMedium, now)
-		require.ErrorIs(t, err, domain.ErrDescriptionTooLong)
-	})
-
-	t.Run("завершение задачи и инкремент версии", func(t *testing.T) {
-		task, err := domain.NewTask(taskID, ownerID, title, "Описание", deadline, domain.TaskPriorityMedium, now)
+	t.Run("завершение задачи и сохранение версии агрегата", func(t *testing.T) {
+		task, err := domain.NewTask(taskID, ownerID, title, desc, deadline, domain.TaskPriorityMedium, now)
 		require.NoError(t, err)
 
 		err = task.Complete()
 		require.NoError(t, err)
 		assert.Equal(t, domain.TaskStatusCompleted, task.Status())
+		assert.Equal(t, int64(1), task.Version(), "доменный метод сохраняет исходную версию до фиксации в репозитории")
+
+		task.IncrementVersion()
 		assert.Equal(t, int64(2), task.Version())
 
 		// Повторное завершение возвращает ErrTaskAlreadyCompleted
@@ -132,15 +164,15 @@ func TestTask_OwnershipAndLifecycle(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrTaskAlreadyCompleted)
 	})
 
-	t.Run("перенос дедлайна и инкремент версии", func(t *testing.T) {
-		task, err := domain.NewTask(taskID, ownerID, title, "Описание", deadline, domain.TaskPriorityMedium, now)
+	t.Run("перенос дедлайна", func(t *testing.T) {
+		task, err := domain.NewTask(taskID, ownerID, title, desc, deadline, domain.TaskPriorityMedium, now)
 		require.NoError(t, err)
 
 		newDeadline := mustDeadline(t, now.Add(72*time.Hour), now)
 		err = task.Reschedule(newDeadline, now)
 		require.NoError(t, err)
 		assert.Equal(t, newDeadline.Time(), task.Deadline().Time())
-		assert.Equal(t, int64(2), task.Version())
+		assert.Equal(t, int64(1), task.Version())
 
 		// Перенос дедлайна в прошлое возвращает ошибку
 		pastDeadline := domain.ReconstituteDeadline(now.Add(-10 * time.Hour))
@@ -149,7 +181,7 @@ func TestTask_OwnershipAndLifecycle(t *testing.T) {
 	})
 
 	t.Run("нельзя перенести дедлайн завершённой задачи", func(t *testing.T) {
-		task, err := domain.NewTask(taskID, ownerID, title, "Описание", deadline, domain.TaskPriorityMedium, now)
+		task, err := domain.NewTask(taskID, ownerID, title, desc, deadline, domain.TaskPriorityMedium, now)
 		require.NoError(t, err)
 
 		require.NoError(t, task.Complete())

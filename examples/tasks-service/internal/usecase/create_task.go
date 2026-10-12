@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -41,6 +43,9 @@ func NewCreateTaskUseCase(
 	eventIDGen EventIDGenerator,
 	clock Clock,
 ) *CreateTaskUseCase {
+	if idempStore == nil {
+		idempStore = NoopIdempotencyStore{}
+	}
 	return &CreateTaskUseCase{
 		saver:      saver,
 		finder:     finder,
@@ -58,18 +63,18 @@ func (uc *CreateTaskUseCase) Execute(ctx context.Context, actor domain.OwnerID, 
 		return nil, domain.ErrEmptyOwnerID
 	}
 
-	// 1. Проверка идемпотентности с изоляцией по владельцу (Multi-Tenant Scoping по Google AIP-155)
+	// 1. Атомарная резервация ключа идемпотентности (Multi-Tenant Scoping по Google AIP-155)
 	scopedKey := ""
+	requestHash := ""
 	if input.IdempotencyKey != "" {
 		scopedKey = actor.String() + ":" + input.IdempotencyKey
-	}
+		requestHash = computeRequestHash(input)
 
-	if scopedKey != "" && uc.idempStore != nil {
-		existingID, found, err := uc.idempStore.Get(ctx, scopedKey)
+		existingID, completed, err := uc.idempStore.Reserve(ctx, scopedKey, requestHash)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка проверки ключа идемпотентности: %w", err)
 		}
-		if found {
+		if completed {
 			existingTask, err := uc.finder.FindByID(ctx, existingID)
 			if err != nil {
 				return nil, fmt.Errorf("ошибка загрузки существующей задачи по ключу идемпотентности: %w", err)
@@ -78,61 +83,79 @@ func (uc *CreateTaskUseCase) Execute(ctx context.Context, actor domain.OwnerID, 
 		}
 	}
 
+	releaseReservation := func() {
+		if scopedKey != "" {
+			_ = uc.idempStore.Release(context.Background(), scopedKey)
+		}
+	}
+
 	now := uc.clock.Now()
 
-	// 2. Создание Value Objects
+	// 2. Создание Value Objects с инвариантами
 	title, err := domain.NewTitle(input.Title)
 	if err != nil {
+		releaseReservation()
 		return nil, fmt.Errorf("ошибка названия задачи: %w", err)
+	}
+
+	desc, err := domain.NewDescription(input.Description)
+	if err != nil {
+		releaseReservation()
+		return nil, fmt.Errorf("ошибка описания задачи: %w", err)
 	}
 
 	deadline, err := domain.NewDeadline(input.Deadline, now)
 	if err != nil {
+		releaseReservation()
 		return nil, fmt.Errorf("ошибка дедлайна: %w", err)
 	}
 
 	taskID, err := uc.taskIDGen.NewTaskID()
 	if err != nil {
+		releaseReservation()
 		return nil, fmt.Errorf("ошибка генерации идентификатора задачи: %w", err)
 	}
 
-	// 3. Создание доменной сущности с инвариантами
-	task, err := domain.NewTask(taskID, actor, title, input.Description, deadline, input.Priority, now)
+	// 3. Создание доменной сущности (агрегат накапливает доменные события)
+	task, err := domain.NewTask(taskID, actor, title, desc, deadline, input.Priority, now)
 	if err != nil {
+		releaseReservation()
 		return nil, fmt.Errorf("ошибка создания сущности задачи: %w", err)
 	}
 
 	// 4. Сохранение в хранилище через порт TaskSaver
 	if err := uc.saver.Save(ctx, task); err != nil {
+		releaseReservation()
 		return nil, fmt.Errorf("не удалось сохранить задачу в хранилище: %w", err)
 	}
 
-	// 5. Фиксация ключа идемпотентности
-	if scopedKey != "" && uc.idempStore != nil {
-		if err := uc.idempStore.Save(ctx, scopedKey, task.ID()); err != nil {
+	// 5. Фиксация успешного завершения по ключу идемпотентности
+	if scopedKey != "" {
+		if err := uc.idempStore.Complete(ctx, scopedKey, task.ID()); err != nil {
 			return nil, fmt.Errorf("не удалось зафиксировать ключ идемпотентности: %w", err)
 		}
 	}
 
-	// ВНИМАНИЕ: КРИТИЧЕСКИЙ АРХИТЕКТУРНЫЙ РИСК — ДВОЙНАЯ ЗАПИСЬ (DUAL-WRITE)!
-	// Вызов repo.Save() с последующим events.Publish() не атомарен.
-	// Если после сохранения в БД упадёт сеть или брокер — событие потеряется, а запись останется.
-	// В главе 8 мы устраняем этот риск через паттерн Transactional Outbox.
-	event := domain.TaskCreated{
-		EventID:    uc.eventIDGen.NewEventID(),
-		TaskID:     task.ID(),
-		OwnerID:    task.OwnerID(),
-		Title:      task.Title(),
-		Deadline:   task.Deadline(),
-		Priority:   task.Priority(),
-		OccurredAt: now,
-	}
+	// 6. Публикация событий агрегата (DDD)
+	for _, event := range task.PullEvents() {
+		eventID, err := uc.eventIDGen.NewEventID()
+		if err != nil {
+			return nil, fmt.Errorf("генерация идентификатора события: %w", err)
+		}
+		event.EventID = eventID
 
-	if err := uc.events.PublishTaskCreated(ctx, event); err != nil {
-		return nil, fmt.Errorf("не удалось опубликовать событие создания задачи: %w", err)
+		if err := uc.events.PublishTaskCreated(ctx, event); err != nil {
+			return nil, fmt.Errorf("не удалось опубликовать событие создания задачи: %w", err)
+		}
 	}
 
 	return task, nil
+}
+
+func computeRequestHash(input CreateTaskInput) string {
+	h := sha256.New()
+	_, _ = fmt.Fprintf(h, "%s|%s|%s|%d", input.Title, input.Description, input.Deadline.UTC().Format(time.RFC3339Nano), input.Priority)
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // --8<-- [end:create_task_usecase]

@@ -65,12 +65,12 @@ go mod tidy
 
 ### Шаг 3. Подключение сгенерированных контрактов gRPC
 
-Если ваш сервис реализует собственный gRPC API, сначала убедитесь, что контракт описан в `orbit-contracts` (см. рецепт [Как добавить новый gRPC-метод](add-grpc-method.md)).
+Если ваш сервис реализует собственный gRPC API, сначала убедитесь, что контракт описан в `contracts` (см. рецепт [Как добавить новый gRPC-метод](add-grpc-method.md)).
 
 Подключите сгенерированный Go-пакет контрактов:
 
 ```bash
-go get github.com/orbit-polytech/orbit-contracts/gen/go/orbit/study/v1@main
+go get github.com/orbit-polytech/contracts/gen/go/orbit/study/v1@main
 go mod tidy
 ```
 
@@ -107,18 +107,18 @@ RABBITMQ_URL=amqp://guest:guest@localhost:5672/
 
 ---
 
-### Шаг 5. Регистрация базы данных и сервиса в `orbit-infra`
+### Шаг 5. Регистрация базы данных и сервиса в `infra`
 
-Для локальной разработки всей командой зарегистрируйте базу данных и запуск сервиса в репозитории `orbit-infra`:
+Для локальной разработки всей командой зарегистрируйте базу данных и запуск сервиса в репозитории `infra`:
 
-1. В скрипт инициализации баз данных `orbit-infra/scripts/init-databases.sql` добавьте создание отдельной БД:
+1. В скрипт инициализации баз данных `infra/scripts/init-databases.sql` добавьте создание отдельной БД:
 
 ```sql
 CREATE DATABASE study_db;
 GRANT ALL PRIVILEGES ON DATABASE study_db TO orbit;
 ```
 
-2. В `orbit-infra/docker-compose.yml` добавьте секцию сборки сервиса:
+2. В `infra/docker-compose.yml` добавьте секцию сборки сервиса:
 
 ```yaml
   study-service:

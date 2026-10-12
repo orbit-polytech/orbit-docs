@@ -14,7 +14,7 @@
 - **HTTP-роутер:** `go-chi/chi/v5`
 - **Протоколы:** Вход — HTTP/1.1 & HTTP/2 (REST/JSON), Выход — gRPC по HTTP/2
 - **Кэш и безопасность:** Redis 7 (проверка блэклиста отозванных JWT по `jti`, Rate Limiting)
-- **Контракты:** Клиенты gRPC из `orbit-contracts/gen/go`
+- **Контракты:** Клиенты gRPC из `contracts/gen/go`
 
 ---
 

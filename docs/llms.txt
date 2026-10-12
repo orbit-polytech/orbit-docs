@@ -1,0 +1,61 @@
+# Orbit AI Engineering Handbook & Architecture Documentation
+> Инженерная база знаний и архитектурный стандарт студенческого проекта Orbit AI (Московский Политех).
+
+## Quickstart & Rules
+- [Overview & Repositories](quickstart/overview.md): Общие правила команды, список 13 репозиториев организации orbit-polytech, Conventional Commits, процесс PR.
+- [Local Setup](quickstart/local-setup.md): Запуск проекта с нуля на локальной машине через Docker Compose.
+- [Git Workflow](quickstart/git-workflow.md): Процесс работы с ветками, GitHub Flow, Squash and merge.
+- [Review Checklist](quickstart/review-checklist.md): Чек-лист код-ревью и стандарты чистого кода.
+
+## Go Backend & Microservices
+- [Go Backend Overview](backend-go/overview.md): Архитектурное дерево сервиса Go 1.25, Clean Architecture, границы пакетов.
+- [Create Microservice Tutorial](backend-go/tutorial.md): Пошаговое руководство по созданию нового микросервиса.
+- [How-To Matrix](backend-go/how-to.md): Матрица «Куда писать, если хочу добавить X».
+- [Clean Architecture & DDD](backend-go/clean-architecture.md): Объяснение слоев Domain, App/UseCases, Value Objects, Aggregates.
+- [Reference & Depguard](backend-go/reference.md): Справочник слоев, правила depguard, стандарты SQL-миграций.
+
+## HTTP Gateway
+- [Gateway Overview](gateway-service/overview.md): Задачи единого HTTP шлюза, архитектура, ADR-004.
+- [Handlers & Middleware](gateway/handlers-and-middleware.md): Chi роутер, безопасный readJSON, аутентификация, rate limiting.
+- [gRPC Clients](gateway/grpc-clients.md): Организация клиентов, таймауты, маппинг ошибок gRPC -> HTTP.
+
+## Python & AI
+- [Python & AI Overview](python-ai/overview.md): Сервисы ai-service и bot-service на Python 3.12, менеджер пакетов uv.
+- [RAG & pgvector Tutorial](python-ai/rag-tutorial.md): RAG, Google Gemini API, векторный поиск HNSW, размерность vector(768).
+- [Telegram Bot Guide](python-ai/bot-guide.md): aiogram 3, долгоживущий httpx.AsyncClient, безопасная привязка контактов.
+- [Python Architecture Explanation](python-ai/explanation.md): Причины изоляции Python, границы ответственности.
+
+## Mobile (Flutter)
+- [Flutter Mobile Overview](mobile-flutter/overview.md): Архитектура MVVM, Compass App стандарт Google.
+- [MVVM Architecture](mobile-flutter/mvvm-architecture.md): Паттерн Command, sealed class Result, связывание View и ViewModel.
+- [Widgets Tutorial](mobile-flutter/widgets-tutorial.md): Адаптивная верстка, дизайн-токены Политеха.
+- [Network & Storage](mobile-flutter/network-and-storage.md): HTTP клиент, flutter_secure_storage, Keychain/KeyStore.
+
+## Contracts & Infrastructure
+- [Contracts & Infra Overview](contracts-infra/overview.md): Принцип API-First (сначала контракты).
+- [Contracts (Buf & Protobuf)](contracts-infra/contracts.md): Репозиторий contracts, Buf v2, Google Protobuf Style Guide.
+- [Infra (Docker Compose)](contracts-infra/infra.md): docker-compose.yml, профили core/ai/all, изоляция схем PostgreSQL.
+- [Infra Reference](contracts-infra/reference.md): Порты контейнеров, дефолтные креды, очереди RabbitMQ.
+
+## Security & Authentication
+- [Security Overview](security/overview.md): Модель угроз, верификация Telegram Login Widget и initData.
+- [JWT & Ed25519](security/jwt-ed25519.md): Асимметричная подпись Ed25519, структура access-токена, RFC 8725, RFC 9068.
+- [Sessions & Refresh Tokens](security/sessions-refresh.md): Ротация токенов, Token Reuse Detection, Redis Blacklist.
+- [Validation & Threat Defense](security/validation-defense.md): Защита от IDOR, параметризованные SQL-запросы, Mass Assignment.
+
+## Tasks Service Post-Mortem (Lessons Learned)
+- [Post-Mortem Overview](tasks-service-postmortem/overview.md): Разбор 6 архитектурных ошибок и грабель из внешнего ревью.
+- [01: Idempotency Race](tasks-service-postmortem/01-idempotency-race.md): Check-then-act гонка, атомарная резервация AIP-155.
+- [02: Optimistic Locking](tasks-service-postmortem/02-optimistic-locking.md): Ошибка инкремента версии в домене, контроль версий репозиторием.
+- [03: Transport DIP](tasks-service-postmortem/03-transport-dip.md): Нарушение инверсии зависимостей, интерфейсы на стороне потребителя.
+- [04: Error Handling OCP](tasks-service-postmortem/04-error-handling-ocp.md): Хрупкий switch ошибок, классификация по категориям.
+- [05: Use Case SRP](tasks-service-postmortem/05-usecase-srp.md): Декомпозиция монолитного файла сценариев, предотвращение конфликтов Git.
+- [06: Runtime Panics](tasks-service-postmortem/06-runtime-panics.md): Исключение скрытых panic, безопасный uuid.NewRandom, RecoveryInterceptor.
+
+## Reference
+- [Canonical Values](reference/canonical-values.md): Канонические версии (Go 1.25), порты (8080, 50051..50057), env переменные.
+- [Polyrepo Map](reference/polyrepo-map.md): Карта 13 репозиториев организации orbit-polytech.
+- [Naming Conventions](reference/naming-conventions.md): Стандарты именования по всем технологиям.
+
+## AI Agents Guidelines
+- [AI Agent Rules](ai/agents.md): Строгие правила MUST / MUST NOT, пути к файлам и команды верификации.

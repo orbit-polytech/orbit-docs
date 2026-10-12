@@ -87,7 +87,7 @@ func AuthInterceptor() grpc.UnaryServerInterceptor {
 
 func containsControlChars(s string) bool {
 	for _, r := range s {
-		if r == '\r' || r == '\n' || r == '\t' || (r < 32 && r >= 0) || r == 127 {
+		if r < 32 || r == 127 {
 			return true
 		}
 	}
@@ -121,11 +121,23 @@ func LoggingInterceptor(logger *slog.Logger) grpc.UnaryServerInterceptor {
 			level = slog.LevelError
 		}
 
-		logger.Log(ctx, level, "gRPC запрос",
+		var reqID string
+		if md, ok := metadata.FromIncomingContext(ctx); ok {
+			if vals := md.Get("x-request-id"); len(vals) > 0 {
+				reqID = vals[0]
+			}
+		}
+
+		attrs := []slog.Attr{
 			slog.String("method", info.FullMethod),
 			slog.String("code", code.String()),
 			slog.Duration("duration", duration),
-		)
+		}
+		if reqID != "" {
+			attrs = append(attrs, slog.String("request_id", reqID))
+		}
+
+		logger.LogAttrs(ctx, level, "gRPC запрос", attrs...)
 
 		return resp, err
 	}

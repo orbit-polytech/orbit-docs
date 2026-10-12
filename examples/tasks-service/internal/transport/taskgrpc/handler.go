@@ -6,6 +6,7 @@ import (
 	"io"
 	"log/slog"
 	"math"
+	"time"
 
 	"github.com/orbit-polytech/orbit-docs/examples/tasks-service/internal/domain"
 	"github.com/orbit-polytech/orbit-docs/examples/tasks-service/internal/usecase"
@@ -15,25 +16,46 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// DIP: Интерфейсы на стороне потребителя (consumer-driven interfaces)
+type taskCreator interface {
+	Execute(ctx context.Context, actor domain.OwnerID, input usecase.CreateTaskInput) (*domain.Task, error)
+}
+
+type taskGetter interface {
+	Execute(ctx context.Context, actor domain.OwnerID, rawID string) (*domain.Task, error)
+}
+
+type taskLister interface {
+	Execute(ctx context.Context, actor domain.OwnerID, limit, offset int) ([]*domain.Task, int, error)
+}
+
+type taskCompleter interface {
+	Execute(ctx context.Context, actor domain.OwnerID, rawID string) (*domain.Task, error)
+}
+
+type taskRescheduler interface {
+	Execute(ctx context.Context, actor domain.OwnerID, rawID string, newDeadlineTime time.Time) (*domain.Task, error)
+}
+
 // --8<-- [start:grpc_handler]
 // TaskHandler реализует gRPC-сервер TaskServiceServer.
 // Является тонким транспортным адаптером: извлекает actor из контекста, валидирует DTO, вызывает usecase.
 type TaskHandler struct {
 	tasksv1.UnimplementedTaskServiceServer
-	createUC     *usecase.CreateTaskUseCase
-	getUC        *usecase.GetTaskUseCase
-	listUC       *usecase.ListTasksUseCase
-	completeUC   *usecase.CompleteTaskUseCase
-	rescheduleUC *usecase.RescheduleTaskUseCase
+	createUC     taskCreator
+	getUC        taskGetter
+	listUC       taskLister
+	completeUC   taskCompleter
+	rescheduleUC taskRescheduler
 	logger       *slog.Logger
 }
 
 func NewTaskHandler(
-	createUC *usecase.CreateTaskUseCase,
-	getUC *usecase.GetTaskUseCase,
-	listUC *usecase.ListTasksUseCase,
-	completeUC *usecase.CompleteTaskUseCase,
-	rescheduleUC *usecase.RescheduleTaskUseCase,
+	createUC taskCreator,
+	getUC taskGetter,
+	listUC taskLister,
+	completeUC taskCompleter,
+	rescheduleUC taskRescheduler,
 	logger *slog.Logger,
 ) *TaskHandler {
 	if logger == nil {
@@ -112,12 +134,7 @@ func (h *TaskHandler) ListTasks(ctx context.Context, req *tasksv1.ListTasksReque
 		return nil, err
 	}
 
-	limit := int(req.GetLimit())
-	if limit == 0 {
-		limit = 20
-	}
-
-	tasks, total, err := h.listUC.Execute(ctx, actor, limit, int(req.GetOffset()))
+	tasks, total, err := h.listUC.Execute(ctx, actor, int(req.GetLimit()), int(req.GetOffset()))
 	if err != nil {
 		return nil, h.mapError(ctx, err)
 	}
@@ -193,28 +210,25 @@ func (h *TaskHandler) mapError(ctx context.Context, err error) error {
 		return status.Error(codes.Canceled, "запрос отменён клиентом")
 	case errors.Is(err, context.DeadlineExceeded):
 		return status.Error(codes.DeadlineExceeded, "превышен таймаут выполнения запроса")
-	case errors.Is(err, domain.ErrEmptyTaskID):
-		return status.Error(codes.InvalidArgument, domain.ErrEmptyTaskID.Error())
 	case errors.Is(err, domain.ErrEmptyOwnerID):
 		return status.Error(codes.Unauthenticated, domain.ErrEmptyOwnerID.Error())
-	case errors.Is(err, domain.ErrEmptyTitle):
-		return status.Error(codes.InvalidArgument, domain.ErrEmptyTitle.Error())
-	case errors.Is(err, domain.ErrTitleTooLong):
-		return status.Error(codes.InvalidArgument, domain.ErrTitleTooLong.Error())
-	case errors.Is(err, domain.ErrDescriptionTooLong):
-		return status.Error(codes.InvalidArgument, domain.ErrDescriptionTooLong.Error())
-	case errors.Is(err, domain.ErrInvalidDeadline):
-		return status.Error(codes.InvalidArgument, domain.ErrInvalidDeadline.Error())
-	case errors.Is(err, domain.ErrInvalidPriority):
-		return status.Error(codes.InvalidArgument, domain.ErrInvalidPriority.Error())
-	case errors.Is(err, domain.ErrInvalidPagination):
+	case errors.Is(err, domain.ErrEmptyTaskID),
+		errors.Is(err, domain.ErrEmptyTitle),
+		errors.Is(err, domain.ErrTitleTooShort),
+		errors.Is(err, domain.ErrTitleTooLong),
+		errors.Is(err, domain.ErrDescriptionTooLong),
+		errors.Is(err, domain.ErrInvalidDeadline),
+		errors.Is(err, domain.ErrInvalidPriority),
+		errors.Is(err, usecase.ErrInvalidPagination),
+		errors.Is(err, usecase.ErrIdempotencyConflict):
 		return status.Error(codes.InvalidArgument, err.Error())
 	case errors.Is(err, domain.ErrTaskNotFound):
 		return status.Error(codes.NotFound, domain.ErrTaskNotFound.Error())
 	case errors.Is(err, domain.ErrTaskAlreadyCompleted):
 		return status.Error(codes.FailedPrecondition, domain.ErrTaskAlreadyCompleted.Error())
-	case errors.Is(err, domain.ErrVersionConflict):
-		return status.Error(codes.Aborted, domain.ErrVersionConflict.Error())
+	case errors.Is(err, domain.ErrVersionConflict),
+		errors.Is(err, usecase.ErrIdempotencyInFlight):
+		return status.Error(codes.Aborted, err.Error())
 	default:
 		h.logger.ErrorContext(ctx, "непредвиденная внутренняя ошибка сервера", slog.String("error", err.Error()))
 		return status.Error(codes.Internal, "внутренняя ошибка сервиса")
@@ -244,7 +258,7 @@ func domainToProtoTask(t *domain.Task) *tasksv1.Task {
 		Id:          t.ID().String(),
 		OwnerId:     t.OwnerID().String(),
 		Title:       t.Title().String(),
-		Description: t.Description(),
+		Description: t.Description().String(),
 		Deadline:    timestamppb.New(t.Deadline().Time().UTC()),
 		Priority:    domainToProtoPriority(t.Priority()),
 		Status:      domainToProtoStatus(t.Status()),

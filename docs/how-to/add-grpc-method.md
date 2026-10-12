@@ -1,6 +1,6 @@
 # Как добавить новый gRPC-метод
 
-В проекте Orbit AI разработка межсервисного взаимодействия ведётся по принципу **Schema-First (Контракт прежде всего)**. Вы не пишете код на Go или Python, пока новый метод не описан и не верифицирован в Protobuf-репозитории `orbit-contracts`.
+В проекте Orbit AI разработка межсервисного взаимодействия ведётся по принципу **Schema-First (Контракт прежде всего)**. Вы не пишете код на Go или Python, пока новый метод не описан и не верифицирован в Protobuf-репозитории `contracts`.
 
 ---
 
@@ -8,7 +8,7 @@
 
 ```mermaid
 flowchart LR
-    A["1. orbit-contracts<br/>.proto файл"] --> B["2. Buf CLI<br/>lint & breaking"]
+    A["1. contracts<br/>.proto файл"] --> B["2. Buf CLI<br/>lint & breaking"]
     B --> C["3. Buf generate<br/>gen/go & gen/python"]
     C --> D["4. go get<br/>в микросервисе"]
     D --> E["5. Usecase & Domain<br/>бизнес-логика"]
@@ -19,9 +19,9 @@ flowchart LR
 
 ## 2. Пошаговая инструкция
 
-### Шаг 1. Описание метода в репозитории `orbit-contracts`
+### Шаг 1. Описание метода в репозитории `contracts`
 
-Перейдите в репозиторий `orbit-contracts` и откройте целевой файл (например, `proto/orbit/tasks/v1/task.proto`).
+Перейдите в репозиторий `contracts` и откройте целевой файл (например, `proto/orbit/tasks/v1/task.proto`).
 
 Добавьте сигнатуру нового RPC в интерфейс сервиса и опишите структуры запроса и ответа:
 
@@ -60,7 +60,7 @@ message CompleteTaskResponse {
 
 ### Шаг 2. Проверка качества контракта утилитой Buf
 
-В корне репозитория `orbit-contracts` запустите проверки линтера и обратной совместимости:
+В корне репозитория `contracts` запустите проверки линтера и обратной совместимости:
 
 ```bash
 # Проверка стиля и оформления proto-файлов
@@ -76,7 +76,7 @@ buf breaking --against ".git#branch=main"
 buf generate
 ```
 
-Закоммитьте изменения и откройте Pull Request в `orbit-contracts`. После вливания PR в `main` зафиксируйте коммит или git-тег.
+Закоммитьте изменения и откройте Pull Request в `contracts`. После вливания PR в `main` зафиксируйте коммит или git-тег.
 
 ---
 
@@ -85,7 +85,7 @@ buf generate
 В репозитории вашего сервиса (например, `tasks-service`) обновите зависимость контрактов:
 
 ```bash
-go get github.com/orbit-polytech/orbit-contracts/gen/go/orbit/tasks/v1@main
+go get github.com/orbit-polytech/contracts/gen/go/orbit/tasks/v1@main
 go mod tidy
 ```
 

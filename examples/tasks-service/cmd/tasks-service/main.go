@@ -18,6 +18,9 @@ import (
 	"github.com/orbit-polytech/orbit-docs/examples/tasks-service/internal/usecase"
 	tasksv1 "github.com/orbit-polytech/orbit-docs/examples/tasks-service/pkg/api/orbit/tasks/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/reflection"
 )
 
 type systemClock struct{}
@@ -72,12 +75,21 @@ func run(parentCtx context.Context) error {
 
 	grpcServer := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(
-			taskgrpc.LoggingInterceptor(logger),
 			taskgrpc.RecoveryInterceptor(logger),
+			taskgrpc.LoggingInterceptor(logger),
 			taskgrpc.AuthInterceptor(),
 		),
 	)
 	tasksv1.RegisterTaskServiceServer(grpcServer, taskHandler)
+
+	// Регистрация сервера здоровья для оркестраторов и grpc_health_probe (глава 12)
+	healthServer := health.NewServer()
+	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
+	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("orbit.tasks.v1.TaskService", grpc_health_v1.HealthCheckResponse_SERVING)
+
+	// Регистрация gRPC reflection для отладки
+	reflection.Register(grpcServer)
 
 	addr := fmt.Sprintf(":%d", cfg.GRPCPort)
 	listener, err := net.Listen("tcp", addr)

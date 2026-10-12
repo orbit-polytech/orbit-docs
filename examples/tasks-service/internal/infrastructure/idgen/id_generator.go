@@ -30,9 +30,13 @@ func (g *UUIDGenerator) NewTaskID() (domain.TaskID, error) {
 	return taskID, nil
 }
 
-// NewEventID генерирует уникальный идентификатор события.
-func (g *UUIDGenerator) NewEventID() string {
-	return uuid.New().String()
+// NewEventID генерирует уникальный идентификатор события без паники.
+func (g *UUIDGenerator) NewEventID() (string, error) {
+	newUUID, err := uuid.NewRandom()
+	if err != nil {
+		return "", fmt.Errorf("ошибка генератора случайных чисел при создании UUID события: %w", err)
+	}
+	return newUUID.String(), nil
 }
 
 // --8<-- [end:id_generator]
