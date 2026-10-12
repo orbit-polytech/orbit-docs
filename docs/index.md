@@ -65,7 +65,7 @@ flowchart TD
 
 <div class="grid cards" markdown>
 
--   :rocket: __[Быстрый старт](quickstart/overview.md)__
+-   :material-rocket-launch: __[Быстрый старт](quickstart/overview.md)__
     
     ---
     
@@ -75,7 +75,7 @@ flowchart TD
     - [Git, ветки и GitHub Flow](quickstart/git-workflow.md);
     - [Чек-лист код-ревью и чистый код](quickstart/review-checklist.md).
 
--   :gourd: __[Go-бэкенд](backend-go/overview.md)__
+-   :simple-go: __[Go-бэкенд](backend-go/overview.md)__
     
     ---
     
@@ -86,7 +86,7 @@ flowchart TD
     - [Чистая архитектура и DDD](backend-go/clean-architecture.md);
     - [Справочник слоев и линтер depguard](backend-go/reference.md).
 
--   :shield: __[HTTP Gateway](gateway/overview.md)__
+-   :material-shield-check: __[HTTP Gateway](gateway/overview.md)__
     
     ---
     
@@ -95,7 +95,7 @@ flowchart TD
     - [Обработчики и Middleware](gateway/handlers-and-middleware.md);
     - [gRPC-клиенты и маппинг ошибок](gateway/grpc-clients.md).
 
--   :snake: __[Python & AI](python-ai/overview.md)__
+-   :simple-python: __[Python & AI](python-ai/overview.md)__
     
     ---
     
@@ -105,7 +105,7 @@ flowchart TD
     - [Telegram-бот на aiogram 3 (How-to)](python-ai/bot-guide.md);
     - [Изоляция и границы Python-стека](python-ai/explanation.md).
 
--   :iphone: __[Flutter & Мобилка](mobile-flutter/overview.md)__
+-   :simple-flutter: __[Flutter & Мобилка](mobile-flutter/overview.md)__
     
     ---
     
@@ -115,7 +115,7 @@ flowchart TD
     - [Вёрстка адаптивных виджетов и темы Политеха](mobile-flutter/widgets-tutorial.md);
     - [Безопасное хранение токенов в Keychain/KeyStore](mobile-flutter/network-and-storage.md).
 
--   :link: __[Контракты и Инфра](contracts-infra/overview.md)__
+-   :material-transit-connection-variant: __[Контракты и Инфра](contracts-infra/overview.md)__
     
     ---
     
@@ -124,7 +124,7 @@ flowchart TD
     - [infra: Docker Compose и базы данных](contracts-infra/infra.md);
     - [Справочник контейнеров и очередей RabbitMQ](contracts-infra/reference.md).
 
--   :lock: __[Безопасность и Auth](security/overview.md)__
+-   :material-lock-check: __[Безопасность и Auth](security/overview.md)__
     
     ---
     
@@ -133,7 +133,7 @@ flowchart TD
     - [Сессии, Refresh Tokens и Token Reuse Detection](security/sessions-refresh.md);
     - [Защита от IDOR, инъекций и подмены ролей](security/validation-defense.md).
 
--   :microscope: __[Разбор ошибок tasks-service (Post-Mortem)](tasks-service-postmortem/overview.md)__
+-   :material-bug-check: __[Разбор ошибок tasks-service (Post-Mortem)](tasks-service-postmortem/overview.md)__
     
     ---
     
@@ -145,7 +145,7 @@ flowchart TD
     - [Декомпозиция сценариев (SRP)](tasks-service-postmortem/05-usecase-srp.md);
     - [Скрытые паники в генераторах ID](tasks-service-postmortem/06-runtime-panics.md).
 
--   :books: __[Справочник](reference/canonical-values.md)__
+-   :material-book-open-page-variant: __[Справочник](reference/canonical-values.md)__
     
     ---
     
@@ -154,7 +154,7 @@ flowchart TD
     - [Карта 13 репозиториев организации](reference/polyrepo-map.md);
     - [Соглашения об именовании кода, веток и коммитов](reference/naming-conventions.md).
 
--   :robot: __[Для ИИ-агентов](ai/agents.md)__
+-   :material-robot: __[Для ИИ-агентов](ai/agents.md)__
     
     ---
     
