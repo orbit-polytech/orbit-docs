@@ -1,0 +1,41 @@
+# navigation-service (Навигация по корпусам)
+
+**Репозиторий:** [`orbit-polytech/navigation-service`](https://github.com/orbit-polytech/navigation-service)
+
+---
+
+## 1. Назначение
+Решает острую проблему первокурсников и гостей Московского Политеха: поиск аудиторий, переходов и корпусов вуза (Большая Семёновская «БС», Автозаводская «АВ», Прянишникова «ПР», Михалковская «МИХ»). Хранит этажные планы, координаты лестниц, лифтов, столовых, деканатов и строит кратчайшие маршруты между аудиториями.
+
+---
+
+## 2. Технический стек
+- **Язык:** Go 1.24+ (Clean Architecture)
+- **База данных:** PostgreSQL 16 (`navigation_db`)
+- **Алгоритмы:** Графовый поиск кратчайшего пути (A* / Дейкстра)
+- **Протокол:** gRPC (порт `50054`)
+- **Контракт:** `orbit.navigation.v1.NavigationService`
+
+---
+
+## 3. Выделенные порты и база данных
+- **gRPC порт:** `50054`
+- **База данных:** `navigation_db` в PostgreSQL
+- **Healthcheck:** `/grpc.health.v1.Health/Check`
+
+---
+
+## 4. Обязательные переменные окружения
+
+```ini
+APP_ENV=local
+LOG_LEVEL=debug
+GRPC_PORT=50054
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=orbit
+DB_PASSWORD=orbit_dev_secret
+DB_NAME=navigation_db
+DB_SSLMODE=disable
+```

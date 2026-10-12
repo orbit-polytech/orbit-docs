@@ -1,0 +1,11 @@
+# --8<-- [start:buf_config]
+version: v2
+modules:
+  - path: .
+lint:
+  use:
+    - STANDARD
+breaking:
+  use:
+    - FILE
+# --8<-- [end:buf_config]

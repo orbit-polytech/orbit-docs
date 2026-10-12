@@ -1,0 +1,16 @@
+# Python & Virtualenv
+.venv/
+venv/
+ENV/
+__pycache__/
+*.pyc
+
+# MkDocs build output
+site/
+
+# Binaries & IDE
+bin/
+*.exe
+.idea/
+.vscode/
+*.swp

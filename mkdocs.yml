@@ -1,0 +1,169 @@
+site_name: Orbit AI — Документация и Учебник
+site_description: Официальное учебное руководство и технические стандарты проекта Orbit AI (Московский Политех).
+site_author: Команда разработки Orbit AI
+site_url: https://orbit-polytech.github.io/orbit-docs/
+
+repo_name: orbit-polytech/orbit-docs
+repo_url: https://github.com/orbit-polytech/orbit-docs
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: ru
+  palette:
+    # Тёмная тема по умолчанию
+    - scheme: slate
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/weather-night
+        name: Переключить на светлую тему
+    # Светлая тема
+    - scheme: default
+      primary: deep purple
+      accent: cyan
+      toggle:
+        icon: material/weather-sunny
+        name: Переключить на тёмную тему
+  font:
+    text: Roboto
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: ["."]
+      check_paths: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - attr_list
+  - def_list
+
+plugins:
+  - search
+  - minify:
+      minify_html: true
+
+nav:
+  - Главная: index.md
+
+  # =========================================================================
+  # ЧАСТЬ I. ТУТОРИАЛ (ОБУЧАЮЩИЙ КУРС)
+  # =========================================================================
+  - Учебный курс (Tutorial):
+      - I. Общее для всех направлений:
+          - 00. Подготовка рабочего места: tutorial/common/00-setup.md
+          - 01. Git и командный workflow с нуля: tutorial/common/01-git-basics.md
+          - 02. Запуск локального окружения (orbit-infra): tutorial/common/02-local-infra.md
+          - 03. Контракты API и Buf (Go и Python): tutorial/common/03-contracts-buf.md
+          - 04. Как открыть и защитить свой Pull Request: tutorial/common/04-pull-request-review.md
+
+      - II. Трек Go Backend:
+          - 01. Go в объёме проекта: tutorial/backend/01-go-essentials.md
+          - 02. Анатомия шаблона сервиса: tutorial/backend/02-service-template.md
+          - 03. Конфигурация сервиса (.env и флаги): tutorial/backend/03-configuration.md
+          - 04. Структурированное логирование (slog): tutorial/backend/04-logging-slog.md
+          - 05. Обработка и проброс ошибок между слоями: tutorial/backend/05-error-handling.md
+          - 06. Пишем сервис по слоям (tasks-service):
+              - 6.0 Принципы на практике: tutorial/backend/layers/6.0-principles-map.md
+              - 6.1 Доменный слой (Domain): tutorial/backend/layers/6.1-domain.md
+              - 6.2 Порты и сценарии (Usecase): tutorial/backend/layers/6.2-usecase.md
+              - 6.3 Инфраструктура и in-memory хранилище: tutorial/backend/layers/6.3-infrastructure-inmemory.md
+              - 6.4 Транспорт gRPC (Хендлеры и маппинг контрактов): tutorial/backend/layers/6.4-transport-grpc.md
+              - 6.5 События как порт (Event Publisher): tutorial/backend/layers/6.5-events-port.md
+              - 6.6 Точка сборки (main и Graceful Shutdown): tutorial/backend/layers/6.6-composition-root.md
+              - 6.7 Практикум рефакторинга: tutorial/backend/layers/6.7-refactoring-workshop.md
+              - 6.8 Тестирование слоёв (Unit-тесты и моки): tutorial/backend/layers/6.8-layer-testing.md
+          - 07. База данных PostgreSQL и миграции: tutorial/backend/07-postgres-database.md
+          - 08. Брокер сообщений RabbitMQ: tutorial/backend/08-rabbitmq-broker.md
+          - 09. Интеграционное тестирование (Postgres + RabbitMQ): tutorial/backend/09-integration-testing.md
+          - '10. Аутентификация: gRPC-интерцептор и метаданные пользователя': tutorial/backend/10-auth-metadata-interceptor.md
+          - '11. REST-слой Gateway (Роутер, DTO, JWT-middleware, gRPC-клиенты)': tutorial/backend/11-gateway-rest.md
+          - '12. Healthcheck: grpc_health_probe, /healthz и distroless': tutorial/backend/12-healthcheck.md
+          - 13. Упаковка и CI/CD (Dockerfile, GHCR, orbit-infra): tutorial/backend/13-docker-ci-ghcr.md
+
+      - III. Трек AI & Python:
+          - 01. Внутренний gRPC-стек AI (grpcio, pgvector, Gemini): tutorial/ai/01-ai-grpc-stack.md
+          - 02. Пайплайн RAG-поиска по регламентам Политеха: tutorial/ai/02-rag-pipeline.md
+          - 03. Telegram-бот (aiogram 3) и обращение к Gateway по REST: tutorial/ai/03-bot-rest-gateway.md
+
+      - IV. Трек Mobile (Flutter):
+          - 01. Введение во Flutter & Dart: tutorial/mobile/01-flutter-basics.md
+          - 02. Слой Presentation и управление состоянием BLoC: tutorial/mobile/02-bloc-state.md
+          - 03. Подключение к Gateway через REST API с JWT: tutorial/mobile/03-rest-client-jwt.md
+
+  # =========================================================================
+  # ЧАСТЬ II. РЕЦЕПТЫ (HOW-TO GUIDES)
+  # =========================================================================
+  - Рецепты (How-to Guides):
+      - Как создать новый сервис из шаблона: how-to/create-service-from-template.md
+      - Как добавить новый gRPC-метод: how-to/add-grpc-method.md
+      - Как написать и накатить миграцию БД: how-to/database-migration.md
+      - Как опубликовать и прослушать событие: how-to/publish-consume-event.md
+      - Как работать с Redis кэшем: how-to/redis-cache.md
+      - Как добавить переменную окружения: how-to/add-env-variable.md
+      - Как написать юнит- и интеграционный тест: how-to/write-tests.md
+      - Как настроить отладку в VS Code (Debug): how-to/debug-vscode.md
+      - Что делать, если упал Docker или занят порт: how-to/troubleshoot-docker.md
+      - Что делать при конфликтах слияния в Git: how-to/resolve-git-conflicts.md
+
+  # =========================================================================
+  # ЧАСТЬ III. АРХИТЕКТУРА И КОНЦЕПЦИИ (EXPLANATION)
+  # =========================================================================
+  - Архитектура и концепции (Explanation):
+      - Clean Architecture простыми словами: explanation/clean-architecture.md
+      - Domain-Driven Design для микросервисов: explanation/ddd-overview.md
+      - Почему gRPC внутри и REST снаружи: explanation/why-grpc-and-rest.md
+      - Архитектура аутентификации (JWT Ed25519 и метаданные): explanation/auth-architecture.md
+      - Архитектурные решения (ADR):
+          - 'ADR-001: Выбор Polyrepo вместо Monorepo': explanation/adr/001-polyrepo.md
+          - 'ADR-002: Раздельные БД для каждого сервиса': explanation/adr/002-database-per-service.md
+          - 'ADR-003: RabbitMQ для асинхронных событий': explanation/adr/003-rabbitmq-events.md
+          - 'ADR-004: Проверка JWT на Gateway и доверенная передача через gRPC-метаданные': explanation/adr/004-jwt-gateway-metadata.md
+          - 'ADR-005: Контракты в orbit-contracts с Buf (Go и Python, Dart через OpenAPI)': explanation/adr/005-contracts-repo-buf.md
+          - 'ADR-006: Разделение ролей Redis (кэш/токены) и RabbitMQ (события)': explanation/adr/006-redis-vs-rabbitmq.md
+
+  # =========================================================================
+  # ЧАСТЬ IV. СПРАВОЧНИК (REFERENCE)
+  # =========================================================================
+  - Справочник (Reference):
+      - Карта репозиториев организации: reference/polyrepo-map.md
+      - Соглашения об именовании и кодстайл: reference/naming-conventions.md
+      - Спецификация внешнего REST API (OpenAPI): reference/api/openapi.md
+      - Спецификация кодов ошибок: reference/error-codes.md
+      - Сводная таблица портов и переменных окружения: reference/ports-and-env.md
+      - Справочник сервисов:
+          - gateway-service: reference/services/gateway.md
+          - auth-service: reference/services/auth.md
+          - users-service: reference/services/users.md
+          - schedule-service: reference/services/schedule.md
+          - navigation-service: reference/services/navigation.md
+          - notification-service: reference/services/notification.md
+          - ai-service: reference/services/ai.md
+          - bot-service: reference/services/bot.md
+          - client-mobile: reference/services/mobile.md
+      - О проекте и команде: reference/about.md

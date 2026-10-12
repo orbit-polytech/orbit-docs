@@ -1,0 +1,105 @@
+// --8<-- [start:proto_full]
+syntax = "proto3";
+
+package orbit.tasks.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// --8<-- [start:proto_enums]
+// TaskPriority приоритет учебной задачи
+enum TaskPriority {
+  TASK_PRIORITY_UNSPECIFIED = 0;
+  TASK_PRIORITY_LOW = 1;
+  TASK_PRIORITY_MEDIUM = 2;
+  TASK_PRIORITY_HIGH = 3;
+}
+
+// TaskStatus статус выполнения задачи
+enum TaskStatus {
+  TASK_STATUS_UNSPECIFIED = 0;
+  TASK_STATUS_PENDING = 1;
+  TASK_STATUS_COMPLETED = 2;
+}
+// --8<-- [end:proto_enums]
+
+// --8<-- [start:proto_task_message]
+// Task доменная модель учебной задачи
+message Task {
+  string id = 1;
+  string owner_id = 2;
+  string title = 3;
+  string description = 4;
+  google.protobuf.Timestamp deadline = 5;
+  TaskPriority priority = 6;
+  TaskStatus status = 7;
+  // version порядковый номер версии для оптимистичной блокировки на сервере (начинается с 1)
+  int64 version = 8;
+  google.protobuf.Timestamp created_at = 9;
+}
+// --8<-- [end:proto_task_message]
+
+// --8<-- [start:proto_requests]
+// CreateTaskRequest запрос создания задачи (owner_id извлекается из контекста авторизации шлюза)
+message CreateTaskRequest {
+  string title = 1;
+  string description = 2;
+  google.protobuf.Timestamp deadline = 3;
+  TaskPriority priority = 4;
+  // idempotency_key уникальный ключ запроса клиента (до 64 символов) для предотвращения дубликатов
+  string idempotency_key = 5;
+}
+
+message CreateTaskResponse {
+  Task task = 1;
+}
+
+message GetTaskRequest {
+  string id = 1;
+}
+
+message GetTaskResponse {
+  Task task = 1;
+}
+
+// ListTasksRequest запрос списка задач с пагинацией (owner_id извлекается из контекста авторизации)
+message ListTasksRequest {
+  // limit максимальное количество задач в выборке (строго от 1 до 100)
+  int32 limit = 1;
+  // offset смещение выборки (неотрицательное целое число, >= 0)
+  int32 offset = 2;
+}
+
+message ListTasksResponse {
+  repeated Task tasks = 1;
+  int32 total_count = 2;
+}
+
+message CompleteTaskRequest {
+  string id = 1;
+}
+
+message CompleteTaskResponse {
+  Task task = 1;
+}
+
+message RescheduleTaskRequest {
+  string id = 1;
+  google.protobuf.Timestamp new_deadline = 2;
+}
+
+message RescheduleTaskResponse {
+  Task task = 1;
+}
+// --8<-- [end:proto_requests]
+
+// --8<-- [start:proto_service]
+// TaskService сервис управления учебными задачами студентов
+service TaskService {
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse);
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse);
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse);
+  rpc RescheduleTask(RescheduleTaskRequest) returns (RescheduleTaskResponse);
+}
+// --8<-- [end:proto_service]
+// --8<-- [end:proto_full]

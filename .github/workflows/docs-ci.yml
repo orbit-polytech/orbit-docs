@@ -1,0 +1,76 @@
+name: Documentation & Examples CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-examples:
+    name: Test & Lint tasks-service
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/tasks-service
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: examples/tasks-service/go.mod
+          cache-dependency-path: examples/tasks-service/go.sum
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Verify go mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: Run Unit & Layer Tests with Race Detector
+        run: go test -v -race -count=1 ./...
+
+      - name: Setup Buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Run buf lint
+        run: buf lint api/proto
+
+      - name: Verify buf generate drift
+        run: |
+          buf generate api/proto
+          git diff --exit-code pkg/api
+
+      - name: Run golangci-lint (Clean Architecture & depguard rules)
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          working-directory: examples/tasks-service
+
+  validate-docs:
+    name: Build MkDocs Site
+    runs-on: ubuntu-latest
+    needs: validate-examples
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install MkDocs dependencies
+        run: pip install -r requirements.txt
+
+      - name: Build documentation (Strict)
+        run: mkdocs build --strict
