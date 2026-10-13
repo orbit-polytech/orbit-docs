@@ -9,9 +9,13 @@
 ## 1. Системные требования и платформы
 
 * **Поддерживаемые ОС**:
+    * **Windows 10/11** (нативная разработка через PowerShell, Windows Terminal или CMD с установленным Docker Desktop). Виртуальные машины и WSL 2 настраивать не обязательно — стек поддерживается нативно;
     * **Linux** (Ubuntu 22.04 LTS / 24.04 LTS, Debian, Fedora, Arch);
-    * **macOS** (Apple Silicon M1/M2/M3/M4 или Intel, macOS 13+);
-    * **Windows 10/11** (строго с установленным **WSL2** и дистрибутивом Ubuntu 22.04/24.04). Разработка бэкенда непосредственно в Windows PowerShell поддерживается, но для работы с Docker и скриптами автоматизации рекомендуется среда Linux/WSL2.
+    * **macOS** (Apple Silicon M1/M2/M3/M4 или Intel, macOS 13+).
+* **Рекомендации для пользователей Windows**:
+    * **Путь к проекту**: создавайте рабочую папку в корне диска без кириллицы и пробелов (например, `C:\orbit`). Это исключает ошибки компиляторов и монтирования Docker томов;
+    * **Кодировка консоли**: включите UTF-8 (`chcp 65001`), чтобы русскоязычные логи выводились корректно;
+    * **Окончания строк в Git**: настройте `git config --global core.autocrlf true`.
 * **Аппаратные ресурсы**:
     * ОЗУ: минимум 8 ГБ (рекомендуется 16 ГБ для комфортного запуска Docker Compose со всеми БД и брокерами);
     * Свободное место на диске: минимум 25 ГБ.
@@ -23,6 +27,13 @@
 ### 2.1. Установка и настройка Git
 Git — основа версионирования кода в нашей организации `orbit-polytech`.
 
+=== "Windows"
+    Скачайте официальный инсталлятор с [git-scm.com](https://git-scm.com/) или установите через `winget`:
+    ```powershell
+    winget install --id Git.Git -e --source winget
+    ```
+    Инсталлятор Git для Windows включает в себя также полезные утилиты `bash`, `curl` и `openssl`.
+
 === "Linux (Ubuntu/Debian)"
     ```bash
     sudo apt update && sudo apt install -y git curl wget jq make
@@ -31,12 +42,6 @@ Git — основа версионирования кода в нашей ор�
 === "macOS"
     ```bash
     brew install git curl jq make
-    ```
-
-=== "Windows (WSL2)"
-    Запустите терминал Ubuntu в WSL2:
-    ```bash
-    sudo apt update && sudo apt install -y git curl wget jq make
     ```
 
 ### 2.2. Глобальная конфигурация Git
@@ -54,19 +59,30 @@ git config --global pull.rebase true
 # Для Linux и macOS:
 git config --global core.autocrlf input
 
-# Для Windows (если работаете в PowerShell):
+# Для Windows (PowerShell / CMD):
 git config --global core.autocrlf true
 ```
 
 ### 2.3. Настройка SSH-ключа для GitHub
 Для безопасной работы без постоянного ввода пароля настройте Ed25519-ключ:
 
-```bash
-ssh-keygen -t ed25519 -C "ivan.ivanov@example.com"
-eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519
-cat ~/.ssh/id_ed25519.pub
-```
+=== "Windows (PowerShell)"
+    ```powershell
+    # Генерация ключа (при запросе парольной фразы можно просто нажать Enter)
+    ssh-keygen -t ed25519 -C "ivan.ivanov@example.com"
+
+    # Вывод созданного публичного ключа для добавления в GitHub:
+    Get-Content $env:USERPROFILE\.ssh\id_ed25519.pub
+    ```
+
+=== "Linux / macOS"
+    ```bash
+    ssh-keygen -t ed25519 -C "ivan.ivanov@example.com"
+    eval "$(ssh-agent -s)"
+    ssh-add ~/.ssh/id_ed25519
+    cat ~/.ssh/id_ed25519.pub
+    ```
+
 Скопируйте полученную строку и добавьте её в свой профиль GitHub: **Settings $\to$ SSH and GPG keys $\to$ New SSH key**.
 
 Проверьте подключение:
@@ -81,12 +97,12 @@ ssh -T git@github.com
 
 Все внешние зависимости (PostgreSQL, Redis, RabbitMQ, pgvector) разворачиваются локально в изолированных контейнерах через репозиторий `infra`.
 
+* **Windows / macOS**: установите [Docker Desktop](https://www.docker.com/products/docker-desktop/). На Windows Docker Desktop сразу интегрируется со стандартным PowerShell и командной строкой, позволяя выполнять команды `docker` и `docker compose` без дополнительных настроек;
 * **Linux**: установите [Docker Engine и Docker Compose v2](https://docs.docker.com/engine/install/ubuntu/) через официальный репозиторий Docker. Обязательно добавьте пользователя в группу `docker`:
     ```bash
     sudo usermod -aG docker $USER
     newgrp docker
     ```
-* **macOS / Windows**: установите [Docker Desktop](https://www.docker.com/products/docker-desktop/). На Windows включите интеграцию **Use the WSL 2 based engine**.
 
 Проверка установки:
 ```bash
@@ -104,7 +120,17 @@ docker run --rm hello-world
 ### 4.1. Установка Go
 Официальный дистрибутив загружается с [go.dev/dl](https://go.dev/dl/):
 
-=== "Linux / WSL2"
+=== "Windows"
+    Скачайте MSI-инсталлятор с [go.dev/dl](https://go.dev/dl/) или установите через `winget`:
+    ```powershell
+    winget install GoLang.Go
+    ```
+    Инсталлятор автоматически добавит `go` в системный `PATH`. Чтобы утилиты, установленные через `go install` (например `golangci-lint`, `buf`, `goose`), вызывались из любого терминала, добавьте папку `%USERPROFILE%\go\bin` в `PATH` текущего пользователя (выполните один раз в PowerShell):
+    ```powershell
+    [Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\go\bin", "User")
+    ```
+
+=== "Linux"
     ```bash
     wget https://go.dev/dl/go1.26.6.linux-amd64.tar.gz
     sudo rm -rf /usr/local/go && sudo tar -C /usr/local -xzf go1.26.6.linux-amd64.tar.gz
@@ -126,8 +152,7 @@ docker run --rm hello-world
 ### 4.2. Установка линтера `golangci-lint`
 Статический анализ кода в Orbit строго автоматизирован:
 ```bash
-# Официальный скрипт установки бинарника golangci-lint:
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 golangci-lint --version
 ```
 
@@ -137,7 +162,15 @@ golangci-lint --version
 
 API-контракты между сервисами описаны на Protocol Buffers v3 и управляются утилитой **Buf** (версия v2):
 
-=== "Linux / WSL2 / macOS"
+=== "Windows"
+    ```powershell
+    # Через winget:
+    winget install bufbuild.buf
+    # Или через Go:
+    go install github.com/bufbuild/buf/cmd/buf@latest
+    ```
+
+=== "Linux / macOS"
     ```bash
     # Установка бинарника Buf:
     BIN="/usr/local/bin" && \
@@ -145,16 +178,10 @@ API-контракты между сервисами описаны на Protoco
     chmod +x "${BIN}/buf"
     ```
 
-=== "Windows"
-    ```powershell
-    # Через Scoop или winget:
-    winget install bufbuild.buf
-    ```
-
 Проверка:
 ```bash
 buf --version
-# Должно вернуть версию 1.30+ или 1.70+
+# Должно вернуть версию 1.40+ (v2 config)
 ```
 
 ---
@@ -164,13 +191,31 @@ buf --version
 Для сервиса искусственного интеллекта (`ai-service`) и Telegram-бота (`bot-service`):
 
 1. **Python 3.12+**:
-   ```bash
-   sudo apt install -y python3 python3-pip python3-venv
-   ```
+   === "Windows"
+       ```powershell
+       winget install Python.Python.3.12
+       # Или скачайте установщик с python.org (отметьте галочку "Add python.exe to PATH")
+       ```
+   === "Linux"
+       ```bash
+       sudo apt install -y python3 python3-pip python3-venv
+       ```
+   === "macOS"
+       ```bash
+       brew install python@3.12
+       ```
+
 2. **Менеджер пакетов `uv` (рекомендуется)**:
-   ```bash
-   curl -LsSf https://astral.sh/uv/install.sh | sh
-   ```
+   === "Windows"
+       ```powershell
+       powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+       # Или через winget:
+       # winget install astral-sh.uv
+       ```
+   === "Linux / macOS"
+       ```bash
+       curl -LsSf https://astral.sh/uv/install.sh | sh
+       ```
 
 ---
 
@@ -217,29 +262,47 @@ code --install-extension usernamehw.errorlens
 
 ## 9. Комплексная самодиагностика (Smoke Test)
 
-Создайте в домашней директории скрипт `check_env.sh` и запустите его для подтверждения готовности всех компонентов:
+Проверьте готовность всех установленных компонентов в вашем терминале:
 
-```bash
-#!/usr/bin/env bash
-set -e
+=== "Windows (PowerShell)"
+    Выполните следующие команды в PowerShell для быстрой проверки:
+    ```powershell
+    Write-Host "=== Проверка окружения Orbit AI ===" -ForegroundColor Cyan
+    git --version
+    docker --version
+    docker compose version
+    go version
+    golangci-lint --version
+    buf --version
+    python --version
+    Write-Host "======================================" -ForegroundColor Cyan
+    Write-Host "Все критические инструменты установлены успешно!" -ForegroundColor Green
+    # Подсказка: если golangci-lint или buf не найдены, убедитесь, что %USERPROFILE%\go\bin
+    # добавлен в PATH (см. шаг 4.1), и перезапустите окно терминала.
+    ```
 
-echo "=== Проверка окружения Orbit AI ==="
-printf "%-15s: " "Git" && git --version
-printf "%-15s: " "Docker" && docker --version
-printf "%-15s: " "Docker Compose" && docker compose version
-printf "%-15s: " "Go" && go version
-printf "%-15s: " "golangci-lint" && golangci-lint --version
-printf "%-15s: " "Buf CLI" && buf --version
-printf "%-15s: " "Python" && python3 --version
+=== "Linux / macOS (Bash)"
+    Создайте в домашней директории скрипт `check_env.sh` и запустите его:
+    ```bash
+    #!/usr/bin/env bash
+    set -e
 
-echo "======================================"
-echo "Все критические инструменты установлены успешно!"
-```
+    echo "=== Проверка окружения Orbit AI ==="
+    printf "%-15s: " "Git" && git --version
+    printf "%-15s: " "Docker" && docker --version
+    printf "%-15s: " "Docker Compose" && docker compose version
+    printf "%-15s: " "Go" && go version
+    printf "%-15s: " "golangci-lint" && golangci-lint --version
+    printf "%-15s: " "Buf CLI" && buf --version
+    printf "%-15s: " "Python" && python3 --version
 
-Сделайте скрипт исполняемым и выполните:
-```bash
-chmod +x check_env.sh
-./check_env.sh
-```
+    echo "======================================"
+    echo "Все критические инструменты установлены успешно!"
+    ```
+    Сделайте скрипт исполняемым и выполните:
+    ```bash
+    chmod +x check_env.sh
+    ./check_env.sh
+    ```
 
 Если все строки вернули версии без ошибок — ваше рабочее место готово. Переходите к следующей главе: **[01. Git и командный workflow с нуля](01-git-basics.md)**.

@@ -15,50 +15,89 @@
 | **Git** | 2.40+ | `git --version` |
 | **Docker Engine & Compose** | Compose 2.22+ (с поддержкой `watch`) | `docker compose version` |
 | **Go** | 1.25+ | `go version` |
-| **Python** | 3.12+ | `python3 --version` |
+| **Python** | 3.12+ | `python --version` (Windows) / `python3 --version` (Linux) |
 | **uv** (менеджер пакетов Python) | свежая | `uv --version` |
 | **Flutter** | stable (3.24+) | `flutter doctor` |
 | **Buf CLI** | 1.40+ (v2 config) | `buf --version` |
 | **grpcurl** | свежая | `grpcurl --version` |
-| **Make** | любая | `make --version` |
+| **Make** | любая | `make --version` *(для Linux/macOS; на Windows опционально)* |
 
-### Рекомендация для пользователей Windows
-На Windows рекомендуется работать внутри **WSL 2 (Ubuntu)**. 
-Репозитории клонируйте внутрь файловой системы WSL (например, в `~/orbit`), а не в смонтированный диск `/mnt/c/...`, иначе сборка Go и дисковый ввод-вывод Docker будут работать заметно медленнее.
+### Нативная разработка на Windows, Linux и macOS
+Вам **не требуется** настраивать виртуальные машины или WSL 2, если вы этого не хотите. На Windows разработка ведётся нативно и комфортно: через обычный терминал (**PowerShell**, **Windows Terminal** или CMD), установленный **Docker Desktop** и стандартные инструменты разработчика.
 
-Установка консольных Go-утилит одной командой:
+> [!TIP]
+> **А что насчет WSL 2?**  
+> Если вы на Windows уже привыкли работать внутри Linux-окружения через WSL 2 (Ubuntu), вы можете продолжать им пользоваться — просто следуйте инструкциям на вкладках **Linux / macOS**. Но если WSL у вас не настроен, ставить его специально не нужно: нативная разработка в Windows через PowerShell и Docker Desktop полностью поддерживается и работает без лишних прослоек.
+
+Чтобы локальная среда на Windows работала без сюрпризов, обратите внимание на три простых правила:
+1. **Путь к рабочей папке (без пробелов и кириллицы)**: Создайте папку проекта прямо в корне диска, например `C:\orbit` (или `D:\orbit`). Если положить репозитории в путь вроде `C:\Users\Иван Иванов\Документы\...`, компилятор Go и Docker-монтирования volumes могут спотыкаться о пробелы и русские буквы в путях.
+2. **Кодировка UTF-8 в консоли**: В PowerShell перед началом работы можно выполнить команду `chcp 65001`, чтобы вывод консоли и логи на русском языке отображались без искажений.
+3. **Окончания строк в Git**: Для исключения конфликтов переводов строк (CRLF vs LF) настройте Git: `git config --global core.autocrlf true`.
+
+Установка консольных Go-утилит одной командой (работает одинаково в PowerShell, CMD, Bash и Zsh):
 
 ```bash
 go install github.com/bufbuild/buf/cmd/buf@latest
 go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
-go install golang.org/x/vuln/cmd/govulncheck@latest
+go install github.com/pressly/goose/v3/cmd/goose@latest
 go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+go install golang.org/x/vuln/cmd/govulncheck@latest
 ```
 
-Убедитесь, что путь `$(go env GOPATH)/bin` добавлен в системную переменную `PATH`.
+* `buf` — работа с Proto-контрактами;
+* `grpcurl` — тестирование gRPC-эндпоинтов из консоли;
+* `goose` — применение и откат миграций PostgreSQL;
+* `golangci-lint` — статический анализатор кода Go;
+* `govulncheck` — проверка зависимостей на уязвимости.
+
+Убедитесь, что каталог с бинарными файлами Go добавлен в переменную `PATH`:
+- **Windows**: `%USERPROFILE%\go\bin` (или `$env:USERPROFILE\go\bin`). Чтобы добавить один раз в PowerShell:
+  ```powershell
+  [Environment]::SetEnvironmentVariable("Path", $env:Path + ";$env:USERPROFILE\go\bin", "User")
+  ```
+- **Linux / macOS**: `$(go env GOPATH)/bin` (обычно `~/go/bin`).
 
 ---
 
 ## 2. Шаг 1. Клонирование репозиториев
 
-Репозитории клонируются в одну общую рабочую директорию рядом друг с другом. Docker Compose в репозитории `infra` находит исходный код сервисов по относительным путям `../<сервис>`:
+Все сервисы проекта клонируются в одну общую рабочую директорию рядом друг с другом. Это ключевое архитектурное соглашение: Docker Compose в репозитории `infra` находит исходный код микросервисов по относительным путям `../<сервис>`.
 
-```bash
-mkdir -p ~/orbit && cd ~/orbit
+=== "Windows (PowerShell)"
+    ```powershell
+    # Создаем рабочую папку в корне диска и переходим в неё
+    mkdir C:\orbit
+    cd C:\orbit
 
-# Инфраструктура, контракты и базовые сервисы
-git clone git@github.com:orbit-polytech/infra.git
-git clone git@github.com:orbit-polytech/contracts.git
-git clone git@github.com:orbit-polytech/gateway-service.git
-git clone git@github.com:orbit-polytech/auth-service.git
-git clone git@github.com:orbit-polytech/tasks-service.git
-# Остальные сервисы (schedule, navigation, ai, mobile) клонируются по мере работы
-```
+    # Инфраструктура, API-контракты и базовые сервисы
+    git clone https://github.com/orbit-polytech/infra.git
+    git clone https://github.com/orbit-polytech/contracts.git
+    git clone https://github.com/orbit-polytech/gateway-service.git
+    git clone https://github.com/orbit-polytech/auth-service.git
+    git clone https://github.com/orbit-polytech/tasks-service.git
+    # Дополнительные сервисы (ai-service, mobile и т.д.) клонируются по мере необходимости
+    ```
 
-Итоговая структура папок на диске:
+=== "Linux / macOS"
+    ```bash
+    # Создаем рабочую папку и переходим в неё
+    mkdir -p ~/orbit && cd ~/orbit
+
+    # Инфраструктура, API-контракты и базовые сервисы
+    git clone https://github.com/orbit-polytech/infra.git
+    git clone https://github.com/orbit-polytech/contracts.git
+    git clone https://github.com/orbit-polytech/gateway-service.git
+    git clone https://github.com/orbit-polytech/auth-service.git
+    git clone https://github.com/orbit-polytech/tasks-service.git
+    ```
+
+> [!TIP]
+> Если у вас настроен SSH-ключ для GitHub, вместо HTTPS-ссылок вы можете клонировать через SSH: `git clone git@github.com:orbit-polytech/infra.git`.
+
+Итоговая структура папок на вашем диске:
 
 ```text
-~/orbit/
+orbit/  (например, C:\orbit или ~/orbit)
 ├── infra/
 ├── contracts/
 ├── gateway-service/
@@ -71,29 +110,58 @@ git clone git@github.com:orbit-polytech/tasks-service.git
 
 ## 3. Шаг 2. Переменные окружения и ключи
 
-Перейдите в папку инфраструктуры и скопируйте шаблон переменных окружения:
+Перейдите в папку инфраструктуры и создайте файл локальных настроек `.env` на основе шаблона:
 
-```bash
-cd ~/orbit/infra
-cp .env.example .env
-```
+=== "Windows (PowerShell)"
+    ```powershell
+    cd C:\orbit\infra
+    Copy-Item .env.example .env
+    ```
 
-Значения по умолчанию из `.env.example` уже оптимизированы для локальной разработки. Секретный ключ Google Gemini (`GEMINI_API_KEY`) и токен Telegram-бота (`TELEGRAM_BOT_TOKEN`) каждый разработчик генерирует для себя индивидуально и вносит только в свой локальный `.env`. Файл `.env` никогда не коммитится в Git.
+=== "Linux / macOS"
+    ```bash
+    cd ~/orbit/infra
+    cp .env.example .env
+    ```
 
-Сгенерируйте пару асимметричных ключей **Ed25519** для подписи JWT:
+Значения по умолчанию из `.env.example` уже оптимизированы для локальной разработки (порты, пароли к тестовым БД и адреса брокеров). Внешние секреты (например, ключ Gemini API или токен Telegram) вносятся по желанию только в локальный `.env`. Файл `.env` защищён `.gitignore` и никогда не попадает в репозиторий.
 
-```bash
-make keys
-# Создаст пару: secrets/jwt_ed25519 (приватный) и secrets/jwt_ed25519.pub (публичный)
-```
+Для авторизации в системе используется асимметричная подпись токенов **Ed25519**: сервис `auth-service` подписывает токен приватным ключом, а `gateway-service` проверяет его по открытому ключу. Создадим эту пару ключей в папке `secrets/`:
 
-Директория `secrets/` также занесена в `.gitignore`.
+=== "Windows (PowerShell / OpenSSL)"
+    ```powershell
+    # Переходим в папку infra (если еще не там) и создаем каталог secrets
+    cd C:\orbit\infra
+    if (-not (Test-Path "secrets")) { New-Item -ItemType Directory -Path "secrets" }
+
+    # Генерируем пару ключей Ed25519 через openssl (входит в стандартную поставку Git)
+    openssl genpkey -algorithm ed25519 -out secrets/jwt_ed25519
+    openssl pkey -in secrets/jwt_ed25519 -pubout -out secrets/jwt_ed25519.pub
+
+    # Подсказка: если PowerShell сообщает, что команда openssl не найдена,
+    # вызовите бинарник Git напрямую:
+    # & "C:\Program Files\Git\usr\bin\openssl.exe" genpkey -algorithm ed25519 -out secrets/jwt_ed25519
+    # & "C:\Program Files\Git\usr\bin\openssl.exe" pkey -in secrets/jwt_ed25519 -pubout -out secrets/jwt_ed25519.pub
+    # Либо просто откройте терминал Git Bash в папке infra и выполните: make keys
+    ```
+
+=== "Linux / macOS / Make"
+    ```bash
+    make keys
+    # Выполняет скрипт scripts/gen-keys.sh и создает пару в каталоге secrets/
+    ```
+
+В результате в каталоге `infra/secrets/` появятся файлы:
+- `jwt_ed25519` — приватный ключ (читается `auth-service`);
+- `jwt_ed25519.pub` — открытый ключ (монтируется в `gateway-service`).
+
+Папка `secrets/` также добавлена в `.gitignore`.
 
 ---
 
 ## 4. Шаг 3. Запуск инфраструктурных контейнеров
 
-Запустите контейнеры баз данных и брокеров:
+Запустите контейнеры баз данных и брокеров сообщений:
 
 ```bash
 docker compose up -d postgres redis rabbitmq jaeger
@@ -104,16 +172,16 @@ docker compose ps
 
 ```bash
 # Проверка PostgreSQL 16
-docker compose exec postgres psql -U orbit -d orbit -c 'SELECT 1;'
+docker compose exec postgres psql -U orbit -d orbit -c "SELECT 1;"
 
 # Проверка Redis 7
 docker compose exec redis redis-cli ping
 # Ответ: PONG
-
-# Проверка веб-интерфейсов:
-# RabbitMQ Management: http://localhost:15672 (логин/пароль: guest / guest)
-# Jaeger UI трассировки: http://localhost:16686
 ```
+
+Веб-интерфейсы инфраструктуры доступны в браузере:
+- **RabbitMQ Management**: [http://localhost:15672](http://localhost:15672) (логин / пароль: `guest` / `guest`);
+- **Jaeger UI (трассировка)**: [http://localhost:16686](http://localhost:16686).
 
 ---
 
@@ -121,10 +189,26 @@ docker compose exec redis redis-cli ping
 
 Каждый сервис изолированно управляет своей схемой БД в общей инстанции PostgreSQL (`search_path=auth`, `search_path=tasks` и т.д.):
 
-```bash
-cd ~/orbit/auth-service && make migrate-up
-cd ~/orbit/tasks-service && make migrate-up
-```
+=== "Через Make (Linux / macOS / Git Bash)"
+    ```bash
+    cd ../auth-service && make migrate-up
+    cd ../tasks-service && make migrate-up
+    cd ../infra
+    ```
+
+=== "Через Goose (Windows PowerShell / универсально)"
+    ```powershell
+    # Применяем миграции auth-service:
+    cd ..\auth-service
+    goose -dir migrations postgres "host=localhost port=5432 user=orbit password=orbit_dev_secret dbname=orbit search_path=auth sslmode=disable" up
+
+    # Применяем миграции tasks-service:
+    cd ..\tasks-service
+    goose -dir migrations postgres "host=localhost port=5432 user=orbit password=orbit_dev_secret dbname=orbit search_path=tasks sslmode=disable" up
+
+    # Возвращаемся в папку infra:
+    cd ..\infra
+    ```
 
 ---
 
@@ -133,27 +217,52 @@ cd ~/orbit/tasks-service && make migrate-up
 Есть два основных сценария локальной разработки:
 
 ### Сценарий А: Запуск всех сервисов в Docker (удобно для фронтендеров и новичков)
-```bash
-cd ~/orbit/infra
-docker compose --profile core up -d
-# Поднимет auth-service, tasks-service и gateway-service
-```
+
+=== "Windows (PowerShell)"
+    ```powershell
+    cd C:\orbit\infra
+    docker compose --profile core up -d
+    docker compose ps
+    ```
+
+=== "Linux / macOS"
+    ```bash
+    cd ~/orbit/infra
+    docker compose --profile core up -d
+    docker compose ps
+    ```
+
+Эта команда автоматически соберёт и запустит контейнеры `auth-service`, `tasks-service` и `gateway-service`. Все три сервиса должны быть в состоянии `Up` (running).
 
 ### Сценарий Б: Сервис разрабатывается на хосте, остальное в Docker (для бэкендеров)
-Если вы прямо сейчас редактируете `tasks-service`, остановите его docker-контейнер и запустите код локально на хосте под отладчиком в VS Code:
+Если вы прямо сейчас пишете код для `tasks-service`, остановите его Docker-контейнер и запустите сервис локально в IDE или терминале:
 
-```bash
-cd ~/orbit/infra
-docker compose --profile core up -d
-docker compose stop tasks-service
+=== "Windows (PowerShell)"
+    ```powershell
+    cd C:\orbit\infra
+    docker compose --profile core up -d
+    docker compose stop tasks-service
 
-# Запуск сервиса на хосте
-cd ~/orbit/tasks-service
-cp .env.example .env
-make run
-```
+    # Запуск сервиса на хосте:
+    cd ..\tasks-service
+    if (-not (Test-Path ".env")) { Copy-Item .env.example .env }
+    go run ./cmd/tasks-service/main.go
+    ```
 
-Шлюз `gateway-service` автоматически свяжется с сервисом на хост-машине через `host.docker.internal:50055`.
+=== "Linux / macOS"
+    ```bash
+    cd ~/orbit/infra
+    docker compose --profile core up -d
+    docker compose stop tasks-service
+
+    # Запуск сервиса на хосте:
+    cd ../tasks-service
+    test -f .env || cp .env.example .env
+    go run ./cmd/tasks-service/main.go
+    # (или make run)
+    ```
+
+Шлюз `gateway-service` автоматически свяжется с сервисом на вашей хост-машине через адрес `host.docker.internal:50055`.
 
 Для режима «меняю код на диске — контейнер сам пересобирается на лету» используйте встроенную функцию Docker:
 
@@ -165,50 +274,182 @@ docker compose --profile core watch
 
 ## 7. Шаг 6. Проверка работы и первый запрос
 
-### Проверка gRPC напрямую через `grpcurl`:
-*(gRPC reflection активирован только в режиме `APP_ENV=local`)*
+Поздравляем! Инфраструктура и сервисы запущены. Теперь проверим, как работает наш стек в реальном сценарии.
+
+Вместо громоздких консольных команд с bash-пайпами, самый наглядный и быстрый способ для разработчика — воспользоваться интерактивным интерфейсом **Swagger UI** прямо в браузере.
+
+---
+
+### Основной способ: Проверка через Swagger UI (в браузере)
+
+Шлюз `gateway-service` автоматически предоставляет веб-интерфейс со всеми эндпоинтами системы.
+
+Откройте браузер по адресу:
+[**`http://localhost:8080/swagger`**](http://localhost:8080/swagger) (или [**`http://localhost:8080/docs`**](http://localhost:8080/docs)).
+
+Перед вами откроется интерактивная страница со списком доступных методов API. Пройдем базовый сценарий пользователя за 4 простых шага:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as Разработчик (Браузер)
+    participant GW as HTTP Gateway (:8080)
+    participant Auth as auth-service (:50051)
+    participant Tasks as tasks-service (:50055)
+    participant DB as PostgreSQL (:5432)
+
+    Dev->>GW: POST /v1/auth/dev-login {"telegram_id": 1001}
+    GW->>Auth: gRPC DevLogin
+    Auth-->>GW: JWT (Ed25519)
+    GW-->>Dev: access_token: eyJhbGciOiJFZ...
+    Note over Dev: В Swagger нажимаем Authorize и вставляем токен
+
+    Dev->>GW: POST /v1/tasks (Authorization: Bearer <token>)
+    GW->>Tasks: gRPC CreateTask (x-user-id: 1001)
+    Tasks->>DB: INSERT INTO tasks.tasks
+    Tasks-->>GW: Task DTO
+    GW-->>Dev: 201 Created { id, title, status }
+```
+
+#### 1. Получаем тестовый токен (Dev-логин)
+1. В секции **Auth** найдите метод **`POST /v1/auth/dev-login`** (в локальном окружении он позволяет мгновенно войти под тестовым профилем без отправки внешних кодов).
+2. Нажмите кнопку **Try it out** справа.
+3. В поле *Request body* укажите тестовый ID студента:
+   ```json
+   {
+     "telegram_id": 1001
+   }
+   ```
+4. Нажмите синюю кнопку **Execute**.
+5. Прокрутите чуть ниже до блока **Responses** (статус `200 OK`). В ответе вы увидите поле `access_token` с длинной строкой токена (начинается с `eyJ...`). Скопируйте значение токена в буфер обмена (без кавычек).
+
+#### 2. Авторизуемся в Swagger UI
+1. Поднимитесь в верхнюю часть страницы Swagger UI и нажмите зеленую кнопку **Authorize** (с изображением замочка).
+2. В поле *Value* введите:
+   ```text
+   Bearer ВАШ_СКОПИРОВАННЫЙ_ТОКЕН
+   ```
+   *(или просто сам токен, если поле настроено автоматически)*.
+3. Нажмите **Authorize**, а затем **Close**. Теперь замочки рядом с методами закроются — все последующие запросы из браузера будут автоматически отправляться с вашим JWT-токеном.
+
+#### 3. Создаем первую задачу студента
+1. В секции **Tasks** найдите метод **`POST /v1/tasks`**.
+2. Нажмите **Try it out**.
+3. В поле *Request body* укажите параметры задачи:
+   ```json
+   {
+     "title": "Сдать 1-ю лабораторную по микросервисам",
+     "due_at": "2026-11-01T18:00:00Z"
+   }
+   ```
+4. Если отображается поле заголовка `Idempotency-Key`, укажите любую уникальную строку (например, `test-task-1`).
+5. Нажмите **Execute**.
+6. В ответе со статусом `201 Created` (или `200 OK`) вы увидите созданную задачу с уникальным `id`, статусом `OPEN` и временем создания. Задача успешно записана в базу данных!
+
+#### 4. Проверяем список задач
+1. В той же секции **Tasks** разверните метод **`GET /v1/tasks`**.
+2. Нажмите **Try it out** $\to$ **Execute**.
+3. В теле ответа отобразится массив задач текущего авторизованного студента, содержащий созданную вами задачу.
+
+---
+
+### Наглядная трассировка запроса в Jaeger
+
+После выполнения запросов откройте интерфейс распределенного трейсинга **Jaeger**:
+[**`http://localhost:16686`**](http://localhost:16686)
+
+1. В левой панели в выпадающем списке **Service** выберите `gateway-service` (или `tasks-service`).
+2. Нажмите кнопку **Find Traces**.
+3. Кликните на найденный трейс `POST /v1/tasks`.
+
+Вы увидите интерактивную временную шкалу вызова:
+- Вход HTTP-запроса в шлюз;
+- Проверка криптографической подписи JWT в middleware;
+- gRPC-вызов между `gateway-service` и `tasks-service`;
+- Выполнение SQL-запроса `INSERT` в PostgreSQL.
+
+Это наглядно демонстрирует, как взаимодействуют микросервисы без необходимости читать бесконечные консольные логи.
+
+---
+
+### Альтернатива: Проверка через терминал
+
+Если вам привычнее отправлять запросы из консоли, используйте готовые команды без внешних зависимостей (`jq`, `tee` и `uuidgen` не требуются):
+
+=== "Windows (PowerShell)"
+    ```powershell
+    # 1. Получаем токен авторизации dev-пользователя
+    $login = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/v1/auth/dev-login" `
+      -ContentType "application/json; charset=utf-8" -Body '{"telegram_id": 1001}'
+    $token = $login.access_token
+    Write-Host "Получен токен: $token" -ForegroundColor Green
+
+    # 2. Создаем задачу через HTTP Gateway
+    $headers = @{
+        "Authorization" = "Bearer $token"
+        "Idempotency-Key" = [guid]::NewGuid().ToString()
+    }
+    $taskBody = '{"title": "Сдать 1-ю лабораторную по базам данных", "due_at": "2026-11-01T18:00:00Z"}'
+    $newTask = Invoke-RestMethod -Method Post -Uri "http://localhost:8080/v1/tasks" `
+      -Headers $headers -ContentType "application/json; charset=utf-8" -Body $taskBody
+    Write-Host "Создана задача с ID: $($newTask.id)" -ForegroundColor Cyan
+
+    # 3. Получаем список задач
+    $tasks = Invoke-RestMethod -Method Get -Uri "http://localhost:8080/v1/tasks" `
+      -Headers @{ "Authorization" = "Bearer $token" }
+    $tasks
+    ```
+
+=== "Linux / macOS (cURL)"
+    ```bash
+    # 1. Получаем токен dev-пользователя
+    TOKEN=$(curl -s -X POST http://localhost:8080/v1/auth/dev-login \
+      -H 'Content-Type: application/json' \
+      -d '{"telegram_id": 1001}' | grep -o '"access_token":"[^"]*' | cut -d'"' -f4)
+
+    # 2. Создаем задачу через HTTP Gateway
+    curl -s -X POST http://localhost:8080/v1/tasks \
+      -H "Authorization: Bearer $TOKEN" \
+      -H 'Content-Type: application/json' \
+      -H "Idempotency-Key: task-test-01" \
+      -d '{"title": "Сдать 1-ю лабораторную по базам данных", "due_at": "2026-11-01T18:00:00Z"}'
+
+    # 3. Запрашиваем список задач
+    curl -s http://localhost:8080/v1/tasks -H "Authorization: Bearer $TOKEN"
+    ```
+
+### Проверка gRPC напрямую (для бэкенд-разработчиков)
+Если вам нужно протестировать gRPC-сервис в обход шлюза через утилиту `grpcurl`:
 
 ```bash
 grpcurl -plaintext localhost:50055 list
 grpcurl -plaintext localhost:50055 grpc.health.v1.Health/Check
 ```
-
-### Проверка через единый HTTP Gateway (как это делает приложение):
-
-```bash
-# 1. Получаем тестовый токен через dev-логин (доступен только при APP_ENV=local)
-curl -s -X POST http://localhost:8080/v1/auth/dev-login \
-  -H 'Content-Type: application/json' \
-  -d '{"telegram_id": 1001}' | tee /tmp/login.json
-
-TOKEN=$(jq -r .access_token /tmp/login.json)
-
-# 2. Создаем задачу через HTTP API с ключом идемпотентности
-curl -s -X POST http://localhost:8080/v1/tasks \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -H "Idempotency-Key: $(uuidgen)" \
-  -d '{"title": "Сдать 1-ю лабораторную по базам данных", "due_at": "2026-11-01T18:00:00Z"}'
-
-# 3. Запрашиваем список задач текущего студента
-curl -s http://localhost:8080/v1/tasks -H "Authorization: Bearer $TOKEN" | jq .
-```
-
-Откройте панель **Jaeger** на [http://localhost:16686](http://localhost:16686), выберите сервис `gateway` и найдите созданный трейс. Вы увидите наглядную диаграмму того, как запрос прошел через шлюз, gRPC-интерцепторы и обратился к PostgreSQL.
+*(gRPC reflection активирован по умолчанию при `APP_ENV=local`).*
 
 ---
 
 ## 8. Шаг 7. Запуск мобильного приложения на Flutter
 
-```bash
-cd ~/orbit/mobile
-flutter pub get
-flutter run -t lib/main_development.dart --dart-define=API_URL=http://localhost:8080
-```
+Клиентское приложение `mobile` подключается к запущенному шлюзу:
+
+=== "Windows (PowerShell)"
+    ```powershell
+    cd C:\orbit\mobile
+    flutter pub get
+    flutter run -t lib/main_development.dart --dart-define=API_URL=http://localhost:8080
+    ```
+
+=== "Linux / macOS"
+    ```bash
+    cd ~/orbit/mobile
+    flutter pub get
+    flutter run -t lib/main_development.dart --dart-define=API_URL=http://localhost:8080
+    ```
 
 > [!NOTE]
-> Для Android-эмулятора локальный хост доступен по специальному IP: `10.0.2.2`. 
-> Запуск для Android: `--dart-define=API_URL=http://10.0.2.2:8080`.
+> При тестировании внутри Android-эмулятора адрес хост-компьютера `localhost` доступен по специальному IP `10.0.2.2`. 
+> Параметр запуска для Android: `--dart-define=API_URL=http://10.0.2.2:8080`.
 
 ---
 
@@ -216,15 +457,25 @@ flutter run -t lib/main_development.dart --dart-define=API_URL=http://localhost:
 
 | Симптом | Причина | Что сделать |
 |---|---|---|
-| `bind: address already in use (5432)` | Порт занят системным Postgres | Остановите локальную службу: `sudo service postgresql stop` или проверьте `lsof -i :5432`. |
-| Сервис падает с `connection refused` к Postgres | БД ещё не успела пройти инициализацию | Проверьте в `compose.yaml` условие `condition: service_healthy`. |
-| `relation "tasks.tasks" does not exist` | Не применены миграции | Запустите шаг 4: `make migrate-up` в директории сервиса. |
-| Gateway возвращает `401 Unauthorized` | Истёк 15-минутный access-токен или были пересозданы ключи в `secrets/` | Получите новый токен через `/v1/auth/dev-login`. |
-| Gateway возвращает `503 Service Unavailable` | Целевой микросервис не запущен | Проверьте `docker compose ps` или запустите сервис на хосте. |
+| `bind: address already in use (5432)` | Порт 5432 занят системным PostgreSQL, установленным ранее как служба Windows/Linux | **На Windows**: откройте диспетчер служб (`Win+R` $\to$ `services.msc`), найдите службу `postgresql-x64...` и остановите её (или в PowerShell: `Stop-Service postgresql*`).<br>**На Linux**: `sudo service postgresql stop`. |
+| Ошибки сборки Go или монтирования volumes в Docker | В пути к папке проекта есть русские буквы или пробелы (например, `C:\Пользователи\Иван\...`) | Переместите проект в простой путь без кириллицы и пробелов: `C:\orbit`. |
+| Искаженный вывод кириллицы в консоли Windows | Неверная кодовая страница PowerShell | Выполните в терминале команду `chcp 65001` (переключение на UTF-8). |
+| `openssl` не распознаётся как команда в PowerShell | Путь к OpenSSL из Git не добавлен в системный `PATH` | Используйте прямой путь: `& "C:\Program Files\Git\usr\bin\openssl.exe" ...` либо запустите генерацию ключей в Git Bash (`make keys`). |
+| Сервис падает с `connection refused` к Postgres | БД ещё не успела пройти инициализацию при первом старте | Дождитесь статуса healthy (`docker compose ps`) либо проверьте условия `condition: service_healthy` в `compose.yaml`. |
+| `relation "tasks.tasks" does not exist` | Не применены миграции схемы базы данных | Выполните Шаг 4: накатите миграции через `goose` или `make migrate-up`. |
+| Gateway возвращает `401 Unauthorized` | Истёк 15-минутный access-токен или были заново сгенерированы ключи в `secrets/` | Получите свежий токен через dev-логин (`POST /v1/auth/dev-login`). |
+| Gateway возвращает `503 Service Unavailable` | Целевой микросервис (`tasks-service` или `auth-service`) не запущен | Проверьте состояние контейнеров `docker compose ps` или запустите сервис локально. |
 
-Полный сброс и очистка всех контейнеров и томов:
+Полный сброс и очистка всех контейнеров и баз данных (при необходимости начать всё заново):
 
-```bash
-cd ~/orbit/infra
-docker compose --profile "*" down -v
-```
+=== "Windows (PowerShell)"
+    ```powershell
+    cd C:\orbit\infra
+    docker compose --profile "*" down -v
+    ```
+
+=== "Linux / macOS"
+    ```bash
+    cd ~/orbit/infra
+    docker compose --profile "*" down -v
+    ```
