@@ -13,7 +13,33 @@
 - `schedule-service` подключается к базе `schedule_db`;
 - `auth-service` подключается к базе `auth_db`.
 
-![Изолированные базы данных микросервисов (Database per Service)](image/db-per-service.png)
+```mermaid
+flowchart LR
+    subgraph ServiceTasks ["tasks-service"]
+        direction TB
+        AppTasks["Код сервиса"]
+    end
+
+    subgraph ServiceSched ["schedule-service"]
+        direction TB
+        AppSched["Код сервиса"]
+    end
+
+    subgraph ServiceAuth ["auth-service"]
+        direction TB
+        AppAuth["Код сервиса"]
+    end
+
+    DBTasks[("tasks_db")]
+    DBSched[("schedule_db")]
+    DBAuth[("auth_db")]
+
+    AppTasks -->|"Собственный пул pgx"| DBTasks
+    AppSched -->|"Собственный пул pgx"| DBSched
+    AppAuth -->|"Собственный пул pgx"| DBAuth
+
+    AppTasks -.->|"Запрещено (только gRPC/Events)"| DBSched
+```
 
 
 > [!CRITICAL] Запрет прямых межсервисных SQL-запросов

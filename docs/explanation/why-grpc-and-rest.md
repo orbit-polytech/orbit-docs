@@ -4,9 +4,34 @@
 
 ---
 
-## 1. Архитектурная топология сети
+```mermaid
+flowchart TD
+    subgraph Clients ["Внешние клиенты (Интернет / Публичный периметр)"]
+        Mobile["Orbit Mobile (Flutter)"]
+        Bot["Orbit Bot (aiogram 3)"]
+        Web["Swagger UI / Web"]
+    end
 
-![Сетевая топология: REST на внешней границе и gRPC во внутреннем контуре](image/network-topology.png)
+    subgraph Perimeter ["Периметр безопасности"]
+        GW["gateway-service (:8080)<br/>REST Router Chi + JWT Verifier"]
+    end
+
+    subgraph InternalMesh ["Внутренняя сеть orbit-net (Бинарный gRPC / HTTP/2)"]
+        Auth["auth-service (:50051)"]
+        Tasks["tasks-service (:50055)"]
+        Sched["schedule-service (:50052)"]
+        AI["ai-service (:50054)"]
+    end
+
+    Mobile ==>|"HTTPS / REST JSON"| GW
+    Bot ==>|"HTTPS / REST JSON"| GW
+    Web ==>|"HTTPS / REST JSON"| GW
+
+    GW -->|"gRPC / Protobuf"| Auth
+    GW -->|"gRPC / Protobuf"| Tasks
+    GW -->|"gRPC / Protobuf"| Sched
+    GW -->|"gRPC / Protobuf"| AI
+```
 
 ---
 

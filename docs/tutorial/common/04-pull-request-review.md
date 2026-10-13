@@ -8,9 +8,16 @@
 
 ## 1. Жизненный цикл задачи и Pull Request
 
-Работа над любой задачей проходит через строго определённые этапы:
-
-![Схема жизненного цикла задачи и Pull Request](image/pr-lifecycle.png)
+```mermaid
+flowchart LR
+    A["1. Ветка от main"] --> B["2. Разработка и тесты"]
+    B --> C["3. Локальный Quality Gate"]
+    C --> D["4. Открытие PR"]
+    D --> E["5. Авто-проверки CI"]
+    E --> F["6. Code Review"]
+    F -->|Замечания| B
+    F -->|Approved| G["7. Squash and Merge в main"]
+```
 
 1. **Создание ветки**: ветка отводится от свежего `main` (`feature/name`, `fix/name`, `refactor/name`).
 2. **Локальная разработка**: соблюдение слоёв Clean Architecture, написание тестов.
@@ -112,9 +119,38 @@ Closes #42
 
 ## 4. Автоматические проверки в CI (GitHub Actions)
 
-При открытии или обновлении PR в репозитории запускается пайплайн GitHub Actions.
-
-![Схема автоматического пайплайна проверок CI (Quality Gate)](image/ci-quality-gate.png)
+```mermaid
+flowchart TD
+    Push["Git Push / Open PR"] --> CI["GitHub Actions Pipeline"]
+    
+    subgraph Linters["Статический анализ"]
+        L1["buf lint"]
+        L2["golangci-lint"]
+        L3["ruff check (Python)"]
+    end
+    
+    subgraph Tests["Тестирование"]
+        T1["go test -v -race"]
+        T2["pytest -v"]
+        T3["flutter test"]
+    end
+    
+    subgraph Contracts["Контракты"]
+        C1["buf generate & drift check"]
+        C2["buf breaking"]
+    end
+    
+    CI --> Linters
+    CI --> Tests
+    CI --> Contracts
+    
+    Linters --> Decision{"Все проверки успешны?"}
+    Tests --> Decision
+    Contracts --> Decision
+    
+    Decision -->|Нет: Red CI| Reject["Блокировка ревью и слияния"]
+    Decision -->|Да: Green CI| Review["Допуск к Code Review"]
+```
 
 > [!CRITICAL] Правило «Красного CI»
 > Если хотя бы одна проверка в CI упала (красный крестик), **PR не рассматривается ревьюером**.

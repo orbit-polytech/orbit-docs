@@ -10,7 +10,23 @@
 
 Локальный стек `infra` поднимает изолированные контейнеры, необходимые для запуска сервисов на машинах разработчиков:
 
-![Схема локального окружения и Docker Compose стека](image/local-infra-stack.png)
+```mermaid
+flowchart TD
+    subgraph Host ["Локальная машина разработчика"]
+        Dev["Сервисы Orbit AI (tasks-service, gateway, ai-service)"]
+    end
+
+    subgraph DockerInfra ["Docker Compose (репозиторий infra)"]
+        direction TB
+        PG[("PostgreSQL 16 + pgvector<br/>:5432 (auth_db, tasks_db, ai_db)")]
+        Redis[("Redis 7.2<br/>:6379 (Кэш и Blacklist)")]
+        RMQ["RabbitMQ 3.13<br/>:5672 (AMQP) и :15672 (Web UI)"]
+    end
+
+    Dev -->|"localhost:5432"| PG
+    Dev -->|"localhost:6379"| Redis
+    Dev -->|"localhost:5672"| RMQ
+```
 
 | Компонент | Образ Docker | Порт на хосте | Роль в проекте |
 | :--- | :--- | :--- | :--- |

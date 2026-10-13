@@ -8,7 +8,21 @@
 
 ## 1. Архитектурное обоснование компромисса (ADR-004)
 
-![Схема проверки аутентификации и проброса метаданных gRPC](image/auth-interceptor-flow.png)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Клиент (Mobile / Web)
+    participant GW as gateway-service (:8080)
+    participant Tasks as tasks-service (:50055)
+
+    Client->>GW: HTTP Request (Authorization: Bearer JWT)
+    GW->>GW: 1. Проверка подписи Ed25519 в памяти (< 1 мс)
+    GW->>GW: 2. Очистка внешних заголовков (Strip Spoofed Headers)
+    GW->>Tasks: gRPC Call (Metadata: x-user-id = claims.Subject)
+    Tasks->>Tasks: 3. AuthInterceptor: валидация формата x-user-id
+    Tasks-->>GW: gRPC Response
+    GW-->>Client: HTTP JSON Response
+```
 
 
 ### Почему микросервисы не проверяют JWT самостоятельно:

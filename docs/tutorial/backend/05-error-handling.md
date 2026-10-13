@@ -8,7 +8,30 @@
 
 ## 1. Иерархия ошибок по слоям
 
-![Иерархия ошибок по слоям и трансляция в статус-коды gRPC](image/error-hierarchy.png)
+```mermaid
+flowchart TD
+    subgraph DomainErrors ["1. Доменные ошибки (domain.Err...)"]
+        ErrNotFound["domain.ErrTaskNotFound"]
+        ErrValidation["domain.ErrInvalidTitle / ErrInvalidDeadline"]
+        ErrConflict["domain.ErrVersionConflict"]
+    end
+
+    subgraph UsecaseWrap ["2. Сценарии usecase (Оборачивание через %w)"]
+        Wrap["fmt.Errorf('execute usecase: %w', err)"]
+    end
+
+    subgraph TransportMapping ["3. Транспорт gRPC (Маппинг в статус-коды)"]
+        Map404["codes.NotFound (404)"]
+        Map400["codes.InvalidArgument (400)"]
+        Map409["codes.Aborted (409)"]
+        Map500["codes.Internal (500)"]
+    end
+
+    ErrNotFound --> Wrap --> Map404
+    ErrValidation --> Wrap --> Map400
+    ErrConflict --> Wrap --> Map409
+    DBErr["Сбой БД / Драйвера"] --> Wrap --> Map500
+```
 
 
 ---

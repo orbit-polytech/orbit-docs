@@ -8,7 +8,15 @@ Telegram-бот (**`bot-service`**) предоставляет студента�
 
 ## 1. Архитектура взаимодействия бота и бэкенда
 
-![Архитектура взаимодействия бота и бэкенда через API Gateway](image/bot-gateway-topology.png)
+```mermaid
+flowchart TD
+    User["Студент в Telegram"] -->|"Команды и текст"| Bot["bot-service (aiogram 3)"]
+    Bot -->|"1. REST JSON (Authorization: Bearer)"| GW["gateway-service (:8080)"]
+    GW -->|"2. gRPC (с метаданными x-user-id)"| Services["Микросервисы:<br/>tasks-service, schedule-service, ai-service"]
+    Services -->|"3. gRPC Ответ"| GW
+    GW -->|"4. REST JSON"| Bot
+    Bot -->|"5. Ответ в чат"| User
+```
 
 
 ---

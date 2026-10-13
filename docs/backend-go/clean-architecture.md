@@ -4,9 +4,9 @@
 
 ---
 
-## 1. Зачем первокурсникам Чистая архитектура?
+## 1. Зачем нам Чистая архитектура?
 
-Обычный код новичка выглядит так: в обработчике HTTP/gRPC напрямую парсится JSON, тут же пишется SQL-запрос `SELECT * FROM ...`, здесь же отправляется письмо или вызывается внешний API.
+Обычный код без слоёв выглядит так: в обработчике HTTP/gRPC напрямую парсится JSON, тут же пишется SQL-запрос `SELECT * FROM ...`, здесь же отправляется письмо или вызывается внешний API.
 
 **В чём беда такого подхода?**
 1. **Невозможно протестировать**: чтобы проверить простую логику «дедлайн должен быть в будущем», приходится поднимать тестовый PostgreSQL и gRPC-клиент.
@@ -15,7 +15,37 @@
 
 **Чистая архитектура решает это разделением на независимые слои:**
 
-![Схема слоев Clean Architecture и The Dependency Rule](../explanation/image/clean-architecture-layers.png)
+```mermaid
+flowchart TD
+    subgraph External ["Внешний мир (Драйверы и протоколы)"]
+        HTTP["Клиенты / HTTP Gateway"]
+        DB["PostgreSQL / Redis"]
+        Broker["RabbitMQ Broker"]
+    end
+
+    subgraph TransportInfra ["Слой 3: Транспорт и Инфраструктура"]
+        GRPC["internal/transport/taskgrpc<br/>(gRPC Handlers, Interceptors)"]
+        Repo["internal/infrastructure/postgres<br/>(SQL Репозитории, БД адаптеры)"]
+    end
+
+    subgraph UsecaseLayer ["Слой 2: Сценарии (Usecase)"]
+        UC["internal/usecase<br/>(Бизнес-сценарии: Create, Get)"]
+        Ports["internal/usecase/ports.go<br/>(Интерфейсы: TaskSaver, EventPublisher)"]
+    end
+
+    subgraph DomainLayer ["Слой 1: Домен (Domain Core) — Чистый Go"]
+        Agg["internal/domain/task.go<br/>(Агрегат Task, инварианты)"]
+        VO["Value Objects<br/>(TaskID, Title, Deadline)"]
+    end
+
+    HTTP --> GRPC
+    DB --> Repo
+    GRPC ==>|"вызывает сценарий"| UC
+    Repo -.->|"реализует интерфейс"| Ports
+    UC ==>|"манипулирует сущностями"| Agg
+    UC -.->|"зависит от портов"| Ports
+    Agg --- VO
+```
 
 ---
 

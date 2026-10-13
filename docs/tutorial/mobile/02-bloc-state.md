@@ -4,11 +4,16 @@
 
 Паттерн BLoC (Business Logic Component) обеспечивает однонаправленный поток данных (**Unidirectional Data Flow**), полностью изолируя верстку виджетов от бизнес-логики.
 
----
-
 ## 1. Поток данных в BLoC
 
-![Поток данных в архитектуре BLoC](image/bloc-flow.png)
+```mermaid
+flowchart LR
+    UI["UI (Flutter Widget)"] -->|1. add(Event)| BLoC["BLoC Component"]
+    BLoC -->|2. вызов метода| Repo["Domain / Repository"]
+    Repo -->|3. результат / ошибка| BLoC
+    BLoC -->|4. emit(State)| Stream["Stream состояний"]
+    Stream -->|5. BlocBuilder (rebuild)| UI
+```
 
 
 ---

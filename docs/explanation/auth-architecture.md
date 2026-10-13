@@ -4,9 +4,32 @@
 
 ---
 
-## 1. Схема сквозной аутентификации
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Клиент (Mobile / Web)
+    participant GW as gateway-service (:8080)
+    participant Redis as Redis (Blacklist)
+    participant Auth as auth-service (:50051)
+    participant Microservice as Внутренний сервис (:5005x)
 
-![Схема сквозной аутентификации и границы доверия](image/auth-sequence.png)
+    Note over Client,Auth: 1. Вход и получение токена
+    Client->>GW: POST /v1/auth/login
+    GW->>Auth: gRPC Login()
+    Auth->>Auth: Подпись JWT приватным ключом Ed25519
+    Auth-->>GW: JWT + Refresh Token
+    GW-->>Client: 200 OK (JWT)
+
+    Note over Client,Microservice: 2. Вызов бизнес-методов
+    Client->>GW: HTTP Request (Authorization: Bearer JWT)
+    GW->>Redis: Проверка jti в blacklist
+    Redis-->>GW: Токен активен
+    GW->>GW: Валидация подписи публичным ключом Ed25519
+    GW->>GW: Очистка внешних заголовков, инъекция x-user-id
+    GW->>Microservice: gRPC Call (Metadata: x-user-id)
+    Microservice-->>GW: gRPC Response
+    GW-->>Client: HTTP JSON Response
+```
 
 
 ---

@@ -11,7 +11,21 @@
 3. **Ветки короткоживущие**: среднее время жизни ветки — от нескольких часов до 2–3 дней. Если работа над фичей занимает неделю, разбейте её на 3–4 независимых PR.
 4. **Слияние через Squash and merge**: вся история ветки задачи схлопывается в один атомарный коммит в `main`, после чего ветка удаляется. Это сохраняет историю ветки `main` чистой и понятной.
 
-![Схема Git Workflow: ветки, коммиты и Squash Merge](../tutorial/common/image/git-workflow.png)
+```mermaid
+flowchart LR
+    subgraph MainBranch ["Ветка main (Защищена, стабильный код)"]
+        M1["main @ release"] --> M2["Squash Commit #42"]
+        M2 --> M3["Следующий релиз"]
+    end
+
+    subgraph FeatureBranch ["Ветка feature/42-task-deadlines"]
+        C1["feat: domain logic"] --> C2["feat: usecase"]
+        C2 --> C3["test: unit & race"]
+    end
+
+    M1 -.->|"git checkout -b"| C1
+    C3 ==>|"Pull Request + CI Checks"| M2
+```
 
 ---
 

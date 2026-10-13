@@ -13,7 +13,21 @@
 3. **Линейная история коммитов (Rebase workflow)**:
    Мы не засоряем историю бесконечными коммитами вида `Merge branch 'main' into feature`. Обновление своей рабочей ветки выполняется через `git rebase`.
 
-![Схема Git Workflow: ветки, коммиты и Squash Merge](image/git-workflow.png)
+```mermaid
+flowchart LR
+    subgraph MainBranch ["Ветка main (Защищена, стабильный код)"]
+        M1["main @ release"] --> M2["Squash Commit #42"]
+        M2 --> M3["Следующий релиз"]
+    end
+
+    subgraph FeatureBranch ["Ветка feature/42-task-deadlines"]
+        C1["feat: domain logic"] --> C2["feat: usecase"]
+        C2 --> C3["test: unit & race"]
+    end
+
+    M1 -.->|"git checkout -b"| C1
+    C3 ==>|"Pull Request + CI Checks"| M2
+```
 
 
 ---

@@ -4,9 +4,16 @@
 
 ---
 
-## 1. Пирамида тестирования
-
-![Пирамида тестирования Orbit AI](image/testing-pyramid.png)
+```mermaid
+flowchart TD
+    subgraph Pyramid ["Пирамида тестирования сервиса"]
+        direction TB
+        E2E["E2E тесты (Мало)<br/>Сквозные вызовы через Gateway и Docker"]
+        Integration["Интеграционные тесты (Средне)<br/>Реальный PostgreSQL, pgvector, RabbitMQ в CI"]
+        Unit["Юнит-тесты (Много)<br/>Бизнес-инварианты Domain и Usecase (< 1 сек, без внешних БД)"]
+    end
+    Unit --> Integration --> E2E
+```
 
 | Тип теста | Где находится | Зависимости | Скорость выполнения |
 | :--- | :--- | :--- | :--- |

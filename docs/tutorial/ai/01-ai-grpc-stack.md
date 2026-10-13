@@ -8,9 +8,27 @@
 
 ## 1. Архитектура сервиса: Clean Architecture в Python
 
-Сгенерированные утилитой `buf` файлы Protobuf (`rag_pb2.py`, `rag_pb2_grpc.py`) являются артефактами сетевого транспорта и не должны проникать в бизнес-логику:
+```mermaid
+flowchart TD
+    subgraph Transport ["Транспортный слой (interfaces/grpc)"]
+        Servicer["RagGrpcServicer (grpc.aio)<br/>Парсинг DTO, метаданные x-user-id"]
+    end
 
-![Архитектура Clean Architecture в ai-service (Python, gRPC, pgvector, Gemini)](image/ai-clean-architecture.png)
+    subgraph Usecase ["Слой сценариев (usecases/)"]
+        UC["RagSearchUseCase<br/>Оркестрация RAG: поиск + генерация"]
+        Ports["Интерфейсы портов:<br/>VectorRepository, LLMClient"]
+    end
+
+    subgraph Infrastructure ["Инфраструктура (infrastructure/)"]
+        PG["PgVectorRepository<br/>psycopg 3 + HNSW индекс 768"]
+        Gemini["GeminiLLMClient<br/>google-genai SDK (Gemini 2.0 Flash)"]
+    end
+
+    Servicer --> UC
+    UC --> Ports
+    PG -.->|"реализует"| Ports
+    Gemini -.->|"реализует"| Ports
+```
 
 
 ---

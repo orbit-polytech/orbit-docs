@@ -13,7 +13,37 @@
 > **Исходный код может зависеть только от внутренних слоев и никогда не зависит от внешних.**  
 > Внутренний слой ничего не знает о существовании внешнего.
 
-![Схема слоев Clean Architecture и The Dependency Rule](image/clean-architecture-layers.png)
+```mermaid
+flowchart TD
+    subgraph External ["Внешний мир (Драйверы и протоколы)"]
+        HTTP["Клиенты / HTTP Gateway"]
+        DB["PostgreSQL / Redis"]
+        Broker["RabbitMQ Broker"]
+    end
+
+    subgraph TransportInfra ["Слой 3: Транспорт и Инфраструктура"]
+        GRPC["internal/transport/taskgrpc<br/>(gRPC Handlers, Interceptors)"]
+        Repo["internal/infrastructure/postgres<br/>(SQL Репозитории, БД адаптеры)"]
+    end
+
+    subgraph UsecaseLayer ["Слой 2: Сценарии (Usecase)"]
+        UC["internal/usecase<br/>(Бизнес-сценарии: Create, Get)"]
+        Ports["internal/usecase/ports.go<br/>(Интерфейсы: TaskSaver, EventPublisher)"]
+    end
+
+    subgraph DomainLayer ["Слой 1: Домен (Domain Core) — Чистый Go"]
+        Agg["internal/domain/task.go<br/>(Агрегат Task, инварианты)"]
+        VO["Value Objects<br/>(TaskID, Title, Deadline)"]
+    end
+
+    HTTP --> GRPC
+    DB --> Repo
+    GRPC ==>|"вызывает сценарий"| UC
+    Repo -.->|"реализует интерфейс"| Ports
+    UC ==>|"манипулирует сущностями"| Agg
+    UC -.->|"зависит от портов"| Ports
+    Agg --- VO
+```
 
 ---
 

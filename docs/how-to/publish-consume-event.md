@@ -4,9 +4,34 @@
 
 ---
 
-## 1. Архитектурная схема доставки событий
+```mermaid
+sequenceDiagram
+    autonumber
+    participant App as Сервис-издатель (Usecase)
+    participant DB1 as БД Издателя (PostgreSQL)
+    participant Worker as Outbox Worker (Фоновый процесс)
+    participant RMQ as RabbitMQ (Topic Exchange)
+    participant Consumer as Сервис-подписчик (Consumer)
+    participant DB2 as БД Подписчика (Idempotency Key)
 
-![Архитектурная схема доставки событий через Transactional Outbox и Idempotent Consumer](image/outbox-delivery-flow.png)
+    Note over App,DB1: 1. Атомарная транзакция в БД
+    App->>DB1: BEGIN TRANSACTION
+    App->>DB1: INSERT INTO tasks (...)
+    App->>DB1: INSERT INTO outbox_events (id, payload, processed_at=NULL)
+    App->>DB1: COMMIT (Dual-write исключен)
+
+    Note over Worker,RMQ: 2. Фоновая отправка в брокер
+    Worker->>DB1: SELECT * FROM outbox_events WHERE processed_at IS NULL
+    Worker->>RMQ: BasicPublish(exchange="orbit.events", routing_key="task.created")
+    RMQ-->>Worker: Ack
+    Worker->>DB1: UPDATE outbox_events SET processed_at = NOW()
+
+    Note over RMQ,DB2: 3. Идемпотентная обработка
+    RMQ->>Consumer: Deliver Message (event_id, payload)
+    Consumer->>DB2: Проверка event_id (дедупликация)
+    Consumer->>DB2: Обработка события + сохранение event_id
+    Consumer->>RMQ: BasicAck
+```
 
 
 ---

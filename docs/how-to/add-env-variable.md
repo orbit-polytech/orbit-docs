@@ -4,9 +4,15 @@
 
 ---
 
-## 1. Архитектурное правило
-
-![Fail-Fast инициализация конфигурации микросервиса](image/config-flow.png)
+```mermaid
+flowchart TD
+    Env[".env / Окружение ОС"] -->|"1. Чтение"| Load["config.Load() в internal/config"]
+    Load -->|"2. Валидация диапазонов"| Validate{"Параметры корректны?"}
+    Validate -- "Нет" --> Panic["Fail-Fast: аварийный выход с кодом 1"]
+    Validate -- "Да" --> Cfg["Типизированная структура *config.Config"]
+    Cfg -->|"3. Передача в конструкторы"| App["cmd/main.go (Composition Root)"]
+    App --> Components["Компоненты (gRPC, PostgreSQL, Redis)"]
+```
 
 > [!CAUTION] Запрет прямого чтения
 > Ни один слой (`domain`, `usecase`, `repository`, `transport`) не имеет права вызывать `os.Getenv()`. Вся конфигурация считывается и проверяется **исключительно в пакете `internal/config`** и передается в компоненты через параметры конструкторов.

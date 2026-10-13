@@ -1,11 +1,10 @@
-# Orbit AI — Инженерная база знаний и архитектурный стандарт
+# Orbit AI — Руководство разработчика и стандарты архитектуры
 
-Добро пожаловать в официальную инженерную базу знаний и руководство разработчика распределенной системы **Orbit AI** — цифрового ассистента для студентов и преподавателей Московского Политеха.
+Это центральная база знаний и инженерное руководство проекта **Orbit AI**. Здесь зафиксированы архитектурные стандарты, устройство сервисов и правила командной работы над кодовой базой.
 
-Здесь собраны правила командной разработки, стандарты архитектуры микросервисов, пошаговые руководства и справочники по всем технологиям проекта.
+Система построена на микросервисной архитектуре из 13 специализированных репозиториев, объединённых общим API Gateway, контрактами Protobuf и асинхронной шиной RabbitMQ. Если вы только подключились к разработке — начните с раздела [Быстрый старт](quickstart/local-setup.md), чтобы развернуть локальное окружение и сделать первый запрос.
 
 ---
-
 
 ## 1. Архитектурная схема экосистемы
 
@@ -86,18 +85,6 @@
     - [JWT и асимметричная подпись Ed25519](security/jwt-ed25519.md);
     - [Сессии, Refresh Tokens и Token Reuse Detection](security/sessions-refresh.md);
     - [Защита от IDOR, инъекций и подмены ролей](security/validation-defense.md).
-
--   :material-bug-check: __[Разбор ошибок tasks-service (Post-Mortem)](tasks-service-postmortem/overview.md)__
-    
-    ---
-    
-    6 практических уроков из аудита реального кода:
-    - [Гонка в идемпотентности (Check-then-act)](tasks-service-postmortem/01-idempotency-race.md);
-    - [Сломанная оптимистичная блокировка](tasks-service-postmortem/02-optimistic-locking.md);
-    - [Нарушение DIP в gRPC-транспорте](tasks-service-postmortem/03-transport-dip.md);
-    - [Хрупкий switch ошибок (OCP)](tasks-service-postmortem/04-error-handling-ocp.md);
-    - [Декомпозиция сценариев (SRP)](tasks-service-postmortem/05-usecase-srp.md);
-    - [Скрытые паники в генераторах ID](tasks-service-postmortem/06-runtime-panics.md).
 
 -   :material-book-open-page-variant: __[Справочник](reference/canonical-values.md)__
     

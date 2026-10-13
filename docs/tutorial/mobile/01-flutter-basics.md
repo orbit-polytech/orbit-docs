@@ -8,9 +8,27 @@
 
 ## 1. Архитектурное позиционирование в системе
 
-В соответствии с решением **ADR-005**, мобильное приложение общается с бэкендом **исключительно через внешний API Gateway по протоколу REST/JSON**:
-
-![Архитектурное позиционирование client-mobile и API Gateway](image/flutter-architecture.png)
+```mermaid
+flowchart TD
+    App["client-mobile (Flutter App)"]
+    
+    subgraph Edge["Внешний периметр"]
+        GW["API Gateway (:8080)<br/>HTTPS / REST / JSON"]
+    end
+    
+    subgraph Internal["Внутренний контур (gRPC)"]
+        Auth["auth-service (:50051)"]
+        Tasks["tasks-service (:50052)"]
+        Schedule["schedule-service (:50053)"]
+        AI["ai-service (:50054)"]
+    end
+    
+    App -->|HTTPS / REST + JWT| GW
+    GW -->|gRPC + x-user-id| Auth
+    GW -->|gRPC + x-user-id| Tasks
+    GW -->|gRPC + x-user-id| Schedule
+    GW -->|gRPC + x-user-id| AI
+```
 
 ### Почему в мобильном приложении нет gRPC:
 - В репозитории контрактов `contracts` генерация кода под Dart исключена (ADR-005).

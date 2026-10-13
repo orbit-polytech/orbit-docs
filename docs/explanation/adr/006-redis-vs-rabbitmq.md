@@ -20,7 +20,24 @@
 ## Решение
 Принято четкое архитектурное разделение ответственности между двумя инструментами:
 
-![Архитектурное разделение ролей Redis 7 и RabbitMQ](image/redis-vs-rabbitmq.png)
+```mermaid
+flowchart LR
+    subgraph RedisRole ["Redis 7 (Оперативный In-Memory Кэш)"]
+        direction TB
+        R1["Key-Value чтение за < 1 мс"]
+        R2["Cache-Aside со строгим TTL"]
+        R3["Token Blacklist (auth:blacklist:jti)"]
+        R4["Rate Limiting по IP/UserID"]
+    end
+
+    subgraph RabbitRole ["RabbitMQ (Брокер асинхронных событий)"]
+        direction TB
+        Q1["Topic Exchange: orbit.events"]
+        Q2["Персистентные очереди на диске"]
+        Q3["Гарантированная доставка At-Least-Once"]
+        Q4["Dead Letter Queue (DLQ) для сбоев"]
+    end
+```
 
 1. **Redis используется ТОЛЬКО как:**
    - Быстрый кэш со строгим временем жизни (TTL) и fallback на базу данных PostgreSQL;

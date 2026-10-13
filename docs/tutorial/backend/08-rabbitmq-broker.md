@@ -8,9 +8,16 @@
 
 ## 1. Топология AMQP 0-9-1 в Orbit AI
 
-Все события публикуются в центральный обменник типа `topic`:
-
-![Топология RabbitMQ AMQP 0-9-1 и Transactional Outbox](image/rabbitmq-topology.png)
+```mermaid
+flowchart LR
+    Pub["tasks-service (Издатель)"] -->|"Outbox Worker"| Ex["Topic Exchange: orbit.events"]
+    
+    Ex -->|"tasks.v1.task.*"| Q1["Queue: notification.tasks"]
+    Ex -->|"tasks.v1.task.created"| Q2["Queue: ai.tasks.ingestion"]
+    
+    Q1 --> Sub1["notification-service"]
+    Q2 --> Sub2["ai-service"]
+```
 
 ### Соглашение об именовании ключей маршрутизации (Routing Keys):
 ```text

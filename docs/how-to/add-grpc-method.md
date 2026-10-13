@@ -4,9 +4,16 @@
 
 ---
 
-## 1. Схема движения изменений
+```mermaid
+flowchart TD
+    Step1["1. Описание proto в contracts<br/>(сигнатура RPC, Request/Response)"]
+    Step2["2. Генерация кода через Buf CLI<br/>(buf generate для Go, Python, Dart)"]
+    Step3["3. Реализация домена и сценария<br/>(internal/domain и internal/usecase)"]
+    Step4["4. Реализация gRPC-хэндлера<br/>(internal/transport/taskgrpc)"]
+    Step5["5. Подключение эндпоинта в Gateway<br/>(REST маршрут в gateway-service)"]
 
-![Порядок добавления нового gRPC-метода](image/add-grpc-method-flow.png)
+    Step1 --> Step2 --> Step3 --> Step4 --> Step5
+```
 
 ---
 

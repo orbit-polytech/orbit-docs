@@ -290,7 +290,27 @@ docker compose --profile core watch
 
 Перед вами откроется интерактивная страница со списком доступных методов API. Пройдем базовый сценарий пользователя за 4 простых шага:
 
-![Сквозной сценарий: Dev-логин и создание задачи через Gateway](image/quickstart-sequence.png)
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as Разработчик (Swagger UI)
+    participant GW as gateway-service (:8080)
+    participant Auth as auth-service (:50051)
+    participant Tasks as tasks-service (:50055)
+
+    Note over Dev,GW: Шаг 1. Получение Dev-токена
+    Dev->>GW: POST /v1/auth/dev-login {"telegram_id": 1001}
+    GW->>Auth: gRPC DevLogin(1001)
+    Auth-->>GW: JWT access_token (Ed25519)
+    GW-->>Dev: 200 OK {"access_token": "eyJ..."}
+
+    Note over Dev,Tasks: Шаг 2. Запрос к сервису с токеном
+    Dev->>GW: POST /v1/tasks (Header: Bearer eyJ...)
+    GW->>GW: Проверка подписи Ed25519, извлечение x-user-id
+    GW->>Tasks: gRPC CreateTask(metadata: x-user-id=1001)
+    Tasks-->>GW: TaskCreated
+    GW-->>Dev: 201 Created {"id": "tsk_...", "title": "..."}
+```
 
 
 #### 1. Получаем тестовый токен (Dev-логин)

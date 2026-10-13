@@ -8,7 +8,16 @@
 
 ## 1. Схема сквозного пайплайна RAG
 
-![Схема сквозного пайплайна RAG-поиска по регламентам](image/rag-pipeline.png)
+```mermaid
+flowchart LR
+    Q["Вопрос студента:<br/>'Сколько баллов для зачета?'"] --> Emb["text-embedding-004<br/>(Вектор 768 float)"]
+    Emb --> HNSW["pgvector в PostgreSQL<br/>(HNSW косинусный поиск <=>)"]
+    Doc[("База регламентов Политеха<br/>(PostgreSQL)")] --> HNSW
+    HNSW --> TopK["Top-3 релевантных фрагмента<br/>(similarity >= 0.75)"]
+    TopK --> Prompt["Промпт: Вопрос + Найденные регламенты"]
+    Prompt --> Gen["Gemini 2.0 Flash<br/>(Синтез ответа)"]
+    Gen --> Ans["Точный ответ со ссылкой на пункт регламента"]
+```
 
 ---
 

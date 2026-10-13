@@ -44,7 +44,27 @@ service-root/
 
 Главное правило чистой архитектуры: **внутренние слои ничего не знают о внешних слоях**.
 
-![Слои сервиса и правило зависимостей (Dependency Rule)](image/service-template-layers.png)
+```mermaid
+flowchart TD
+    subgraph Layer4 ["Слой 4: Входной транспорт и драйверы"]
+        Transport["internal/transport/taskgrpc (gRPC)"]
+        Infra["internal/infrastructure (postgres, rabbitmq)"]
+    end
+
+    subgraph Layer3 ["Слой 3: Прикладные сценарии"]
+        UC["internal/usecase (Сценарии)"]
+        Ports["internal/usecase/ports.go (Интерфейсы)"]
+    end
+
+    subgraph Layer2 ["Слой 2: Доменное ядро (Чистый Go)"]
+        Domain["internal/domain (Task, инварианты, Value Objects)"]
+    end
+
+    Transport ==>|"вызывает"| UC
+    Infra -.->|"реализует порты"| Ports
+    UC ==>|"манипулирует сущностями"| Domain
+    UC -.->|"зависит от"| Ports
+```
 
 
 ### Зоны ответственности слоёв:

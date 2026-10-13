@@ -10,7 +10,15 @@
 
 В модели Polyrepo каждый сервис изолирован, но им необходим общий язык общения. Для этого выделен единый репозиторий **`contracts`**:
 
-![Схема пайплайна Contract-First и Buf CLI](image/contracts-buf-pipeline.png)
+```mermaid
+flowchart LR
+    Proto["Репозиторий contracts<br/>(api/proto/orbit/*)"] --> Lint["buf lint и buf breaking"]
+    Lint --> Gen["buf generate"]
+    Gen --> Go["Go-модуль contracts/gen/go<br/>(типы и gRPC-стабы)"]
+    Gen --> Py["Python-пакет<br/>(Pydantic/gRPC стабы)"]
+    Go --> GoServices["Микросервисы Go<br/>(auth, tasks, gateway)"]
+    Py --> PyServices["Микросервисы Python<br/>(ai-service, bot-service)"]
+```
 
 ### Ключевые архитектурные решения:
 1. **Единый источник истины**:

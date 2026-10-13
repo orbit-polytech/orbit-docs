@@ -8,7 +8,15 @@ Gateway принимает внешние запросы по протоколу
 
 ## 1. Архитектура и поток запроса в Gateway
 
-![Архитектура и конвейер обработки запроса в API Gateway](image/gateway-request-pipeline.png)
+```mermaid
+flowchart LR
+    Req["HTTP Запрос<br/>POST /v1/tasks"] --> CORS["1. CORS & Rate Limit"]
+    CORS --> Trace["2. TraceID & Slog Logger"]
+    Trace --> JWT["3. JWT Middleware<br/>(Проверка Ed25519)"]
+    JWT --> Handler["4. REST Handler<br/>(Парсинг JSON DTO)"]
+    Handler --> Client["5. gRPC Клиент<br/>(Пул соединений)"]
+    Client --> Backend["tasks-service (:50055)"]
+```
 
 
 ---
