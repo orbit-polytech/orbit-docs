@@ -1,101 +1,130 @@
 <mxfile host="app.diagrams.net">
-  <diagram name="Orbit AI Git Workflow" id="orbit-git-workflow">
-    <mxGraphModel dx="1000" dy="500" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="500" background="#ffffff" math="0" shadow="0">
+  <diagram name="Git Workflow по ГОСТ" id="git-workflow-gost">
+    <mxGraphModel dx="1000" dy="1200" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="800" pageHeight="1100" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
 
-        <!-- Заголовок -->
-        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=15;fontColor=#0f172a;" value="Orbit AI Git Workflow • Linear History &amp;amp; Short-Lived Feature Branches" vertex="1">
-          <mxGeometry x="30" y="20" width="800" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="sub" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#64748b;" value="Стандарт командной разработки: ветки, Conventional Commits, Rebase и Squash Merge" vertex="1">
-          <mxGeometry x="30" y="45" width="650" height="20" as="geometry" />
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Times New Roman;fontStyle=1;fontSize=15;fontColor=#000000;" value="Командный регламент работы с Git (Rebase &amp; Squash Merge)" vertex="1">
+          <mxGeometry x="100" y="20" width="600" height="30" as="geometry" />
         </mxCell>
 
-        <!-- Бейдж ветки main -->
-        <mxCell id="badge_main" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#2563eb;strokeWidth=1.5;fillColor=#eff6ff;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=12;fontColor=#1d4ed8;" value="main" vertex="1">
-          <mxGeometry x="30" y="95" width="80" height="32" as="geometry" />
+        <!-- 1. Начало -->
+        <mxCell id="start" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;fontFamily=Times New Roman;fontSize=12;fontStyle=1;fontColor=#000000;strokeColor=#000000;fillColor=#ffffff;" value="Начало задачи" vertex="1">
+          <mxGeometry x="340" y="70" width="120" height="40" as="geometry" />
         </mxCell>
-        <!-- Линия ветки main -->
-        <mxCell id="line_main" parent="1" style="endArrow=none;html=1;strokeColor=#2563eb;strokeWidth=4;" edge="1">
+
+        <!-- 2. Создание ветки -->
+        <mxCell id="step_branch" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="git checkout -b feature/&lt;name&gt; от свежего main" vertex="1">
+          <mxGeometry x="270" y="140" width="260" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" edge="1" parent="1" source="start" target="step_branch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 3. Написание кода -->
+        <mxCell id="step_code" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Разработка функциональности и юнит-тестов" vertex="1">
+          <mxGeometry x="270" y="210" width="260" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" edge="1" parent="1" source="step_branch" target="step_code" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 4. Коммит -->
+        <mxCell id="step_commit" parent="1" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Ввод: git commit -m &quot;feat(...): ...&quot;" vertex="1">
+          <mxGeometry x="280" y="280" width="240" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" edge="1" parent="1" source="step_code" target="step_commit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 5. Локальный запуск линтера и тестов -->
+        <mxCell id="step_test" parent="1" style="shape=process;backgroundOutline=1;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Запуск тестов: go test -race ./... и golangci-lint" vertex="1">
+          <mxGeometry x="260" y="355" width="280" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" edge="1" parent="1" source="step_commit" target="step_test" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 6. Условие прохождения тестов -->
+        <mxCell id="cond_tests" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Локальные тесты пройдены?" vertex="1">
+          <mxGeometry x="310" y="430" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" edge="1" parent="1" source="step_test" target="cond_tests" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Ветка Нет: возврат к коду -->
+        <mxCell id="e_fix_code" edge="1" parent="1" source="cond_tests" target="step_code" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;" value="Нет (исправление)">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="120" y="111" as="sourcePoint" />
-            <mxPoint x="920" y="111" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="590" y="460" />
+              <mxPoint x="590" y="230" />
+            </Array>
           </mxGeometry>
         </mxCell>
 
-        <!-- Бейдж ветки feature -->
-        <mxCell id="badge_feature" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#d97706;strokeWidth=1.5;fillColor=#fffbeb;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=11;fontColor=#b45309;" value="feature/task-filters" vertex="1">
-          <mxGeometry x="30" y="240" width="180" height="32" as="geometry" />
+        <!-- 7. Пуш ветки -->
+        <mxCell id="step_push" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="git push origin feature/&lt;name&gt;" vertex="1">
+          <mxGeometry x="290" y="520" width="220" height="40" as="geometry" />
         </mxCell>
-        <!-- Линия ветки feature -->
-        <mxCell id="line_feature" parent="1" style="endArrow=none;html=1;strokeColor=#d97706;strokeWidth=4;" edge="1">
+        <mxCell id="e6" edge="1" parent="1" source="cond_tests" target="step_push" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;" value="Да">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 8. Создание PR -->
+        <mxCell id="step_pr" parent="1" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Создание Pull Request в GitHub" vertex="1">
+          <mxGeometry x="280" y="590" width="240" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" edge="1" parent="1" source="step_push" target="step_pr" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- 9. Проверка CI и Review -->
+        <mxCell id="cond_review" parent="1" style="rhombus;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="CI зелёный &amp;&amp; Review одобрен?" vertex="1">
+          <mxGeometry x="300" y="665" width="200" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="step_pr" target="cond_review" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Ветка ребейза -->
+        <mxCell id="step_rebase" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="git fetch &amp;&amp; git rebase origin/main" vertex="1">
+          <mxGeometry x="40" y="680" width="200" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="e_rebase" edge="1" parent="1" source="cond_review" target="step_rebase" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;" value="Конфликт / правки">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_back_push" edge="1" parent="1" source="step_rebase" target="step_code" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
           <mxGeometry relative="1" as="geometry">
-            <mxPoint x="310" y="256" as="sourcePoint" />
-            <mxPoint x="760" y="256" as="targetPoint" />
+            <Array as="points">
+              <mxPoint x="140" y="230" />
+            </Array>
           </mxGeometry>
         </mxCell>
 
-        <!-- Ответвление feature от main -->
-        <mxCell id="curve_branch" parent="1" style="edgeStyle=orthogonalEdgeStyle;curved=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#d97706;strokeWidth=4;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="230" y="111" as="sourcePoint" />
-            <mxPoint x="310" y="256" as="targetPoint" />
-          </mxGeometry>
+        <!-- 10. Squash & Merge -->
+        <mxCell id="step_merge" parent="1" style="shape=process;backgroundOutline=1;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Squash &amp; Merge в main (1 атомарный коммит)" vertex="1">
+          <mxGeometry x="270" y="770" width="260" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" edge="1" parent="1" source="cond_review" target="step_merge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;" value="Да">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- Слияние Squash & Merge обратно в main -->
-        <mxCell id="curve_merge" parent="1" style="edgeStyle=orthogonalEdgeStyle;curved=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#16a34a;strokeWidth=4;" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="760" y="256" as="sourcePoint" />
-            <mxPoint x="840" y="111" as="targetPoint" />
-          </mxGeometry>
+        <!-- 11. Вывод -->
+        <mxCell id="out_done" parent="1" style="shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Вывод: Ветка удалена, изменения в продакшене" vertex="1">
+          <mxGeometry x="250" y="845" width="300" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" edge="1" parent="1" source="step_merge" target="out_done" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- Коммит 1 на main: v1.0.0 -->
-        <mxCell id="c_main_v1" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#2563eb;strokeWidth=3;fillColor=#ffffff;" vertex="1">
-          <mxGeometry x="220" y="101" width="20" height="20" as="geometry" />
+        <!-- 12. Конец -->
+        <mxCell id="finish" parent="1" style="strokeWidth=2;html=1;shape=mxgraph.flowchart.terminator;whiteSpace=wrap;fontFamily=Times New Roman;fontSize=12;fontStyle=1;fontColor=#000000;strokeColor=#000000;fillColor=#ffffff;" value="Конец" vertex="1">
+          <mxGeometry x="340" y="920" width="120" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="tag_v1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#64748b;strokeWidth=1;fillColor=#f1f5f9;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=10;fontColor=#334155;" value="v1.0.0" vertex="1">
-          <mxGeometry x="195" y="65" width="70" height="24" as="geometry" />
-        </mxCell>
-
-        <!-- Параллельный коммит в main: fix(auth): validate token exp -->
-        <mxCell id="c_main_fix" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#2563eb;strokeWidth=3;fillColor=#ffffff;" vertex="1">
-          <mxGeometry x="525" y="101" width="20" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="card_main_fix" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#93c5fd;strokeWidth=1;fillColor=#eff6ff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10.5;fontColor=#1e40af;" value="&lt;b&gt;fix(auth):&lt;/b&gt; validate token exp" vertex="1">
-          <mxGeometry x="430" y="55" width="210" height="34" as="geometry" />
-        </mxCell>
-
-        <!-- Итоговый коммит в main: PR #42 (Squash & Merge) -->
-        <mxCell id="c_main_pr" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#16a34a;strokeWidth=3.5;fillColor=#dcfce7;" vertex="1">
-          <mxGeometry x="840" y="99" width="24" height="24" as="geometry" />
-        </mxCell>
-        <mxCell id="card_main_pr" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=#f0fdf4;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#15803d;" value="&lt;b style=&quot;font-size:11px;&quot;&gt;PR #42 (Squash &amp;amp; Merge)&lt;/b&gt;&lt;br/&gt;1 атомарный коммит в main" vertex="1">
-          <mxGeometry x="725" y="50" width="240" height="38" as="geometry" />
-        </mxCell>
-
-        <!-- Коммит 1 в feature: feat(domain): add priority filter -->
-        <mxCell id="c_feat_1" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#d97706;strokeWidth=3;fillColor=#ffffff;" vertex="1">
-          <mxGeometry x="400" y="246" width="20" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="card_feat_1" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#fcd34d;strokeWidth=1;fillColor=#fffbeb;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10.5;fontColor=#92400e;" value="&lt;b&gt;feat(domain):&lt;/b&gt; add priority filter&lt;br/&gt;&lt;span style=&quot;font-size:9.5px;color:#a16207;&quot;&gt;коммит 1 в локальной ветке&lt;/span&gt;" vertex="1">
-          <mxGeometry x="285" y="280" width="250" height="44" as="geometry" />
-        </mxCell>
-
-        <!-- Коммит 2 в feature: test(domain): unit test filters -->
-        <mxCell id="c_feat_2" parent="1" style="ellipse;whiteSpace=wrap;html=1;strokeColor=#d97706;strokeWidth=3;fillColor=#ffffff;" vertex="1">
-          <mxGeometry x="660" y="246" width="20" height="20" as="geometry" />
-        </mxCell>
-        <mxCell id="card_feat_2" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#fcd34d;strokeWidth=1;fillColor=#fffbeb;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10.5;fontColor=#92400e;" value="&lt;b&gt;test(domain):&lt;/b&gt; unit test filters&lt;br/&gt;&lt;span style=&quot;font-size:9.5px;color:#a16207;&quot;&gt;коммит 2 в локальной ветке&lt;/span&gt;" vertex="1">
-          <mxGeometry x="550" y="280" width="240" height="44" as="geometry" />
-        </mxCell>
-
-        <!-- Подсказка Rebase -->
-        <mxCell id="pill_rebase" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#db2777;strokeWidth=1.5;fillColor=#fdf2f8;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=11;fontColor=#9d174d;" value="git rebase origin/main" vertex="1">
-          <mxGeometry x="445" y="170" width="180" height="28" as="geometry" />
+        <mxCell id="e11" edge="1" parent="1" source="out_done" target="finish" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
+          <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
       </root>

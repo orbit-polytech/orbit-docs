@@ -1,125 +1,97 @@
 <mxfile host="app.diagrams.net">
-  <diagram name="Архитектура экосистемы Orbit AI" id="orbit-arch-overview">
-    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="800" background="#ffffff" math="0" shadow="0">
+  <diagram name="Архитектурная схема ГОСТ" id="arch-gost">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1000" pageHeight="700" background="#ffffff" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
-        
-        <!-- Заголовок схемы -->
-        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=16;fontColor=#0f172a;" value="Orbit AI • Архитектура распределенной экосистемы микросервисов" vertex="1">
-          <mxGeometry x="30" y="20" width="700" height="30" as="geometry" />
-        </mxCell>
-        <mxCell id="subtitle" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=right;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Segoe UI, Arial, sans-serif;fontSize=12;fontColor=#64748b;" value="github.com/orbit-polytech (13 специализированных репозиториев)" vertex="1">
-          <mxGeometry x="750" y="20" width="400" height="30" as="geometry" />
-        </mxCell>
-        
-        <!-- 1. Зона клиентов -->
-        <mxCell id="zone_clients" parent="1" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;strokeColor=#94a3b8;strokeWidth=1.5;fillColor=#f8fafc;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=11;fontColor=#475569;" value="ВНЕШНИЙ КОНТУР • КЛИЕНТЫ (UNTRUSTED)" vertex="1">
-          <mxGeometry x="30" y="65" width="1120" height="100" as="geometry" />
-        </mxCell>
-        <mxCell id="client_mobile" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=12;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0284c7;font-size:13px;&quot;&gt;📱 mobile&lt;/b&gt;&lt;br/&gt;Flutter 3.x • MVVM &amp;amp; BLoC&lt;br/&gt;&lt;span style=&quot;color:#64748b;font-size:10px;&quot;&gt;iOS / Android клиент&lt;/span&gt;" vertex="1">
-          <mxGeometry x="60" y="90" width="280" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="client_bot" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=12;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0284c7;font-size:13px;&quot;&gt;🤖 bot-service&lt;/b&gt;&lt;br/&gt;Python 3.12 • aiogram 3&lt;br/&gt;&lt;span style=&quot;color:#64748b;font-size:10px;&quot;&gt;Telegram-интерфейс&lt;/span&gt;" vertex="1">
-          <mxGeometry x="450" y="90" width="280" height="60" as="geometry" />
-        </mxCell>
-        <mxCell id="client_web" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=12;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0284c7;font-size:13px;&quot;&gt;🌐 Web &amp;amp; Swagger UI&lt;/b&gt;&lt;br/&gt;OpenAPI 3.1 • HTTP REST&lt;br/&gt;&lt;span style=&quot;color:#64748b;font-size:10px;&quot;&gt;Браузер разработчика&lt;/span&gt;" vertex="1">
-          <mxGeometry x="840" y="90" width="280" height="60" as="geometry" />
+
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Times New Roman;fontStyle=1;fontSize=16;fontColor=#000000;" value="Структурная схема распределенной системы Orbit AI" vertex="1">
+          <mxGeometry x="100" y="20" width="800" height="30" as="geometry" />
         </mxCell>
 
-        <!-- Протокол REST -->
-        <mxCell id="badge_rest" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1;fillColor=#e0f2fe;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=10;fontColor=#0369a1;" value="HTTPS REST JSON • Ed25519 JWT" vertex="1">
-          <mxGeometry x="475" y="180" width="230" height="24" as="geometry" />
+        <!-- Уровень 1: Клиентские приложения -->
+        <mxCell id="grp_clients" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#000000;strokeWidth=1.5;dashed=1;fillColor=#ffffff;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontFamily=Times New Roman;fontStyle=1;fontSize=12;fontColor=#000000;" value="1. Клиентский уровень (Внешняя зона)" vertex="1">
+          <mxGeometry x="50" y="60" width="900" height="90" as="geometry" />
         </mxCell>
-        <mxCell id="edge_c1_gw" parent="1" source="client_mobile" target="gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0284c7;strokeWidth=2;" edge="1">
+        <mxCell id="c_mobile" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Мобильный клиент mobile&#xa;(Flutter 3.x, Dart)" vertex="1">
+          <mxGeometry x="80" y="90" width="220" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="c_bot" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Telegram-бот bot-service&#xa;(Python 3.12, aiogram 3)" vertex="1">
+          <mxGeometry x="390" y="90" width="220" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="c_web" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=12;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Браузер разработчика&#xa;(Swagger UI / OpenAPI)" vertex="1">
+          <mxGeometry x="700" y="90" width="220" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Уровень 2: API Gateway -->
+        <mxCell id="gw" parent="1" style="shape=process;backgroundOutline=1;rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=13;fontStyle=1;fontColor=#000000;strokeColor=#000000;strokeWidth=2;fillColor=#ffffff;" value="Единый шлюз API: gateway-service (порт 8080)&#xa;Аутентификация Ed25519 JWT • Проверка Redis Blacklist • CORS • Rate Limit • Инъекция x-user-id" vertex="1">
+          <mxGeometry x="150" y="190" width="700" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e_c1" edge="1" parent="1" source="c_mobile" target="gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;fontFamily=Times New Roman;fontSize=10;fontColor=#000000;" value="HTTPS REST">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_c2_gw" parent="1" source="client_bot" target="gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0284c7;strokeWidth=2;" edge="1">
+        <mxCell id="e_c2" edge="1" parent="1" source="c_bot" target="gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;fontFamily=Times New Roman;fontSize=10;fontColor=#000000;" value="HTTPS REST">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_c3_gw" parent="1" source="client_web" target="gateway" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0284c7;strokeWidth=2;" edge="1">
+        <mxCell id="e_c3" edge="1" parent="1" source="c_web" target="gw" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;fontFamily=Times New Roman;fontSize=10;fontColor=#000000;" value="HTTPS REST">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- 2. Периметр безопасности (API Gateway) -->
-        <mxCell id="gateway" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;strokeWidth=2;fillColor=#f5f3ff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=12;fontColor=#1e1b4b;" value="&lt;b style=&quot;font-size:13px;color:#4338ca;&quot;&gt;🛡️ gateway-service (:8080)&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:11px;color:#3730a3;&quot;&gt;Валидация JWT Ed25519 • Проверка Blacklist (Redis) • Rate Limiting • CORS • Инъекция x-user-id в gRPC&lt;/span&gt;" vertex="1">
-          <mxGeometry x="170" y="215" width="840" height="66" as="geometry" />
+        <!-- Уровень 3: Внутренний доверенный контур микросервисов -->
+        <mxCell id="grp_mesh" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#000000;strokeWidth=1.5;dashed=1;fillColor=#ffffff;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontFamily=Times New Roman;fontStyle=1;fontSize=12;fontColor=#000000;" value="2. Внутренний контур микросервисов (gRPC по HTTP/2, заголовок x-user-id)" vertex="1">
+          <mxGeometry x="50" y="280" width="900" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="s_auth" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="auth-service&#xa;(:50051)&#xa;Авторизация" vertex="1">
+          <mxGeometry x="70" y="320" width="125" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="s_users" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="users-service&#xa;(:50052)&#xa;Профили" vertex="1">
+          <mxGeometry x="220" y="320" width="125" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="s_sched" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="schedule-service&#xa;(:50053)&#xa;Расписание" vertex="1">
+          <mxGeometry x="370" y="320" width="125" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="s_nav" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="navigation-service&#xa;(:50054)&#xa;Навигация" vertex="1">
+          <mxGeometry x="520" y="320" width="125" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="s_tasks" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="tasks-service&#xa;(:50055)&#xa;Задачи" vertex="1">
+          <mxGeometry x="670" y="320" width="125" height="55" as="geometry" />
+        </mxCell>
+        <mxCell id="s_ai" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="ai-service&#xa;(:50057)&#xa;RAG / Gemini" vertex="1">
+          <mxGeometry x="815" y="320" width="115" height="55" as="geometry" />
         </mxCell>
 
-        <!-- Протокол gRPC -->
-        <mxCell id="badge_grpc" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;strokeWidth=1;fillColor=#ede9fe;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=10;fontColor=#4338ca;" value="gRPC over HTTP/2 • Metadata: x-user-id" vertex="1">
-          <mxGeometry x="465" y="295" width="250" height="24" as="geometry" />
+        <mxCell id="s_notif" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="notification-service (:50056)&#xa;Уведомления (Telegram, Push)" vertex="1">
+          <mxGeometry x="370" y="395" width="275" height="40" as="geometry" />
         </mxCell>
-        <mxCell id="edge_gw_mesh" parent="1" source="gateway" target="zone_mesh" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#6366f1;strokeWidth=2.5;" edge="1">
+
+        <mxCell id="e_gw_s" edge="1" parent="1" source="gw" target="s_tasks" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;fontFamily=Times New Roman;fontSize=10;fontColor=#000000;" value="gRPC">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_gw_a" edge="1" parent="1" source="gw" target="s_auth" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
-        <!-- 3. Доверенный контур микросервисов -->
-        <mxCell id="zone_mesh" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#94a3b8;strokeWidth=1.5;fillColor=#f8fafc;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=11;fontColor=#0284c7;" value="ВНУТРЕННИЙ ДОВЕРЕННЫЙ КОНТУР (orbit-net)" vertex="1">
-          <mxGeometry x="30" y="330" width="1120" height="225" as="geometry" />
+        <!-- Уровень 4: Инфраструктура хранения и очередей -->
+        <mxCell id="grp_infra" parent="1" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=#000000;strokeWidth=1.5;dashed=1;fillColor=#ffffff;verticalAlign=top;align=left;spacingLeft=10;spacingTop=5;fontFamily=Times New Roman;fontStyle=1;fontSize=12;fontColor=#000000;" value="3. Уровень хранения и асинхронного взаимодействия" vertex="1">
+          <mxGeometry x="50" y="480" width="900" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="db_pg" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="PostgreSQL 16&#xa;+ pgvector" vertex="1">
+          <mxGeometry x="100" y="505" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="db_redis" parent="1" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=10;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Redis 7&#xa;Кэш и Blacklist" vertex="1">
+          <mxGeometry x="330" y="505" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="broker_rmq" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="RabbitMQ 4&#xa;Брокер событий" vertex="1">
+          <mxGeometry x="560" y="505" width="150" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="obs_jaeger" parent="1" style="rounded=0;whiteSpace=wrap;html=1;fontFamily=Times New Roman;fontSize=11;fontColor=#000000;strokeColor=#000000;strokeWidth=1.5;fillColor=#ffffff;" value="Jaeger 2&#xa;Трассировка" vertex="1">
+          <mxGeometry x="770" y="505" width="150" height="50" as="geometry" />
         </mxCell>
 
-        <!-- Микросервисы -->
-        <mxCell id="svc_auth" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0284c7;&quot;&gt;auth-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color:#0284c7;font-size:9.5px;&quot;&gt;:50051&lt;/span&gt;&lt;br/&gt;Ed25519 ключи&lt;br/&gt;Сессии / TG Auth" vertex="1">
-          <mxGeometry x="45" y="375" width="140" height="92" as="geometry" />
-        </mxCell>
-        <mxCell id="svc_users" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0284c7;&quot;&gt;users-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color:#0284c7;font-size:9.5px;&quot;&gt;:50052&lt;/span&gt;&lt;br/&gt;Профили студентов&lt;br/&gt;Группы и роли" vertex="1">
-          <mxGeometry x="205" y="375" width="140" height="92" as="geometry" />
-        </mxCell>
-        <mxCell id="svc_schedule" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0284c7;&quot;&gt;schedule-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color:#0284c7;font-size:9.5px;&quot;&gt;:50053&lt;/span&gt;&lt;br/&gt;Парсинг расписания&lt;br/&gt;Кэш пар в Redis" vertex="1">
-          <mxGeometry x="365" y="375" width="140" height="92" as="geometry" />
-        </mxCell>
-        <mxCell id="svc_nav" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0284c7;&quot;&gt;nav-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color:#0284c7;font-size:9.5px;&quot;&gt;:50054&lt;/span&gt;&lt;br/&gt;Корпуса Политеха&lt;br/&gt;Маршруты и карты" vertex="1">
-          <mxGeometry x="525" y="375" width="140" height="92" as="geometry" />
-        </mxCell>
-        <mxCell id="svc_tasks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#059669;strokeWidth=2;fillColor=#ecfdf5;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#059669;&quot;&gt;tasks-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color:#059669;font-size:9.5px;&quot;&gt;:50055&lt;/span&gt;&lt;br/&gt;Clean Architecture&lt;br/&gt;Transactional Outbox" vertex="1">
-          <mxGeometry x="685" y="375" width="140" height="92" as="geometry" />
-        </mxCell>
-        <mxCell id="svc_notif" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#d97706;strokeWidth=1.5;fillColor=#fffbeb;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#d97706;&quot;&gt;notif-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color:#d97706;font-size:9.5px;&quot;&gt;:50056&lt;/span&gt;&lt;br/&gt;Push / TG Sender&lt;br/&gt;AMQP Consumer" vertex="1">
-          <mxGeometry x="845" y="375" width="140" height="92" as="geometry" />
-        </mxCell>
-        <mxCell id="svc_ai" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#7c3aed;strokeWidth=1.5;fillColor=#f5f3ff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#7c3aed;&quot;&gt;ai-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;color:#7c3aed;font-size:9.5px;&quot;&gt;:50057&lt;/span&gt;&lt;br/&gt;RAG &amp;amp; pgvector&lt;br/&gt;Gemini 2.0 Flash" vertex="1">
-          <mxGeometry x="1005" y="375" width="140" height="92" as="geometry" />
-        </mxCell>
-
-        <!-- Асинхронный поток Outbox -> RabbitMQ -> notif-service -->
-        <mxCell id="edge_outbox" parent="1" source="svc_tasks" target="svc_notif" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#d97706;strokeWidth=2;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#b45309;" value="Outbox: task.created ──&gt; RabbitMQ ──&gt; notif-service" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="755" y="500" />
-              <mxPoint x="915" y="500" />
-            </Array>
-          </mxGeometry>
-        </mxCell>
-
-        <!-- 4. Инфраструктура хранения и очередей -->
-        <mxCell id="zone_infra" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#94a3b8;strokeWidth=1.5;fillColor=#f8fafc;verticalAlign=top;align=left;spacingLeft=15;spacingTop=10;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=11;fontColor=#059669;" value="ИНФРАСТРУКТУРА ХРАНЕНИЯ И БРОКЕРОВ (infra)" vertex="1">
-          <mxGeometry x="30" y="585" width="1120" height="155" as="geometry" />
-        </mxCell>
-        <mxCell id="infra_pg" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0284c7;font-size:12px;&quot;&gt;🐘 PostgreSQL 16 (:5432)&lt;/b&gt;&lt;br/&gt;Схемы: auth, users, tasks, schedule&lt;br/&gt;Расширение: pgvector (vector 768)&lt;br/&gt;&lt;span style=&quot;color:#64748b;font-size:10px;&quot;&gt;Реляционная целостность и ACID&lt;/span&gt;" vertex="1">
-          <mxGeometry x="45" y="615" width="255" height="105" as="geometry" />
-        </mxCell>
-        <mxCell id="infra_redis" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#dc2626;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#dc2626;font-size:12px;&quot;&gt;⚡ Redis 7.2 (:6379)&lt;/b&gt;&lt;br/&gt;Кэш расписания (Cache-Aside)&lt;br/&gt;Blacklist токенов по jti&lt;br/&gt;&lt;span style=&quot;color:#64748b;font-size:10px;&quot;&gt;Rate Limiting и чтение &amp;lt;2мс&lt;/span&gt;" vertex="1">
-          <mxGeometry x="325" y="615" width="255" height="105" as="geometry" />
-        </mxCell>
-        <mxCell id="infra_rmq" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#ea580c;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#ea580c;font-size:12px;&quot;&gt;🐇 RabbitMQ 4 (:5672)&lt;/b&gt;&lt;br/&gt;AMQP 0-9-1 Topic Exchange&lt;br/&gt;Очереди событий + DLX / DLQ&lt;br/&gt;&lt;span style=&quot;color:#64748b;font-size:10px;&quot;&gt;At-Least-Once доставка сообщений&lt;/span&gt;" vertex="1">
-          <mxGeometry x="605" y="615" width="255" height="105" as="geometry" />
-        </mxCell>
-        <mxCell id="infra_jaeger" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0d9488;strokeWidth=1.5;fillColor=#ffffff;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#0f172a;" value="&lt;b style=&quot;color:#0d9488;font-size:12px;&quot;&gt;🔍 Jaeger 2 (:4318)&lt;/b&gt;&lt;br/&gt;OpenTelemetry Tracing&lt;br/&gt;Сквозной trace_id по RPC&lt;br/&gt;&lt;span style=&quot;color:#64748b;font-size:10px;&quot;&gt;Мониторинг латентности сервисов&lt;/span&gt;" vertex="1">
-          <mxGeometry x="885" y="615" width="255" height="105" as="geometry" />
-        </mxCell>
-
-        <!-- Связи между Mesh и Infra -->
-        <mxCell id="edge_mesh_pg" parent="1" source="zone_mesh" target="infra_pg" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#0284c7;strokeWidth=1.5;" edge="1">
+        <mxCell id="e_rmq" edge="1" parent="1" source="s_tasks" target="broker_rmq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;dashed=1;fontFamily=Times New Roman;fontSize=10;fontColor=#000000;" value="TaskCreated">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="edge_mesh_redis" parent="1" source="zone_mesh" target="infra_redis" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#dc2626;strokeWidth=1.5;" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="edge_mesh_rmq" parent="1" source="zone_mesh" target="infra_rmq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#ea580c;strokeWidth=1.5;" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="edge_mesh_jaeger" parent="1" source="zone_mesh" target="infra_jaeger" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#0d9488;strokeWidth=1.5;" edge="1">
+        <mxCell id="e_notif_rmq" edge="1" parent="1" source="broker_rmq" target="s_notif" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#000000;strokeWidth=1.5;dashed=1;fontFamily=Times New Roman;fontSize=10;fontColor=#000000;" value="Consume">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
 
