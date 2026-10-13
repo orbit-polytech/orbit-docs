@@ -133,24 +133,8 @@ func TestPostgresTaskRepository_OptimisticLocking_Concurrent(t *testing.T) {
 
 Тест проверяет всю цепочку: атомарная запись в PostgreSQL -> вычитка воркером -> получение сообщения из очереди RabbitMQ:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant Test as Интеграционный тест
-    participant Repo as TaskRepository
-    participant DB as PostgreSQL
-    participant Worker as OutboxWorker
-    participant RMQ as RabbitMQ
+![Сквозное тестирование Outbox и доставки в RabbitMQ](img/outbox-test-flow.svg)
 
-    Test->>Repo: CreateWithOutbox(task, event)
-    Repo->>DB: INSERT INTO tasks & outbox_events (Tx Commit)
-    Test->>Worker: ProcessBatch()
-    Worker->>DB: SELECT PENDING FOR UPDATE SKIP LOCKED
-    Worker->>RMQ: PublishWithContext(orbit.events)
-    Worker->>DB: UPDATE outbox_events SET status = 'PROCESSED'
-    Test->>RMQ: Чтение из очереди notif.tasks.created
-    RMQ-->>Test: Сообщение получено и совпадает с исходным!
-```
 
 ```go
 func TestOutbox_EndToEnd_Delivery(t *testing.T) {

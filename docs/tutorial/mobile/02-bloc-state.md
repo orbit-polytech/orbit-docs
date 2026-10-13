@@ -8,13 +8,8 @@
 
 ## 1. Поток данных в BLoC
 
-```mermaid
-graph LR
-    UI["Пользовательский интерфейс (Widget)"] -->|1. Отправляет Event\n(LoadTasksEvent)| BLoC["TasksBloc"]
-    BLoC -->|2. Вызывает метод UseCase| Repo["TasksRepository"]
-    Repo -->|3. Возвращает данные / Ошибку| BLoC
-    BLoC -->|4. Эмитит State\n(TasksLoadedState)| UI
-```
+![Поток данных в архитектуре BLoC](img/bloc-flow.svg)
+
 
 ---
 

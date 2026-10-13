@@ -13,16 +13,8 @@
 - `schedule-service` подключается к базе `schedule_db`;
 - `auth-service` подключается к базе `auth_db`.
 
-```mermaid
-graph LR
-    TS["tasks-service"] -->|Изолированное подключение| DB_Tasks[("PostgreSQL\ntasks_db")]
-    SS["schedule-service"] -->|Изолированное подключение| DB_Sched[("PostgreSQL\nschedule_db")]
-    AS["auth-service"] -->|Изолированное подключение| DB_Auth[("PostgreSQL\nauth_db")]
+![Изолированные базы данных микросервисов (Database per Service)](img/db-per-service.svg)
 
-    style DB_Tasks fill:#2b3a42,stroke:#4caf50
-    style DB_Sched fill:#2b3a42,stroke:#4caf50
-    style DB_Auth fill:#2b3a42,stroke:#4caf50
-```
 
 > [!CRITICAL] Запрет прямых межсервисных SQL-запросов
 > Микросервису `tasks-service` категорически запрещено обращаться к таблицам пользователей `users_db` или расписания `schedule_db`. Любое межсервисное взаимодействие выполняется только через gRPC-клиенты или события RabbitMQ.

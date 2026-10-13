@@ -8,29 +8,8 @@
 
 ## 1. Иерархия ошибок по слоям
 
-```mermaid
-graph TD
-    subgraph Domain["Доменный слой (domain)"]
-        DE["Sentinel ошибки:\nErrTaskNotFound\nErrInvalidDeadline\nErrVersionConflict"]
-    end
+![Иерархия ошибок по слоям и трансляция в статус-коды gRPC](img/error-hierarchy.svg)
 
-    subgraph Usecase["Слой сценариев (usecase)"]
-        UE["Проброс с оборачиванием:\nfmt.Errorf('выполнение: %w', err)\nПроверка ctx.Err()"]
-    end
-
-    subgraph Infrastructure["Инфраструктура (infrastructure)"]
-        IE["Ошибки драйверов:\npgx.ErrNoRows\namqp.ErrClosed\nОборачивание через %w"]
-    end
-
-    subgraph Transport["Транспортный слой (transport/taskgrpc)"]
-        TE["Функция mapError:\nТрансляция в gRPC коды\n(InvalidArgument, NotFound, Aborted)\nМаскирование internal ошибок"]
-    end
-
-    Infrastructure -->|%w| Usecase
-    Domain -->|errors.Is| Usecase
-    Usecase --> Transport
-    Transport --> Client["Внешний клиент (Gateway / AI)"]
-```
 
 ---
 

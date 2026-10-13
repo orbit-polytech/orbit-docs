@@ -10,38 +10,7 @@
 
 В модели Polyrepo каждый сервис изолирован, но им необходим общий язык общения. Для этого выделен единый репозиторий **`contracts`**:
 
-```mermaid
-graph LR
-    subgraph Repo["contracts (GitHub)"]
-        Proto["api/proto/**/*.proto\n(Protobuf v3)"]
-        BufYaml["buf.yaml & buf.gen.yaml\n(Buf v2)"]
-    end
-
-    subgraph CI["GitHub Actions CI"]
-        Lint["buf lint"]
-        Break["buf breaking\n--against main"]
-        Gen["buf generate"]
-    end
-
-    subgraph Generated["Генерируемый код"]
-        GoPkg["Go Stubs (pkg/api/...)"]
-        PyPkg["Python Stubs (grpcio)"]
-        OpenAPI["OpenAPI 3.1 Spec"]
-    end
-
-    subgraph Consumers["Потребители"]
-        GoSvc["Go микросервисы\n(tasks-service, schedule)"]
-        PySvc["Python сервисы\n(ai-service, bot)"]
-        Flutter["Flutter клиент\n(из OpenAPI)"]
-    end
-
-    Proto --> Lint & Break
-    Lint & Break --> Gen
-    Gen --> GoPkg & PyPkg & OpenAPI
-    GoPkg --> GoSvc
-    PyPkg --> PySvc
-    OpenAPI --> Flutter
-```
+![Схема пайплайна Contract-First и Buf CLI](img/contracts-buf-pipeline.svg)
 
 ### Ключевые архитектурные решения:
 1. **Единый источник истины**:

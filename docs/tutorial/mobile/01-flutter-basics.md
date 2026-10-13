@@ -10,23 +10,7 @@
 
 В соответствии с решением **ADR-005**, мобильное приложение общается с бэкендом **исключительно через внешний API Gateway по протоколу REST/JSON**:
 
-```mermaid
-graph LR
-    subgraph MobileApp["client-mobile (Flutter)"]
-        UI["Presentation Layer\n(Widgets, Screens)"]
-        Bloc["BLoC Layer\n(State Management)"]
-        Data["Data Layer\n(Dio HTTP Client, OpenAPI DTO)"]
-    end
-
-    subgraph Backend["Бэкенд периметр"]
-        GW["API Gateway (:8080)\n(REST / JSON)"]
-        Internal["Внутренние сервисы\n(tasks-service, ai-service)"]
-    end
-
-    UI --> Bloc --> Data
-    Data -->|HTTPS REST JSON\nBearer JWT| GW
-    GW -->|Внутренний gRPC| Internal
-```
+![Архитектурное позиционирование client-mobile и API Gateway](img/flutter-architecture.svg)
 
 ### Почему в мобильном приложении нет gRPC:
 - В репозитории контрактов `contracts` генерация кода под Dart исключена (ADR-005).

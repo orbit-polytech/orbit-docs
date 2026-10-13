@@ -8,21 +8,8 @@
 
 ## 1. Архитектурное обоснование компромисса (ADR-004)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Mobile as Мобильное приложение (Flutter)
-    participant GW as API Gateway (Внешний контур)
-    participant Auth as auth-service
-    participant Tasks as tasks-service (Внутренний контур)
+![Схема проверки аутентификации и проброса метаданных gRPC](img/auth-interceptor-flow.svg)
 
-    Mobile->>GW: HTTP POST /api/v1/tasks<br>Header: Authorization: Bearer <JWT>
-    Note over GW: 1. Валидация подписи JWT (Ed25519)<br>2. Проверка срока действия (exp)<br>3. Извлечение claims: user_id
-    GW->>Tasks: gRPC TaskService.CreateTask()<br>Metadata: x-user-id: "student-uuid-42"
-    Note over Tasks: 4. AuthInterceptor валидирует формат x-user-id<br>5. Сохраняет actor в context.Context
-    Tasks-->>GW: gRPC CreateTaskResponse
-    GW-->>Mobile: HTTP 201 Created (JSON)
-```
 
 ### Почему микросервисы не проверяют JWT самостоятельно:
 1. **Производительность**:

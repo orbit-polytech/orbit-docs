@@ -8,27 +8,7 @@
 
 Микросервисная архитектура без четких границ предметных областей превращается в «распределенный монолит». В Orbit AI границы микросервисов совпадают с **Ограниченными контекстами (Bounded Contexts)**.
 
-```mermaid
-flowchart TD
-    subgraph BC_AUTH ["Контекст Аутентификации (auth-service)"]
-        U_AUTH["Учетная запись (Account)<br/>- Email, Hash, Roles, RefreshToken"]
-    end
-
-    subgraph BC_TASKS ["Контекст Задач (tasks-service)"]
-        U_TASKS["Актор (OwnerID)<br/>- Task, Deadline, Status"]
-    end
-
-    subgraph BC_SCHEDULE ["Контекст Расписания (schedule-service)"]
-        U_SCHED["Слушатель (GroupMember)<br/>- Учебная группа 261-334, Подгруппа"]
-    end
-
-    subgraph BC_NAV ["Контекст Навигации (navigation-service)"]
-        U_NAV["Посетитель корпуса<br/>- Маршрут между корпусами БС и АВ"]
-    end
-
-    BC_AUTH -.->|x-user-id в метаданных| BC_TASKS
-    BC_AUTH -.->|x-user-id в метаданных| BC_SCHEDULE
-```
+![Стратегический уровень DDD: Ограниченные контексты](img/ddd-bounded-contexts.svg)
 
 ### Принцип расщепления понятий
 В монолитах часто пытаются создать одну гигантскую универсальную сущность `User` с сотней полей (логин, пароль, номер группы, задачи, средний балл, домашний адрес).  

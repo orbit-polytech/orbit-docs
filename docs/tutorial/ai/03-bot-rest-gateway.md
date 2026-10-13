@@ -8,20 +8,8 @@ Telegram-бот (**`bot-service`**) предоставляет студента�
 
 ## 1. Архитектура взаимодействия бота и бэкенда
 
-```mermaid
-graph LR
-    TelegramUser["Студент в Telegram"] -->|Сообщение| BotSvc["bot-service (aiogram 3)"]
-    
-    subgraph BotInternal["Внутри bot-service"]
-        Router["Router / Handlers"]
-        HTTPClient["Единый пул httpx.AsyncClient"]
-    end
-    
-    BotSvc --> Router
-    Router --> HTTPClient
-    HTTPClient -->|REST: POST /api/v1/ai/ask\nAuthorization: Bearer JWT| Gateway["API Gateway (:8080)"]
-    Gateway -->|Внутренний gRPC| InternalServices["tasks-service / ai-service"]
-```
+![Архитектура взаимодействия бота и бэкенда через API Gateway](img/bot-gateway-topology.svg)
+
 
 ---
 

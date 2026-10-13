@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 440" width="100%" height="100%">
+  <defs>
+    <linearGradient id="dbBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e" />
+      <stop offset="100%" stop-color="#181825" />
+    </linearGradient>
+
+    <!-- Markers -->
+    <marker id="arrGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" />
+    </marker>
+
+    <filter id="shadowBox" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Container Box -->
+  <rect x="2" y="2" width="976" height="436" rx="16" fill="url(#dbBg)" stroke="#313244" stroke-width="2" />
+
+  <!-- Header -->
+  <g transform="translate(32, 28)">
+    <circle cx="10" cy="10" r="6" fill="#10b981" />
+    <text x="26" y="15" font-family="'JetBrains Mono', monospace" font-size="15" font-weight="700" fill="#cdd6f4">
+      ADR-002 • Паттерн Database per Service: Изоляция данных микросервисов
+    </text>
+    <line x1="0" y1="28" x2="916" y2="28" stroke="#313244" stroke-width="1" />
+  </g>
+
+  <!-- Service 1: tasks-service -->
+  <g transform="translate(50, 90)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="250" height="85" rx="10" fill="#1e293b" stroke="#3b82f6" stroke-width="1.8" />
+    <rect x="12" y="10" width="110" height="20" rx="4" fill="#1e3a8a" />
+    <text x="18" y="24" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="700" fill="#93c5fd">GO SERVICE</text>
+    <text x="18" y="52" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#f1f5f9">tasks-service</text>
+    <text x="18" y="72" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">Порт :50055 (gRPC)</text>
+  </g>
+
+  <!-- Arrow 1 -->
+  <line x1="300" y1="132" x2="638" y2="132" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrGreen)" />
+  <rect x="360" y="118" width="220" height="18" rx="3" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+  <text x="470" y="131" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9" fill="#86efac">Изолированное подключение (pgx)</text>
+
+  <!-- DB 1: tasks_db -->
+  <g transform="translate(650, 90)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="270" height="85" rx="10" fill="#064e3b" stroke="#10b981" stroke-width="1.8" />
+    <rect x="12" y="10" width="115" height="20" rx="4" fill="#022c22" />
+    <text x="18" y="24" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="700" fill="#6ee7b7">POSTGRESQL</text>
+    <text x="18" y="52" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#f1f5f9">tasks_db (:5432)</text>
+    <text x="18" y="72" font-family="'JetBrains Mono', monospace" font-size="10" fill="#a7f3d0">Таблицы tasks, outbox_events</text>
+  </g>
+
+  <!-- Service 2: schedule-service -->
+  <g transform="translate(50, 200)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="250" height="85" rx="10" fill="#1e293b" stroke="#8b5cf6" stroke-width="1.8" />
+    <rect x="12" y="10" width="110" height="20" rx="4" fill="#312e81" />
+    <text x="18" y="24" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="700" fill="#c4b5fd">GO SERVICE</text>
+    <text x="18" y="52" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#f1f5f9">schedule-service</text>
+    <text x="18" y="72" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">Порт :50053 (gRPC)</text>
+  </g>
+
+  <!-- Arrow 2 -->
+  <line x1="300" y1="242" x2="638" y2="242" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrGreen)" />
+  <rect x="360" y="228" width="220" height="18" rx="3" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+  <text x="470" y="241" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9" fill="#86efac">Изолированное подключение (pgx)</text>
+
+  <!-- DB 2: schedule_db -->
+  <g transform="translate(650, 200)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="270" height="85" rx="10" fill="#064e3b" stroke="#10b981" stroke-width="1.8" />
+    <rect x="12" y="10" width="115" height="20" rx="4" fill="#022c22" />
+    <text x="18" y="24" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="700" fill="#6ee7b7">POSTGRESQL</text>
+    <text x="18" y="52" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#f1f5f9">schedule_db (:5432)</text>
+    <text x="18" y="72" font-family="'JetBrains Mono', monospace" font-size="10" fill="#a7f3d0">Таблицы lessons, teachers, rooms</text>
+  </g>
+
+  <!-- Service 3: auth-service -->
+  <g transform="translate(50, 310)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="250" height="85" rx="10" fill="#1e293b" stroke="#06b6d4" stroke-width="1.8" />
+    <rect x="12" y="10" width="110" height="20" rx="4" fill="#083344" />
+    <text x="18" y="24" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="700" fill="#67e8f9">GO SERVICE</text>
+    <text x="18" y="52" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#f1f5f9">auth-service</text>
+    <text x="18" y="72" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">Порт :50051 (gRPC)</text>
+  </g>
+
+  <!-- Arrow 3 -->
+  <line x1="300" y1="352" x2="638" y2="352" stroke="#10b981" stroke-width="2.5" marker-end="url(#arrGreen)" />
+  <rect x="360" y="338" width="220" height="18" rx="3" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+  <text x="470" y="351" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9" fill="#86efac">Изолированное подключение (pgx)</text>
+
+  <!-- DB 3: auth_db -->
+  <g transform="translate(650, 310)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="270" height="85" rx="10" fill="#064e3b" stroke="#10b981" stroke-width="1.8" />
+    <rect x="12" y="10" width="115" height="20" rx="4" fill="#022c22" />
+    <text x="18" y="24" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="700" fill="#6ee7b7">POSTGRESQL</text>
+    <text x="18" y="52" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#f1f5f9">auth_db (:5432)</text>
+    <text x="18" y="72" font-family="'JetBrains Mono', monospace" font-size="10" fill="#a7f3d0">Таблицы users, sessions, refresh_tokens</text>
+  </g>
+
+  <!-- Forbidden Cross-boundary line (tasks-service -> schedule_db) -->
+  <path d="M 300 155 C 450 170, 520 220, 640 220" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-dasharray="6 4" marker-end="url(#arrRed)" />
+  <rect x="420" y="180" width="170" height="22" rx="4" fill="#450a0a" stroke="#ef4444" stroke-width="1" />
+  <text x="505" y="195" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="9" font-weight="700" fill="#fca5a5">
+    ⛔ КРОСС-SQL СТРОГО ЗАПРЕЩЕН
+  </text>
+</svg>

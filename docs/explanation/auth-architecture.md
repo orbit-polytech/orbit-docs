@@ -6,36 +6,8 @@
 
 ## 1. Схема сквозной аутентификации
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Клиент (Flutter / Bot)
-    participant GW as gateway-service (Edge)
-    participant Redis as Redis (Blacklist)
-    participant Tasks as tasks-service (gRPC)
-    participant DB as PostgreSQL (tasks_db)
+![Схема сквозной аутентификации и границы доверия](img/auth-sequence.svg)
 
-    User->>GW: HTTP GET /api/v1/tasks<br/>Header: Authorization: Bearer <JWT>
-    activate GW
-    GW->>GW: 1. Валидация подписи JWT (Ed25519 публичный ключ)
-    GW->>GW: 2. Проверка срока жизни (exp, nbf)
-    GW->>Redis: 3. Проверка отзыва токена по jti (Blacklist)
-    Redis-->>GW: OK (не отозван)
-    GW->>GW: 4. Извлечение user_id из поля sub
-    
-    Note over GW,Tasks: Внутренняя сеть orbit-net (gRPC по HTTP/2)
-    GW->>Tasks: gRPC ListTasks()<br/>Metadata: x-user-id = "018f2345-..."
-    activate Tasks
-    Tasks->>Tasks: AuthInterceptor валидирует x-user-id и кладёт в Context
-    Tasks->>Tasks: Usecase читает actorID из Context
-    Tasks->>DB: SELECT * FROM tasks WHERE owner_id = $1
-    DB-->>Tasks: Строки задач актора
-    Tasks-->>GW: gRPC ListTasksResponse
-    deactivate Tasks
-
-    GW-->>User: HTTP 200 OK (JSON)
-    deactivate GW
-```
 
 ---
 

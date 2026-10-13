@@ -10,22 +10,7 @@
 
 Работа над любой задачей проходит через строго определённые этапы:
 
-```mermaid
-stateDiagram-v2
-    [*] --> BranchCreated: git checkout -b feature/...
-    BranchCreated --> CodeAndTests: Реализация по Clean Architecture
-    CodeAndTests --> LocalCheck: go test -race & linters
-    LocalCheck --> OpenPR: git push origin feature/...
-    OpenPR --> CI_Checking: GitHub Actions CI
-    CI_Checking --> FailedCI: Ошибка тестов / линтера
-    FailedCI --> CodeAndTests: Исправление
-    CI_Checking --> ReviewPending: Все проверки зеленые (CI PASS)
-    ReviewPending --> ChangesRequested: Замечания ревьюера
-    ChangesRequested --> CodeAndTests: Исправление замечаний
-    ReviewPending --> Approved: Аппрув тимлида
-    Approved --> Merged: Squash and Merge в main
-    Merged --> [*]
-```
+![Схема жизненного цикла задачи и Pull Request](img/pr-lifecycle.svg)
 
 1. **Создание ветки**: ветка отводится от свежего `main` (`feature/name`, `fix/name`, `refactor/name`).
 2. **Локальная разработка**: соблюдение слоёв Clean Architecture, написание тестов.
@@ -129,28 +114,7 @@ Closes #42
 
 При открытии или обновлении PR в репозитории запускается пайплайн GitHub Actions.
 
-```mermaid
-graph TD
-    PR[Pull Request Created / Updated] --> RunCI[GitHub Actions CI Pipeline]
-    
-    subgraph Jobs[Проверки CI]
-        Lint["golangci-lint run\n(Линтинг + depguard)"]
-        Test["go test -race -count=1\n(Тесты + Race Detector)"]
-        BufLint["buf lint\n(Проверка proto схем)"]
-        BufGen["buf generate diff\n(Проверка дрифта кода)"]
-        DocBuild["mkdocs build --strict\n(Сборка документации)"]
-    end
-
-    RunCI --> Lint
-    RunCI --> Test
-    RunCI --> BufLint
-    RunCI --> BufGen
-    RunCI --> DocBuild
-
-    Lint & Test & BufLint & BufGen & DocBuild --> Status{Все зеленые?}
-    Status -->|Да| OK[ Готов к Code Review]
-    Status -->|Нет| Fail[❌ CI Failed: Блокировка мерджа]
-```
+![Схема автоматического пайплайна проверок CI (Quality Gate)](img/ci-quality-gate.svg)
 
 > [!CRITICAL] Правило «Красного CI»
 > Если хотя бы одна проверка в CI упала (красный крестик), **PR не рассматривается ревьюером**.

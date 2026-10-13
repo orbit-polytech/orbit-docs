@@ -15,15 +15,7 @@
 
 **Чистая архитектура решает это разделением на независимые слои:**
 
-```text
-[ gRPC Transport ] ──> [ App / UseCases ] ──> [ Domain ]
-          │                     │
-          ▼                     ▼
-[ DTO & Protobuf ]       [ Ports (Interfaces) ]
-                                ▲
-                                │
-                     [ Adapters (Postgres, Redis) ]
-```
+![Схема слоев Clean Architecture и The Dependency Rule](../explanation/img/clean-architecture-layers.svg)
 
 ---
 

@@ -13,37 +13,7 @@
 > **Исходный код может зависеть только от внутренних слоев и никогда не зависит от внешних.**  
 > Внутренний слой ничего не знает о существовании внешнего.
 
-```mermaid
-flowchart TD
-    subgraph L4 ["Слой 4: Транспорт и Входные точки (Adapters)"]
-        GRPC["gRPC Handlers"]
-        REST["REST Routers"]
-        CRON["Cron / Worker"]
-    end
-
-    subgraph L3 ["Слой 3: Инфраструктура (Infrastructure)"]
-        PG["PostgreSQL (pgxpool)"]
-        REDIS["Redis Client"]
-        RMQ["RabbitMQ Producer"]
-        IDGEN["UUID Generator"]
-    end
-
-    subgraph L2 ["Слой 2: Сценарии (Usecase / Application)"]
-        PORTS["Интерфейсы-Порты (TaskSaver, TaskFinder)"]
-        UC["CreateTaskUseCase, CompleteTaskUseCase"]
-    end
-
-    subgraph L1 ["Слой 1: Домен (Domain Core)"]
-        ENT["Сущность Task"]
-        VO["Value Objects: TaskID, Title, Deadline"]
-        ERR["Доменные ошибки: ErrTaskNotFound"]
-    end
-
-    L4 -->|Зависит от| L2
-    L3 -->|Реализует порты| L2
-    L2 -->|Зависит от| L1
-    L3 -->|Использует типы| L1
-```
+![Схема слоев Clean Architecture и The Dependency Rule](img/clean-architecture-layers.svg)
 
 ---
 

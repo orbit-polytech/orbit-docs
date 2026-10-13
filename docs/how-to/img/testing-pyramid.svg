@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 380" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="pyrBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e" />
+      <stop offset="100%" stop-color="#181825" />
+    </linearGradient>
+
+    <!-- Tier Gradients -->
+    <linearGradient id="tierUnit" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#064e3b" />
+      <stop offset="100%" stop-color="#022c22" />
+    </linearGradient>
+    <linearGradient id="tierInteg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Card Shadow -->
+    <filter id="pyrShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+  </defs>
+
+  <!-- Container Box -->
+  <rect x="2" y="2" width="916" height="376" rx="14" fill="url(#pyrBg)" stroke="#313244" stroke-width="2" />
+
+  <!-- Header -->
+  <g transform="translate(26, 22)">
+    <circle cx="8" cy="8" r="5" fill="#22c55e" />
+    <text x="20" y="12" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700" fill="#cdd6f4">
+      Пирамида тестирования Orbit AI • Стратегия проверки микросервисов
+    </text>
+    <line x1="0" y1="22" x2="865" y2="22" stroke="#313244" stroke-width="1" />
+  </g>
+
+  <!-- ==================== PYRAMID (Left) ==================== -->
+
+  <!-- Top Level: Integration Tests -->
+  <g transform="translate(140, 65)" filter="url(#pyrShadow)">
+    <polygon points="120,0 240,110 0,110" fill="url(#tierInteg)" stroke="#3b82f6" stroke-width="2" />
+    <text x="120" y="55" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#ffffff">
+      Интеграционные
+    </text>
+    <text x="120" y="73" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" fill="#93c5fd">
+      тесты
+    </text>
+    <text x="120" y="92" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9" fill="#bae6fd">
+      //go:build integration
+    </text>
+  </g>
+
+  <!-- Base Level: Unit Tests -->
+  <g transform="translate(70, 185)" filter="url(#pyrShadow)">
+    <polygon points="70,0 310,0 380,120 0,120" fill="url(#tierUnit)" stroke="#22c55e" stroke-width="2" />
+    <text x="190" y="45" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#ffffff">
+      Быстрые Юнит-тесты (Фундамент)
+    </text>
+    <text x="190" y="68" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" fill="#86efac">
+      go test -race -count=1 ./...
+    </text>
+    <text x="190" y="90" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="10" fill="#bbf7d0">
+      Domain Invariants • Usecase Handlers • Config
+    </text>
+  </g>
+
+  <!-- ==================== DETAILS & CRITERIA (Right) ==================== -->
+
+  <!-- Detail Card 1: Integration Tests -->
+  <g transform="translate(480, 65)" filter="url(#pyrShadow)">
+    <rect x="0" y="0" width="405" height="110" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+    <rect x="14" y="10" width="180" height="20" rx="4" fill="#1e3a8a" />
+    <text x="22" y="24" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" fill="#93c5fd">
+      Интеграционный уровень
+    </text>
+    <text x="210" y="24" font-family="'JetBrains Mono', monospace" font-size="10" fill="#64748b">5–15 сек</text>
+
+    <text x="14" y="48" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Проверяет реальный SQL (PostgreSQL pgxpool, миграции)</text>
+    <text x="14" y="66" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Транзакции Outbox, внешние ключи, индексы, Redis TTL</text>
+    <text x="14" y="84" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Запуск изолирован в Docker Compose через env-переменные</text>
+    <text x="14" y="98" font-family="'JetBrains Mono', monospace" font-size="9" fill="#94a3b8">Запускается в CI перед мерджем в main</text>
+  </g>
+
+  <!-- Detail Card 2: Unit Tests -->
+  <g transform="translate(480, 190)" filter="url(#pyrShadow)">
+    <rect x="0" y="0" width="405" height="115" rx="8" fill="#1e293b" stroke="#22c55e" stroke-width="1.5" />
+    <rect x="14" y="10" width="160" height="20" rx="4" fill="#14532d" />
+    <text x="22" y="24" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" fill="#86efac">
+      Юнит уровень (80%+)
+    </text>
+    <text x="190" y="24" font-family="'JetBrains Mono', monospace" font-size="10" fill="#64748b">&lt; 1 сек</text>
+
+    <text x="14" y="48" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Изолированы от внешних сетей, СУБД и файловой системы</text>
+    <text x="14" y="66" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Флаг -race находит гонки данных в многопоточном коде Go</text>
+    <text x="14" y="84" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Мокирование портов через лёгкие in-memory структуры</text>
+    <text x="14" y="102" font-family="'JetBrains Mono', monospace" font-size="9" fill="#86efac">Мгновенный отклик при локальной разработке</text>
+  </g>
+
+  <!-- Footer -->
+  <g transform="translate(25, 320)">
+    <rect x="0" y="0" width="860" height="38" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+    <text x="14" y="23" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#94a3b8">
+      💡 <tspan font-weight="700" fill="#e2e8f0">Чеклист качества:</tspan> Любой PR обязан иметь 100% проходящие юнит-тесты без предупреждений детектора гонок (-race).
+    </text>
+  </g>
+</svg>

@@ -290,27 +290,8 @@ docker compose --profile core watch
 
 Перед вами откроется интерактивная страница со списком доступных методов API. Пройдем базовый сценарий пользователя за 4 простых шага:
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Dev as Разработчик (Браузер)
-    participant GW as HTTP Gateway (:8080)
-    participant Auth as auth-service (:50051)
-    participant Tasks as tasks-service (:50055)
-    participant DB as PostgreSQL (:5432)
+![Сквозной сценарий: Dev-логин и создание задачи через Gateway](img/quickstart-sequence.svg)
 
-    Dev->>GW: POST /v1/auth/dev-login {"telegram_id": 1001}
-    GW->>Auth: gRPC DevLogin
-    Auth-->>GW: JWT (Ed25519)
-    GW-->>Dev: access_token: eyJhbGciOiJFZ...
-    Note over Dev: В Swagger нажимаем Authorize и вставляем токен
-
-    Dev->>GW: POST /v1/tasks (Authorization: Bearer <token>)
-    GW->>Tasks: gRPC CreateTask (x-user-id: 1001)
-    Tasks->>DB: INSERT INTO tasks.tasks
-    Tasks-->>GW: Task DTO
-    GW-->>Dev: 201 Created { id, title, status }
-```
 
 #### 1. Получаем тестовый токен (Dev-логин)
 1. В секции **Auth** найдите метод **`POST /v1/auth/dev-login`** (в локальном окружении он позволяет мгновенно войти под тестовым профилем без отправки внешних кодов).

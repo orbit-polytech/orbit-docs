@@ -1,0 +1,316 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 760" width="100%" height="100%">
+  <defs>
+    <!-- Card & Zone Gradients -->
+    <linearGradient id="mainBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f111a" />
+      <stop offset="100%" stop-color="#161824" />
+    </linearGradient>
+
+    <linearGradient id="clientZoneBg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e1e2e" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#181825" stop-opacity="0.9" />
+    </linearGradient>
+
+    <linearGradient id="gatewayGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="100%" stop-color="#312e81" />
+    </linearGradient>
+
+    <linearGradient id="meshGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0c2340" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <linearGradient id="infraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1917" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+
+    <!-- Node Shadows -->
+    <filter id="shadowSm" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+    <filter id="glowBlue" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#3b82f6" flood-opacity="0.3" />
+    </filter>
+
+    <!-- Arrow Markers -->
+    <marker id="arrRest" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+    </marker>
+    <marker id="arrGrpc" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#818cf8" />
+    </marker>
+    <marker id="arrAsync" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+    </marker>
+    <marker id="arrDb" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+    </marker>
+  </defs>
+
+  <!-- Canvas Outer Container -->
+  <rect x="2" y="2" width="1156" height="756" rx="16" fill="url(#mainBg)" stroke="#26293b" stroke-width="2" />
+
+  <!-- Header Banner -->
+  <g transform="translate(30, 24)">
+    <circle cx="12" cy="12" r="7" fill="#6366f1" />
+    <circle cx="12" cy="12" r="3" fill="#ffffff" />
+    <text x="30" y="17" font-family="'JetBrains Mono', 'Segoe UI', monospace" font-size="16" font-weight="700" fill="#f1f5f9">
+      Orbit AI • Архитектура распределенной экосистемы микросервисов
+    </text>
+    <text x="740" y="17" font-family="'JetBrains Mono', monospace" font-size="12" fill="#64748b">
+      github.com/orbit-polytech (13 репозиториев)
+    </text>
+    <line x1="0" y1="32" x2="1100" y2="32" stroke="#26293b" stroke-width="1.5" />
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 1. КЛИЕНТСКАЯ ЗОНА (Untrusted Zone) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(30, 75)">
+    <!-- Zone background card -->
+    <rect x="0" y="0" width="1100" height="90" rx="10" fill="url(#clientZoneBg)" stroke="#334155" stroke-width="1" stroke-dasharray="4 4" />
+    
+    <!-- Zone Label -->
+    <rect x="16" y="-10" width="220" height="20" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1" />
+    <text x="24" y="4" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" fill="#94a3b8">
+      ВНЕШНИЙ КОНТУР • КЛИЕНТЫ
+    </text>
+
+    <!-- Client 1: Mobile -->
+    <g transform="translate(60, 20)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="280" height="52" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="18" y="24" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#93c5fd">📱 mobile</text>
+      <text x="18" y="40" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">Flutter 3.x • MVVM &amp; BLoC (iOS/Android)</text>
+      <circle cx="260" cy="26" r="6" fill="#3b82f6" fill-opacity="0.3" />
+      <circle cx="260" cy="26" r="3" fill="#60a5fa" />
+    </g>
+
+    <!-- Client 2: Bot -->
+    <g transform="translate(410, 20)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="280" height="52" rx="8" fill="#1e293b" stroke="#0ea5e9" stroke-width="1.5" />
+      <text x="18" y="24" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#7dd3fc">🤖 bot-service</text>
+      <text x="18" y="40" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">Python 3.12 • aiogram 3 (Telegram)</text>
+      <circle cx="260" cy="26" r="6" fill="#0ea5e9" fill-opacity="0.3" />
+      <circle cx="260" cy="26" r="3" fill="#38bdf8" />
+    </g>
+
+    <!-- Client 3: Web / Swagger -->
+    <g transform="translate(760, 20)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="280" height="52" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5" />
+      <text x="18" y="24" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#a5f3fc">🌐 Web &amp; Swagger UI</text>
+      <text x="18" y="40" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">OpenAPI 3.1 • Браузер разработчика</text>
+      <circle cx="260" cy="26" r="6" fill="#06b6d4" fill-opacity="0.3" />
+      <circle cx="260" cy="26" r="3" fill="#22d3ee" />
+    </g>
+  </g>
+
+  <!-- REST Traffic Arrows to Gateway -->
+  <path d="M 230 147 L 230 190 L 530 190 L 530 205" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrRest)" />
+  <path d="M 580 147 L 580 205" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrRest)" />
+  <path d="M 930 147 L 930 190 L 630 190 L 630 205" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrRest)" />
+
+  <!-- Protocol Badge: REST -->
+  <g transform="translate(485, 177)">
+    <rect x="0" y="0" width="190" height="22" rx="11" fill="#0c4a6e" stroke="#0284c7" stroke-width="1" />
+    <text x="95" y="15" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" fill="#bae6fd">
+      HTTPS REST JSON • Ed25519 JWT
+    </text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 2. ПЕРИМЕТР БЕЗОПАСНОСТИ (API Gateway) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(180, 205)" filter="url(#glowBlue)">
+    <rect x="0" y="0" width="800" height="66" rx="10" fill="url(#gatewayGrad)" stroke="#6366f1" stroke-width="2" />
+    
+    <!-- Title & Badge -->
+    <rect x="18" y="14" width="180" height="24" rx="4" fill="#3730a3" stroke="#818cf8" stroke-width="1" />
+    <text x="26" y="30" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700" fill="#ffffff">🛡️ gateway-service</text>
+    <rect x="206" y="16" width="55" height="20" rx="4" fill="#1e1b4b" />
+    <text x="214" y="30" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" fill="#a5b4fc">:8080</text>
+
+    <!-- Description Chips -->
+    <text x="18" y="52" font-family="'Segoe UI', sans-serif" font-size="11" fill="#c7d2fe">
+      Валидация JWT Ed25519 • Проверка Blacklist (Redis) • Rate Limiting • CORS • Инъекция x-user-id в gRPC
+    </text>
+  </g>
+
+  <!-- Bus line down from Gateway to Mesh -->
+  <line x1="580" y1="271" x2="580" y2="322" stroke="#818cf8" stroke-width="3" />
+  <!-- gRPC Protocol Pill -->
+  <g transform="translate(435, 283)">
+    <rect x="0" y="0" width="290" height="24" rx="12" fill="#1e1b4b" stroke="#6366f1" stroke-width="1.5" />
+    <text x="145" y="16" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="10.5" font-weight="700" fill="#c7d2fe">
+      gRPC over HTTP/2 • Metadata: x-user-id
+    </text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 3. ВНУТРЕННИЙ ДОВЕРЕННЫЙ КОНТУР (Service Mesh) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(30, 320)">
+    <!-- Zone Container -->
+    <rect x="0" y="0" width="1100" height="225" rx="12" fill="url(#meshGrad)" stroke="#1e3a5f" stroke-width="1.5" />
+    
+    <!-- Zone Badge -->
+    <rect x="20" y="-12" width="340" height="22" rx="4" fill="#0f172a" stroke="#38bdf8" stroke-width="1" />
+    <text x="30" y="3" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#38bdf8">
+      ВНУТРЕННИЙ ДОВЕРЕННЫЙ КОНТУР (orbit-net)
+    </text>
+
+    <!-- gRPC Horizontal Distribution Bus -->
+    <line x1="85" y1="22" x2="1015" y2="22" stroke="#818cf8" stroke-width="2" />
+
+    <!-- Drops to each service -->
+    <line x1="85" y1="22" x2="85" y2="40" stroke="#818cf8" stroke-width="2" marker-end="url(#arrGrpc)" />
+    <line x1="240" y1="22" x2="240" y2="40" stroke="#818cf8" stroke-width="2" marker-end="url(#arrGrpc)" />
+    <line x1="395" y1="22" x2="395" y2="40" stroke="#818cf8" stroke-width="2" marker-end="url(#arrGrpc)" />
+    <line x1="550" y1="22" x2="550" y2="40" stroke="#818cf8" stroke-width="2" marker-end="url(#arrGrpc)" />
+    <line x1="705" y1="22" x2="705" y2="40" stroke="#818cf8" stroke-width="2" marker-end="url(#arrGrpc)" />
+    <line x1="860" y1="22" x2="860" y2="40" stroke="#818cf8" stroke-width="2" marker-end="url(#arrGrpc)" />
+    <line x1="1015" y1="22" x2="1015" y2="40" stroke="#818cf8" stroke-width="2" marker-end="url(#arrGrpc)" />
+
+    <!-- 1. auth-service -->
+    <g transform="translate(15, 42)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="140" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="10" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#93c5fd">auth-service</text>
+      <rect x="10" y="30" width="50" height="16" rx="3" fill="#0f172a" />
+      <text x="14" y="42" font-family="'JetBrains Mono', monospace" font-size="9" fill="#60a5fa">:50051</text>
+      <text x="10" y="62" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Ed25519 ключи</text>
+      <text x="10" y="76" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Сессии / TG Auth</text>
+    </g>
+
+    <!-- 2. users-service -->
+    <g transform="translate(170, 42)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="140" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="10" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#93c5fd">users-service</text>
+      <rect x="10" y="30" width="50" height="16" rx="3" fill="#0f172a" />
+      <text x="14" y="42" font-family="'JetBrains Mono', monospace" font-size="9" fill="#60a5fa">:50052</text>
+      <text x="10" y="62" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Профили студентов</text>
+      <text x="10" y="76" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Группы и роли</text>
+    </g>
+
+    <!-- 3. schedule-service -->
+    <g transform="translate(325, 42)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="140" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="10" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#93c5fd">schedule-service</text>
+      <rect x="10" y="30" width="50" height="16" rx="3" fill="#0f172a" />
+      <text x="14" y="42" font-family="'JetBrains Mono', monospace" font-size="9" fill="#60a5fa">:50053</text>
+      <text x="10" y="62" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Парсинг расписания</text>
+      <text x="10" y="76" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Кэш пар в Redis</text>
+    </g>
+
+    <!-- 4. navigation-service -->
+    <g transform="translate(480, 42)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="140" height="90" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+      <text x="10" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#93c5fd">nav-service</text>
+      <rect x="10" y="30" width="50" height="16" rx="3" fill="#0f172a" />
+      <text x="14" y="42" font-family="'JetBrains Mono', monospace" font-size="9" fill="#60a5fa">:50054</text>
+      <text x="10" y="62" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Корпуса Политеха</text>
+      <text x="10" y="76" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Маршруты и карты</text>
+    </g>
+
+    <!-- 5. tasks-service (Highlighted as reference) -->
+    <g transform="translate(635, 42)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="140" height="90" rx="8" fill="#1e293b" stroke="#10b981" stroke-width="2" />
+      <text x="10" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#6ee7b7">tasks-service</text>
+      <rect x="10" y="30" width="50" height="16" rx="3" fill="#064e3b" />
+      <text x="14" y="42" font-family="'JetBrains Mono', monospace" font-size="9" fill="#a7f3d0">:50055</text>
+      <text x="10" y="62" font-family="'Segoe UI', sans-serif" font-size="10" fill="#cbd5e1">Clean Architecture</text>
+      <text x="10" y="76" font-family="'Segoe UI', sans-serif" font-size="10" fill="#cbd5e1">Transactional Outbox</text>
+    </g>
+
+    <!-- 6. notification-service -->
+    <g transform="translate(790, 42)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="140" height="90" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" />
+      <text x="10" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#fcd34d">notif-service</text>
+      <rect x="10" y="30" width="50" height="16" rx="3" fill="#451a03" />
+      <text x="14" y="42" font-family="'JetBrains Mono', monospace" font-size="9" fill="#fde68a">:50056</text>
+      <text x="10" y="62" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Push / TG Sender</text>
+      <text x="10" y="76" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">AMQP Consumer</text>
+    </g>
+
+    <!-- 7. ai-service -->
+    <g transform="translate(945, 42)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="140" height="90" rx="8" fill="#1e293b" stroke="#a855f7" stroke-width="1.5" />
+      <text x="10" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#d8b4fe">ai-service</text>
+      <rect x="10" y="30" width="50" height="16" rx="3" fill="#3b0764" />
+      <text x="14" y="42" font-family="'JetBrains Mono', monospace" font-size="9" fill="#f3e8ff">:50057</text>
+      <text x="10" y="62" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">RAG &amp; pgvector</text>
+      <text x="10" y="76" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Gemini 2.0 Flash</text>
+    </g>
+
+    <!-- Async Event Arrow: tasks-service -> notification-service via broker -->
+    <path d="M 705 132 L 705 160 L 760 160" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4 4" marker-end="url(#arrAsync)" />
+    <text x="640" y="175" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#fcd34d">
+      Outbox: task.created ──&gt; RabbitMQ ──&gt; notif-service
+    </text>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- 4. ИНФРАСТРУКТУРА ХРАНЕНИЯ И ОЧЕРЕДЕЙ (infra) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(30, 580)">
+    <!-- Zone Container -->
+    <rect x="0" y="0" width="1100" height="145" rx="12" fill="url(#infraGrad)" stroke="#334155" stroke-width="1.5" />
+    
+    <!-- Zone Badge -->
+    <rect x="20" y="-12" width="370" height="22" rx="4" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+    <text x="30" y="3" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#34d399">
+      ИНФРАСТРУКТУРА ХРАНЕНИЯ И БРОКЕРОВ (infra)
+    </text>
+
+    <!-- Storage Node 1: PostgreSQL 16 -->
+    <g transform="translate(30, 26)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="240" height="92" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1.5" />
+      <text x="16" y="24" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#38bdf8">🐘 PostgreSQL 16</text>
+      <rect x="180" y="10" width="48" height="18" rx="3" fill="#0c4a6e" />
+      <text x="188" y="23" font-family="'JetBrains Mono', monospace" font-size="10" fill="#7dd3fc">:5432</text>
+      <text x="16" y="46" font-family="'Segoe UI', sans-serif" font-size="11" fill="#94a3b8">Схемы: auth, users, tasks, schedule</text>
+      <text x="16" y="64" font-family="'Segoe UI', sans-serif" font-size="11" fill="#94a3b8">Расширение: pgvector (vector 768)</text>
+      <text x="16" y="80" font-family="'JetBrains Mono', monospace" font-size="10" fill="#64748b">Реляционная целостность и ACID</text>
+    </g>
+
+    <!-- Storage Node 2: Redis 7 -->
+    <g transform="translate(300, 26)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="240" height="92" rx="8" fill="#1e293b" stroke="#ef4444" stroke-width="1.5" />
+      <text x="16" y="24" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#f87171">⚡ Redis 7.2</text>
+      <rect x="180" y="10" width="48" height="18" rx="3" fill="#7f1d1d" />
+      <text x="188" y="23" font-family="'JetBrains Mono', monospace" font-size="10" fill="#fca5a5">:6379</text>
+      <text x="16" y="46" font-family="'Segoe UI', sans-serif" font-size="11" fill="#94a3b8">Кэш расписания (Cache-Aside)</text>
+      <text x="16" y="64" font-family="'Segoe UI', sans-serif" font-size="11" fill="#94a3b8">Blacklist токенов по jti</text>
+      <text x="16" y="80" font-family="'JetBrains Mono', monospace" font-size="10" fill="#64748b">Rate Limiting и быстрое чтение &lt;2мс</text>
+    </g>
+
+    <!-- Storage Node 3: RabbitMQ 4 -->
+    <g transform="translate(570, 26)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="240" height="92" rx="8" fill="#1e293b" stroke="#f97316" stroke-width="1.5" />
+      <text x="16" y="24" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#fb923c">🐇 RabbitMQ 4</text>
+      <rect x="180" y="10" width="48" height="18" rx="3" fill="#7c2d12" />
+      <text x="188" y="23" font-family="'JetBrains Mono', monospace" font-size="10" fill="#fdba74">:5672</text>
+      <text x="16" y="46" font-family="'Segoe UI', sans-serif" font-size="11" fill="#94a3b8">AMQP 0-9-1 Topic Exchange</text>
+      <text x="16" y="64" font-family="'Segoe UI', sans-serif" font-size="11" fill="#94a3b8">Очереди событий + DLX / DLQ</text>
+      <text x="16" y="80" font-family="'JetBrains Mono', monospace" font-size="10" fill="#64748b">At-Least-Once доставка сообщений</text>
+    </g>
+
+    <!-- Storage Node 4: Jaeger 2 -->
+    <g transform="translate(840, 26)" filter="url(#shadowSm)">
+      <rect x="0" y="0" width="230" height="92" rx="8" fill="#1e293b" stroke="#06b6d4" stroke-width="1.5" />
+      <text x="16" y="24" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#67e8f9">🔍 Jaeger 2</text>
+      <rect x="170" y="10" width="48" height="18" rx="3" fill="#164e63" />
+      <text x="178" y="23" font-family="'JetBrains Mono', monospace" font-size="10" fill="#a5f3fc">:4318</text>
+      <text x="16" y="46" font-family="'Segoe UI', sans-serif" font-size="11" fill="#94a3b8">OpenTelemetry Tracing</text>
+      <text x="16" y="64" font-family="'Segoe UI', sans-serif" font-size="11" fill="#94a3b8">Сквозной trace_id по RPC</text>
+      <text x="16" y="80" font-family="'JetBrains Mono', monospace" font-size="10" fill="#64748b">Мониторинг латентности микросервисов</text>
+    </g>
+  </g>
+
+  <!-- Connectors from Mesh to Infra -->
+  <line x1="150" y1="545" x2="150" y2="580" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrDb)" />
+  <line x1="420" y1="545" x2="420" y2="580" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrDb)" />
+  <line x1="690" y1="545" x2="690" y2="580" stroke="#f97316" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrDb)" />
+  <line x1="960" y1="545" x2="960" y2="580" stroke="#06b6d4" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrDb)" />
+
+</svg>

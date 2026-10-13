@@ -20,22 +20,7 @@
 ## Решение
 Принято четкое архитектурное разделение ответственности между двумя инструментами:
 
-```mermaid
-flowchart TD
-    subgraph REDIS ["Redis 7 (In-Memory Key-Value)"]
-        R1["Кэширование расписания (Cache-Aside)"]
-        R2["Хранение отозванных JWT (Blacklist по jti)"]
-        R3["Ограничение частоты запросов (Rate Limiting)"]
-        R4["Идемпотентность быстрых операций (Check & Set)"]
-    end
-
-    subgraph RMQ ["RabbitMQ (AMQP 0-9-1 Message Broker)"]
-        M1["Асинхронные доменные события (TaskCreated, ScheduleChanged)"]
-        M2["Очереди фоновых задач (Отправка писем, генерация эмбеддингов)"]
-        M3["Гарантия доставки At-Least-Once с подтверждениями (Ack/Nack)"]
-        M4["Очереди недоставленных сообщений (Dead Letter Queues)"]
-    end
-```
+![Архитектурное разделение ролей Redis 7 и RabbitMQ](img/redis-vs-rabbitmq.svg)
 
 1. **Redis используется ТОЛЬКО как:**
    - Быстрый кэш со строгим временем жизни (TTL) и fallback на базу данных PostgreSQL;

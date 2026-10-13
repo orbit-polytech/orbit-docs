@@ -6,14 +6,7 @@
 
 ## 1. Схема движения изменений
 
-```mermaid
-flowchart LR
-    A["1. contracts<br/>.proto файл"] --> B["2. Buf CLI<br/>lint & breaking"]
-    B --> C["3. Buf generate<br/>gen/go & gen/python"]
-    C --> D["4. go get<br/>в микросервисе"]
-    D --> E["5. Usecase & Domain<br/>бизнес-логика"]
-    E --> F["6. gRPC Handler<br/>маппинг DTO и ошибок"]
-```
+![Порядок добавления нового gRPC-метода](img/add-grpc-method-flow.svg)
 
 ---
 

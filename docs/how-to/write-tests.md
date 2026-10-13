@@ -6,13 +6,7 @@
 
 ## 1. Пирамида тестирования
 
-```mermaid
-flowchart TD
-    E2E["Интеграционные тесты<br/>//go:build integration<br/>(PostgreSQL, RabbitMQ, Redis)"]
-    UNIT["Юнит-тесты<br/>go test -race ./...<br/>(Domain, Usecase, Config, Handlers)"]
-    
-    UNIT --> E2E
-```
+![Пирамида тестирования Orbit AI](img/testing-pyramid.svg)
 
 | Тип теста | Где находится | Зависимости | Скорость выполнения |
 | :--- | :--- | :--- | :--- |

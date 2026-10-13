@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 500" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="mobBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e" />
+      <stop offset="100%" stop-color="#181825" />
+    </linearGradient>
+
+    <!-- Zone Gradients -->
+    <linearGradient id="mobAppGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.8" />
+    </linearGradient>
+    <linearGradient id="backendGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#312e81" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.8" />
+    </linearGradient>
+
+    <!-- Shadows -->
+    <filter id="mobShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrMobBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+    </marker>
+    <marker id="arrMobPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#818cf8" />
+    </marker>
+  </defs>
+
+  <!-- Container Box -->
+  <rect x="2" y="2" width="1016" height="496" rx="16" fill="url(#mobBg)" stroke="#313244" stroke-width="2" />
+
+  <!-- Header -->
+  <g transform="translate(32, 28)">
+    <circle cx="10" cy="10" r="6" fill="#0284c7" />
+    <text x="26" y="15" font-family="'JetBrains Mono', monospace" font-size="15" font-weight="700" fill="#cdd6f4">
+      Архитектура client-mobile • Взаимодействие Flutter, BLoC и API Gateway
+    </text>
+    <line x1="0" y1="28" x2="956" y2="28" stroke="#313244" stroke-width="1" />
+  </g>
+
+  <!-- ==================== 1. MOBILE APP (client-mobile) ==================== -->
+  <g transform="translate(30, 75)" filter="url(#mobShadow)">
+    <rect x="0" y="0" width="560" height="325" rx="12" fill="url(#mobAppGrad)" stroke="#0284c7" stroke-width="1.5" />
+    <rect x="14" y="-12" width="280" height="22" rx="4" fill="#0c4a6e" stroke="#38bdf8" stroke-width="1" />
+    <text x="22" y="3" font-family="'JetBrains Mono', monospace" font-size="10.5" font-weight="700" fill="#bae6fd">
+      📱 client-mobile (Flutter 3.x / Dart)
+    </text>
+
+    <!-- Layer 1: Presentation (UI) -->
+    <g transform="translate(15, 20)">
+      <rect x="0" y="0" width="530" height="75" rx="8" fill="#1e293b" stroke="#38bdf8" stroke-width="1" />
+      <text x="14" y="22" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#38bdf8">1. Presentation Layer (Виджеты и экраны)</text>
+      <text x="14" y="42" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">Экраны: TasksScreen, ScheduleScreen, AiChatScreen • Дизайн-система Политеха</text>
+      <text x="14" y="60" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">BlocBuilder&lt;TasksBloc, TasksState&gt; (Реактивная перерисовка UI без лагов)</text>
+    </g>
+
+    <!-- In-app flow arrow 1 -> 2 -->
+    <path d="M 280 95 L 280 115" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrMobBlue)" />
+
+    <!-- Layer 2: BLoC (State Management) -->
+    <g transform="translate(15, 115)">
+      <rect x="0" y="0" width="530" height="75" rx="8" fill="#1e293b" stroke="#0ea5e9" stroke-width="1" />
+      <text x="14" y="22" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#7dd3fc">2. BLoC Layer (Управление состоянием)</text>
+      <text x="14" y="42" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">TasksBloc: обработка событий LoadTasksEvent, CompleteTaskEvent</text>
+      <text x="14" y="60" font-family="'JetBrains Mono', monospace" font-size="10" fill="#94a3b8">Unidirectional Data Flow: UI (Event) ──&gt; BLoC ──&gt; UI (State: Loading, Loaded, Error)</text>
+    </g>
+
+    <!-- In-app flow arrow 2 -> 3 -->
+    <path d="M 280 190 L 280 210" fill="none" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrMobBlue)" />
+
+    <!-- Layer 3: Data Layer -->
+    <g transform="translate(15, 210)">
+      <rect x="0" y="0" width="530" height="95" rx="8" fill="#1e293b" stroke="#0284c7" stroke-width="1" />
+      <text x="14" y="22" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#93c5fd">3. Data Layer (Сетевой клиент и хранилище)</text>
+      <text x="14" y="42" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">Клиент: Dio HTTP Client с AuthInterceptor (подстановка Bearer JWT токена)</text>
+      <text x="14" y="60" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">OpenAPI DTO: строго типизированный код моделей из openapi.json</text>
+      <text x="14" y="80" font-family="'JetBrains Mono', monospace" font-size="10" fill="#6ee7b7">FlutterSecureStorage: безопасное хранение JWT в iOS Keychain / Android KeyStore</text>
+    </g>
+  </g>
+
+  <!-- Connect line from Data Layer to Gateway -->
+  <line x1="590" y1="230" x2="660" y2="230" stroke="#38bdf8" stroke-width="2.5" marker-end="url(#arrMobBlue)" />
+
+  <!-- Protocol Badge between Mobile and Gateway -->
+  <g transform="translate(565, 175)">
+    <rect x="0" y="0" width="95" height="40" rx="6" fill="#0c4a6e" stroke="#0284c7" stroke-width="1" />
+    <text x="47" y="18" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" fill="#bae6fd">REST / JSON</text>
+    <text x="47" y="32" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="8" fill="#7dd3fc">Bearer JWT</text>
+  </g>
+
+  <!-- ==================== 2. BACKEND PERIMETER & MESH ==================== -->
+  <g transform="translate(665, 75)" filter="url(#mobShadow)">
+    <rect x="0" y="0" width="320" height="325" rx="12" fill="url(#backendGrad)" stroke="#6366f1" stroke-width="1.5" />
+    <rect x="14" y="-12" width="220" height="22" rx="4" fill="#1e1b4b" stroke="#818cf8" stroke-width="1" />
+    <text x="22" y="3" font-family="'JetBrains Mono', monospace" font-size="10.5" font-weight="700" fill="#c7d2fe">
+      БЭКЕНД ПЕРИМЕТР &amp; КОНТУР
+    </text>
+
+    <!-- Node 1: Gateway -->
+    <g transform="translate(15, 20)">
+      <rect x="0" y="0" width="290" height="115" rx="8" fill="#1e1b4b" stroke="#818cf8" stroke-width="1.5" />
+      <text x="14" y="24" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#ffffff">🛡️ API Gateway (:8080)</text>
+      <text x="14" y="46" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Проверка Ed25519 подписи токена</text>
+      <text x="14" y="64" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Проверка Blacklist (Redis)</text>
+      <text x="14" y="82" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">• Rate Limiting (Token Bucket)</text>
+      <text x="14" y="100" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#86efac">• Инъекция metadata x-user-id</text>
+    </g>
+
+    <!-- Down arrow from Gateway to Internal Mesh -->
+    <line x1="160" y1="135" x2="160" y2="165" stroke="#818cf8" stroke-width="2.5" marker-end="url(#arrMobPurple)" />
+
+    <!-- Node 2: Internal Microservices -->
+    <g transform="translate(15, 170)">
+      <rect x="0" y="0" width="290" height="135" rx="8" fill="#0f172a" stroke="#3b82f6" stroke-width="1" />
+      <text x="14" y="24" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#93c5fd">Внутренние сервисы (gRPC HTTP/2)</text>
+      
+      <rect x="14" y="35" width="125" height="40" rx="4" fill="#1e293b" />
+      <text x="22" y="52" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#cbd5e1">tasks-service</text>
+      <text x="22" y="66" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#6ee7b7">Задачи Политеха</text>
+
+      <rect x="150" y="35" width="125" height="40" rx="4" fill="#1e293b" />
+      <text x="158" y="52" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#cbd5e1">schedule-service</text>
+      <text x="158" y="66" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#93c5fd">Расписание пар</text>
+
+      <rect x="14" y="82" width="261" height="40" rx="4" fill="#1e293b" />
+      <text x="22" y="100" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#d8b4fe">ai-service (:50057)</text>
+      <text x="22" y="114" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">Консультации по регламентам университета (RAG)</text>
+    </g>
+  </g>
+
+  <!-- ==================== FOOTER ==================== -->
+  <g transform="translate(30, 420)">
+    <rect x="0" y="0" width="955" height="60" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1" />
+    <text x="18" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#38bdf8">
+      ADR-005: Почему мобильное приложение работает по REST, а не gRPC:
+    </text>
+    <text x="18" y="42" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">
+      Исключена генерация gRPC-Web стабов под Dart. REST/JSON обеспечивает надёжную работу в мобильных сетях, лёгкую генерацию DTO из OpenAPI и простой перехват трафика для отладки в Charles/Proxyman.
+    </text>
+  </g>
+</svg>

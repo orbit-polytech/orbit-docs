@@ -6,34 +6,7 @@
 
 ## 1. Архитектурная топология сети
 
-```mermaid
-flowchart LR
-    subgraph Clients ["Внешние клиенты (Недоверенная зона)"]
-        MOB["Flutter Мобильное приложение"]
-        BOT["Telegram-бот (aiogram)"]
-        SWAGGER["Swagger UI / Браузер"]
-    end
-
-    subgraph Edge ["Периметр системы"]
-        GW["gateway-service<br/>(API Gateway / Reverse Proxy)"]
-    end
-
-    subgraph InternalMesh ["Внутренний доверенный контур (Docker network)"]
-        AUTH["auth-service"]
-        TASKS["tasks-service"]
-        SCHED["schedule-service"]
-        AI["ai-service"]
-    end
-
-    MOB -->|REST / JSON (HTTP/1.1 & HTTP/2)<br/>JWT Bearer| GW
-    BOT -->|REST / JSON<br/>JWT Bearer| GW
-    SWAGGER -->|REST / JSON| GW
-
-    GW ==>|gRPC / Protobuf (HTTP/2)<br/>Metadata: x-user-id| TASKS
-    GW ==>|gRPC / Protobuf (HTTP/2)| SCHED
-    GW ==>|gRPC / Protobuf (HTTP/2)| AI
-    GW ==>|gRPC / Protobuf (HTTP/2)| AUTH
-```
+![Сетевая топология: REST на внешней границе и gRPC во внутреннем контуре](img/network-topology.svg)
 
 ---
 

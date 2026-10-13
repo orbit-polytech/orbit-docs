@@ -1,0 +1,167 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 480" width="100%" height="100%">
+  <defs>
+    <linearGradient id="gwPipeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e" />
+      <stop offset="100%" stop-color="#181825" />
+    </linearGradient>
+
+    <!-- Markers -->
+    <marker id="arrCyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#06b6d4" />
+    </marker>
+    <marker id="arrPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#8b5cf6" />
+    </marker>
+    <marker id="arrGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+    </marker>
+
+    <filter id="shadowBox" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Container Box -->
+  <rect x="2" y="2" width="1016" height="476" rx="16" fill="url(#gwPipeBg)" stroke="#313244" stroke-width="2" />
+
+  <!-- Header -->
+  <g transform="translate(32, 28)">
+    <circle cx="10" cy="10" r="6" fill="#818cf8" />
+    <text x="26" y="15" font-family="'JetBrains Mono', monospace" font-size="15" font-weight="700" fill="#cdd6f4">
+      gateway-service • Пайплайн обработки запроса: REST/JSON в gRPC и маппинг ошибок
+    </text>
+    <line x1="0" y1="28" x2="956" y2="28" stroke="#313244" stroke-width="1" />
+  </g>
+
+  <!-- 1. Client Node (Left) -->
+  <g transform="translate(30, 90)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="170" height="340" rx="12" fill="#1e293b" stroke="#38bdf8" stroke-width="1.8" />
+    <rect x="12" y="12" width="146" height="28" rx="6" fill="#0284c7" />
+    <text x="85" y="30" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="11.5" font-weight="700" fill="#ffffff">
+      📱 ВНЕШНИЙ КЛИЕНТ
+    </text>
+
+    <!-- Request Box -->
+    <rect x="12" y="60" width="146" height="110" rx="6" fill="#0f172a" stroke="#38bdf8" stroke-width="1" />
+    <text x="20" y="80" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" fill="#7dd3fc">HTTP ЗАПРОС:</text>
+    <text x="20" y="98" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#e0f2fe">POST /api/v1/tasks</text>
+    <text x="20" y="115" font-family="'JetBrains Mono', monospace" font-size="8" fill="#94a3b8">Authorization:</text>
+    <text x="20" y="130" font-family="'JetBrains Mono', monospace" font-size="8" fill="#38bdf8">Bearer &lt;JWT&gt;</text>
+    <text x="20" y="150" font-family="'JetBrains Mono', monospace" font-size="8" fill="#94a3b8">{"title": "Lab 1"}</text>
+
+    <!-- Response Box -->
+    <rect x="12" y="200" width="146" height="110" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+    <text x="20" y="220" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" fill="#86efac">HTTP ОТВЕТ:</text>
+    <text x="20" y="238" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#34d399">HTTP 201 Created</text>
+    <text x="20" y="255" font-family="'JetBrains Mono', monospace" font-size="8" fill="#94a3b8">или 400 Bad Request</text>
+    <text x="20" y="272" font-family="'JetBrains Mono', monospace" font-size="8" fill="#94a3b8">или 404 Not Found</text>
+    <text x="20" y="295" font-family="'JetBrains Mono', monospace" font-size="8" fill="#6ee7b7">Чистый JSON DTO</text>
+  </g>
+
+  <!-- Arrow Client -> Gateway -->
+  <line x1="200" y1="140" x2="238" y2="140" stroke="#06b6d4" stroke-width="2.5" marker-end="url(#arrCyan)" />
+
+  <!-- 2. Gateway Pipeline Card (Center) -->
+  <g transform="translate(240, 80)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="510" height="360" rx="12" fill="#1e1b4b" stroke="#818cf8" stroke-width="2" />
+    
+    <!-- Title -->
+    <rect x="14" y="12" width="482" height="28" rx="6" fill="#312e81" />
+    <text x="255" y="30" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700" fill="#c7d2fe">
+      🛡️ gateway-service (Внутренний конвейер обработки)
+    </text>
+
+    <!-- Stage 1: JWT Middleware -->
+    <g transform="translate(16, 55)">
+      <rect x="0" y="0" width="115" height="130" rx="6" fill="#0f172a" stroke="#818cf8" stroke-width="1" />
+      <text x="10" y="20" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" fill="#a5b4fc">1. JWT Mid</text>
+      <text x="10" y="40" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Ed25519 вал.</text>
+      <text x="10" y="56" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Blacklist jti</text>
+      <text x="10" y="72" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• sub -&gt; user_id</text>
+      <text x="10" y="94" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#67e8f9">Очистка внешних</text>
+      <text x="10" y="108" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#67e8f9">x-user-id!</text>
+    </g>
+
+    <!-- Arrow 1 -> 2 -->
+    <line x1="131" y1="120" x2="141" y2="120" stroke="#818cf8" stroke-width="1.8" marker-end="url(#arrPurple)" />
+
+    <!-- Stage 2: Router -->
+    <g transform="translate(142, 55)">
+      <rect x="0" y="0" width="110" height="130" rx="6" fill="#0f172a" stroke="#818cf8" stroke-width="1" />
+      <text x="10" y="20" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" fill="#a5b4fc">2. Router</text>
+      <text x="10" y="40" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Chi роутер</text>
+      <text x="10" y="56" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Маршрут /v1</text>
+      <text x="10" y="72" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Rate limit</text>
+      <text x="10" y="94" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#c4b5fd">Трансляция</text>
+      <text x="10" y="108" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#c4b5fd">в хендлер</text>
+    </g>
+
+    <!-- Arrow 2 -> 3 -->
+    <line x1="252" y1="120" x2="262" y2="120" stroke="#818cf8" stroke-width="1.8" marker-end="url(#arrPurple)" />
+
+    <!-- Stage 3: Gateway DTO -->
+    <g transform="translate(263, 55)">
+      <rect x="0" y="0" width="115" height="130" rx="6" fill="#0f172a" stroke="#818cf8" stroke-width="1" />
+      <text x="10" y="20" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" fill="#a5b4fc">3. REST DTO</text>
+      <text x="10" y="40" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Unmarshal JSON</text>
+      <text x="10" y="56" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Валидация полей</text>
+      <text x="10" y="72" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• DTO -&gt; Proto</text>
+      <text x="10" y="94" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#fcd34d">Изоляция DTO</text>
+      <text x="10" y="108" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#fcd34d">от Protobuf</text>
+    </g>
+
+    <!-- Arrow 3 -> 4 -->
+    <line x1="378" y1="120" x2="388" y2="120" stroke="#818cf8" stroke-width="1.8" marker-end="url(#arrPurple)" />
+
+    <!-- Stage 4: gRPC Client -->
+    <g transform="translate(389, 55)">
+      <rect x="0" y="0" width="110" height="130" rx="6" fill="#0f172a" stroke="#818cf8" stroke-width="1" />
+      <text x="10" y="20" font-family="'JetBrains Mono', monospace" font-size="9" font-weight="700" fill="#a5b4fc">4. gRPC Client</text>
+      <text x="10" y="40" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Пул соединений</text>
+      <text x="10" y="56" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Заголовок:</text>
+      <text x="10" y="72" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#67e8f9">x-user-id</text>
+      <text x="10" y="94" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Таймаут 3с</text>
+    </g>
+
+    <!-- Stage 5: Status Mapper (Return Path) -->
+    <g transform="translate(16, 215)">
+      <rect x="0" y="0" width="483" height="125" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="1.2" />
+      <text x="16" y="24" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" fill="#6ee7b7">
+        5. Error &amp; Status Mapper (Трансляция gRPC-ответа в HTTP):
+      </text>
+      <text x="16" y="46" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#cbd5e1">• codes.OK (0) ------------&gt; HTTP 200 OK / 201 Created</text>
+      <text x="16" y="64" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#fde68a">• codes.InvalidArgument --&gt; HTTP 400 Bad Request</text>
+      <text x="16" y="82" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#93c5fd">• codes.NotFound ---------&gt; HTTP 404 Not Found</text>
+      <text x="16" y="100" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#fca5a5">• codes.Internal ---------&gt; HTTP 500 Internal Server Error (маскирование)</text>
+    </g>
+  </g>
+
+  <!-- Arrow Gateway -> Internal Tasks -->
+  <line x1="750" y1="150" x2="798" y2="150" stroke="#8b5cf6" stroke-width="2.5" marker-end="url(#arrPurple)" />
+  <line x1="798" y1="260" x2="750" y2="260" stroke="#10b981" stroke-width="2" stroke-dasharray="4 3" marker-end="url(#arrGreen)" />
+
+  <!-- 3. Internal Tasks Service (Right) -->
+  <g transform="translate(805, 90)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="180" height="340" rx="12" fill="#064e3b" stroke="#10b981" stroke-width="1.8" />
+    <rect x="12" y="12" width="156" height="28" rx="6" fill="#022c22" />
+    <text x="90" y="30" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="11.5" font-weight="700" fill="#a7f3d0">
+      🔒 ВНУТРЕННИЙ СЕРВИС
+    </text>
+
+    <text x="16" y="65" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#f1f5f9">tasks-service</text>
+    <text x="16" y="85" font-family="'JetBrains Mono', monospace" font-size="9" fill="#6ee7b7">:50055 (HTTP/2)</text>
+
+    <rect x="12" y="105" width="156" height="100" rx="6" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+    <text x="18" y="125" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#a7f3d0">gRPC TaskService</text>
+    <text x="18" y="145" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• AuthInterceptor</text>
+    <text x="18" y="162" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• UseCase execution</text>
+    <text x="18" y="180" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">• Postgres SQL</text>
+    <text x="18" y="195" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#34d399">Возврат Proto/Error</text>
+
+    <rect x="12" y="225" width="156" height="95" rx="6" fill="#020617" stroke="#334155" stroke-width="1" />
+    <text x="18" y="245" font-family="'Segoe UI', sans-serif" font-size="8.5" font-weight="700" fill="#fcd34d">СЕТЕВОЙ КОНТУР</text>
+    <text x="18" y="262" font-family="'Segoe UI', sans-serif" font-size="8" fill="#94a3b8">Порты не торчат наружу</text>
+    <text x="18" y="278" font-family="'Segoe UI', sans-serif" font-size="8" fill="#94a3b8">Только вызовы со шлюза</text>
+    <text x="18" y="295" font-family="'JetBrains Mono', monospace" font-size="7.5" fill="#64748b">orbit-net network</text>
+  </g>
+</svg>

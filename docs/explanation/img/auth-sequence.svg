@@ -1,0 +1,152 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1020 660" width="100%" height="100%">
+  <defs>
+    <linearGradient id="seqBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e" />
+      <stop offset="100%" stop-color="#181825" />
+    </linearGradient>
+
+    <!-- Markers -->
+    <marker id="arrBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" />
+    </marker>
+    <marker id="arrCyan" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#06b6d4" />
+    </marker>
+    <marker id="arrPurple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#8b5cf6" />
+    </marker>
+    <marker id="arrEmerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#10b981" />
+    </marker>
+    <marker id="arrAmber" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+    </marker>
+
+    <filter id="shadowBox" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+  </defs>
+
+  <!-- Container Box -->
+  <rect x="2" y="2" width="1016" height="656" rx="16" fill="url(#seqBg)" stroke="#313244" stroke-width="2" />
+
+  <!-- Header -->
+  <g transform="translate(32, 28)">
+    <circle cx="10" cy="10" r="6" fill="#8b5cf6" />
+    <text x="26" y="15" font-family="'JetBrains Mono', monospace" font-size="15" font-weight="700" fill="#cdd6f4">
+      Orbit AI • Архитектура сквозной аутентификации: Edge Verification &amp; Context Propagation
+    </text>
+    <line x1="0" y1="28" x2="956" y2="28" stroke="#313244" stroke-width="1" />
+  </g>
+
+  <!-- ==================== PARTICIPANTS ==================== -->
+  <!-- Lifelines -->
+  <line x1="100" y1="110" x2="100" y2="620" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" />
+  <line x1="310" y1="110" x2="310" y2="620" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" />
+  <line x1="520" y1="110" x2="520" y2="620" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" />
+  <line x1="730" y1="110" x2="730" y2="620" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" />
+  <line x1="920" y1="110" x2="920" y2="620" stroke="#334155" stroke-width="1.5" stroke-dasharray="4 4" />
+
+  <!-- Participant 1: User -->
+  <g transform="translate(20, 68)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="160" height="42" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+    <text x="80" y="22" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#93c5fd">👤 Клиент</text>
+    <text x="80" y="35" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#64748b">Flutter / Telegram Bot</text>
+  </g>
+
+  <!-- Participant 2: Gateway -->
+  <g transform="translate(225, 68)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="170" height="42" rx="8" fill="#1e1b4b" stroke="#818cf8" stroke-width="1.5" />
+    <text x="85" y="22" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#c7d2fe">🛡️ gateway-service</text>
+    <text x="85" y="35" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#a5b4fc">Edge Security (:8080)</text>
+  </g>
+
+  <!-- Participant 3: Redis -->
+  <g transform="translate(445, 68)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="150" height="42" rx="8" fill="#450a0a" stroke="#ef4444" stroke-width="1.5" />
+    <text x="75" y="22" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#fca5a5">⚡ Redis 7</text>
+    <text x="75" y="35" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#f87171">Blacklist &amp; Tokens</text>
+  </g>
+
+  <!-- Participant 4: Tasks -->
+  <g transform="translate(650, 68)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="160" height="42" rx="8" fill="#064e3b" stroke="#10b981" stroke-width="1.5" />
+    <text x="80" y="22" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#a7f3d0">⚙️ tasks-service</text>
+    <text x="80" y="35" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#6ee7b7">Internal gRPC (:50055)</text>
+  </g>
+
+  <!-- Participant 5: DB -->
+  <g transform="translate(845, 68)" filter="url(#shadowBox)">
+    <rect x="0" y="0" width="150" height="42" rx="8" fill="#14532d" stroke="#22c55e" stroke-width="1.5" />
+    <text x="75" y="22" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#bbf7d0">🐘 PostgreSQL</text>
+    <text x="75" y="35" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#86efac">tasks_db (:5432)</text>
+  </g>
+
+  <!-- ==================== FLOW INTERACTIONS ==================== -->
+
+  <!-- 1. Client to Gateway -->
+  <line x1="100" y1="140" x2="304" y2="140" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrCyan)" />
+  <rect x="110" y="123" width="180" height="17" rx="3" fill="#0f172a" />
+  <text x="115" y="135" font-family="'JetBrains Mono', monospace" font-size="9" fill="#7dd3fc">1. GET /api/v1/tasks [Bearer JWT]</text>
+
+  <!-- Gateway Activation box -->
+  <rect x="304" y="140" width="12" height="470" rx="3" fill="#312e81" stroke="#818cf8" stroke-width="1" />
+
+  <!-- Self: Validate JWT -->
+  <rect x="325" y="160" width="185" height="42" rx="6" fill="#1e293b" stroke="#6366f1" stroke-width="1" />
+  <text x="333" y="176" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#c7d2fe">Валидация Ed25519 в памяти</text>
+  <text x="333" y="192" font-family="'Segoe UI', sans-serif" font-size="9.5" fill="#94a3b8">Проверка подписи и exp/nbf (0 мс)</text>
+
+  <!-- 2. Gateway to Redis Blacklist -->
+  <line x1="316" y1="225" x2="514" y2="225" stroke="#ef4444" stroke-width="1.8" marker-end="url(#arrAmber)" />
+  <rect x="340" y="210" width="160" height="15" rx="3" fill="#0f172a" />
+  <text x="345" y="221" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#fca5a5">2. Проверка jti в Blacklist</text>
+
+  <!-- Redis response -->
+  <line x1="514" y1="250" x2="316" y2="250" stroke="#10b981" stroke-width="1.8" stroke-dasharray="4 3" marker-end="url(#arrEmerald)" />
+  <text x="385" y="246" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#86efac">OK (токен активен)</text>
+
+  <!-- Self: Extract user_id -->
+  <rect x="325" y="272" width="185" height="34" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1" />
+  <text x="333" y="286" font-family="'JetBrains Mono', monospace" font-size="9.5" fill="#93c5fd">Extract claims.sub -&gt; actorID</text>
+  <text x="333" y="299" font-family="'Segoe UI', sans-serif" font-size="9" fill="#94a3b8">Санитизация входящих заголовков</text>
+
+  <!-- Security Perimeter Note -->
+  <g transform="translate(325, 320)">
+    <rect x="0" y="0" width="390" height="24" rx="4" fill="#0f172a" stroke="#475569" stroke-width="1" stroke-dasharray="3 3" />
+    <text x="195" y="16" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="9.5" font-weight="700" fill="#cbd5e1">
+      🔒 ВНУТРЕННЯЯ СЕТЬ DOCKER (orbit-net) • gRPC по HTTP/2
+    </text>
+  </g>
+
+  <!-- 3. Gateway to Tasks gRPC -->
+  <line x1="316" y1="365" x2="724" y2="365" stroke="#8b5cf6" stroke-width="2" marker-end="url(#arrPurple)" />
+  <rect x="420" y="350" width="220" height="15" rx="3" fill="#0f172a" />
+  <text x="425" y="361" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#c4b5fd">3. ListTasks() [x-user-id: "018f234..."]</text>
+
+  <!-- Tasks Activation box -->
+  <rect x="724" y="365" width="12" height="190" rx="3" fill="#064e3b" stroke="#10b981" stroke-width="1" />
+
+  <!-- Self Tasks: AuthInterceptor & Context -->
+  <rect x="745" y="380" width="165" height="34" rx="6" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+  <text x="752" y="394" font-family="'JetBrains Mono', monospace" font-size="9" fill="#a7f3d0">AuthInterceptor -&gt; Context</text>
+  <text x="752" y="407" font-family="'Segoe UI', sans-serif" font-size="8.5" fill="#94a3b8">Валидация UUID &amp; actor context</text>
+
+  <!-- 4. Tasks to PostgreSQL -->
+  <line x1="736" y1="430" x2="914" y2="430" stroke="#10b981" stroke-width="2" marker-end="url(#arrEmerald)" />
+  <rect x="750" y="420" width="150" height="14" rx="3" fill="#0f172a" />
+  <text x="755" y="430" font-family="'JetBrains Mono', monospace" font-size="8" fill="#86efac">4. SELECT WHERE owner_id=$1</text>
+
+  <!-- DB response -->
+  <line x1="914" y1="470" x2="736" y2="470" stroke="#10b981" stroke-width="1.8" stroke-dasharray="4 3" marker-end="url(#arrEmerald)" />
+  <text x="780" y="465" font-family="'JetBrains Mono', monospace" font-size="8.5" fill="#86efac">Строки задач актора</text>
+
+  <!-- Tasks to Gateway -->
+  <line x1="724" y1="520" x2="316" y2="520" stroke="#8b5cf6" stroke-width="1.8" stroke-dasharray="4 3" marker-end="url(#arrPurple)" />
+  <text x="470" y="515" font-family="'JetBrains Mono', monospace" font-size="9" fill="#c4b5fd">ListTasksResponse (Proto)</text>
+
+  <!-- Gateway to Client -->
+  <line x1="304" y1="580" x2="106" y2="580" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrCyan)" />
+  <rect x="140" y="565" width="130" height="15" rx="3" fill="#0f172a" />
+  <text x="145" y="576" font-family="'JetBrains Mono', monospace" font-size="9" fill="#7dd3fc">HTTP 200 OK (JSON)</text>
+</svg>

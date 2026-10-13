@@ -44,27 +44,8 @@ service-root/
 
 Главное правило чистой архитектуры: **внутренние слои ничего не знают о внешних слоях**.
 
-```mermaid
-graph TD
-    subgraph External["Внешний мир / Инфраструктура"]
-        Transport["internal/transport\n(gRPC хендлеры, мапперы)"]
-        Infra["internal/infrastructure\n(PostgreSQL, Redis, RabbitMQ)"]
-        Cmd["cmd/service-name/main.go\n(Composition Root)"]
-    end
+![Слои сервиса и правило зависимостей (Dependency Rule)](img/service-template-layers.svg)
 
-    subgraph Application["Слой приложения"]
-        Usecase["internal/usecase\n(Сценарии: Create, Get, List)\n(Порты: TaskSaver, TaskFinder)"]
-    end
-
-    subgraph Core["Доменное ядро"]
-        Domain["internal/domain\n(Сущности, Value Objects, Ошибки)\n(Строго только $gostd)"]
-    end
-
-    Transport -->|Вызывает| Usecase
-    Infra -.->|Реализует порты| Usecase
-    Usecase -->|Управляет| Domain
-    Cmd -->|Собирает и связывает| Transport & Infra & Usecase
-```
 
 ### Зоны ответственности слоёв:
 

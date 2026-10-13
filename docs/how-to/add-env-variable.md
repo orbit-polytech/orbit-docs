@@ -6,13 +6,7 @@
 
 ## 1. Архитектурное правило
 
-```mermaid
-flowchart LR
-    ENV[".env / Docker Environment"] --> CFG["internal/config.Load()"]
-    CFG -->|Валидация провалена| DIE["log.Fatal & os.Exit(1)<br/>Падение в первые 5 мс"]
-    CFG -->|Успех| MAIN["cmd/.../main.go (Root)"]
-    MAIN --> SVC["Usecase / Repositories<br/>(получают готовые поля)"]
-```
+![Fail-Fast инициализация конфигурации микросервиса](img/config-flow.svg)
 
 > [!CAUTION] Запрет прямого чтения
 > Ни один слой (`domain`, `usecase`, `repository`, `transport`) не имеет права вызывать `os.Getenv()`. Вся конфигурация считывается и проверяется **исключительно в пакете `internal/config`** и передается в компоненты через параметры конструкторов.

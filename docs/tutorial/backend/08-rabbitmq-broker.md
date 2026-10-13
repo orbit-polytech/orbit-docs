@@ -10,31 +10,7 @@
 
 Все события публикуются в центральный обменник типа `topic`:
 
-```mermaid
-graph LR
-    subgraph Publisher["tasks-service"]
-        Outbox["Outbox Worker"]
-    end
-
-    subgraph RabbitMQ["Брокер RabbitMQ"]
-        Ex["Exchange: orbit.events (topic)"]
-        Q_Notif["Очередь: notif.tasks.created\n(Routing: tasks.v1.task.created)"]
-        Q_AI["Очередь: ai.tasks.created\n(Routing: tasks.v1.task.created)"]
-        DLX["DLX: orbit.events.dlx\n(Очередь: orbit.events.dlq)"]
-    end
-
-    subgraph Consumers["Подписчики"]
-        NotifSvc["notification-service"]
-        AISvc["ai-service"]
-    end
-
-    Outbox -->|Publish: tasks.v1.task.created| Ex
-    Ex -->|Ключ совпал| Q_Notif
-    Ex -->|Ключ совпал| Q_AI
-    Q_Notif --> NotifSvc
-    Q_AI --> AISvc
-    Q_Notif -.->|Отказ x3 попытки| DLX
-```
+![Топология RabbitMQ AMQP 0-9-1 и Transactional Outbox](img/rabbitmq-topology.svg)
 
 ### Соглашение об именовании ключей маршрутизации (Routing Keys):
 ```text

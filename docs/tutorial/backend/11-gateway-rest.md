@@ -8,32 +8,8 @@ Gateway принимает внешние запросы по протоколу
 
 ## 1. Архитектура и поток запроса в Gateway
 
-```mermaid
-graph LR
-    subgraph Client["Клиент (Мобильное приложение)"]
-        HTTP["HTTP POST /api/v1/tasks\nBearer JWT"]
-    end
+![Архитектура и конвейер обработки запроса в API Gateway](img/gateway-request-pipeline.svg)
 
-    subgraph Gateway["gateway-service (Go)"]
-        JWTMiddleware["1. JWT Middleware\n(Проверка Ed25519)"]
-        Router["2. HTTP Router\n(http.ServeMux)"]
-        GatewayDTO["3. Gateway DTO\n(JSON <-> Go struct)"]
-        gRPCClient["4. gRPC Client\n(TaskServiceClient)"]
-        ErrorMapper["5. Status Mapper\n(gRPC code -> HTTP status)"]
-    end
-
-    subgraph Internal["Внутренний периметр"]
-        Tasks["tasks-service\n(gRPC :50051)"]
-    end
-
-    HTTP --> JWTMiddleware
-    JWTMiddleware --> Router
-    Router --> GatewayDTO
-    GatewayDTO --> gRPCClient
-    gRPCClient -->|gRPC вызов с x-user-id| Tasks
-    Tasks -->|gRPC ответ / ошибка| ErrorMapper
-    ErrorMapper -->|HTTP 201 / 400 / 404| HTTP
-```
 
 ---
 

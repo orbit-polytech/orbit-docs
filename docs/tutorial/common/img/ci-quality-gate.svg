@@ -1,0 +1,187 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 580" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e" />
+      <stop offset="100%" stop-color="#181825" />
+    </linearGradient>
+
+    <!-- Zone Gradient -->
+    <linearGradient id="jobsZoneBg" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.8" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.8" />
+    </linearGradient>
+
+    <!-- Shadows -->
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" />
+    </marker>
+    <marker id="arrGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#22c55e" />
+    </marker>
+    <marker id="arrRed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" />
+    </marker>
+  </defs>
+
+  <!-- Container Box -->
+  <rect x="2" y="2" width="976" height="576" rx="16" fill="url(#bgGrad)" stroke="#313244" stroke-width="2" />
+
+  <!-- Header -->
+  <g transform="translate(32, 28)">
+    <circle cx="10" cy="10" r="6" fill="#3b82f6" />
+    <text x="26" y="15" font-family="'JetBrains Mono', monospace" font-size="15" font-weight="700" fill="#cdd6f4">
+      GitHub Actions CI • Автоматический пайплайн проверок PR (Quality Gate)
+    </text>
+    <line x1="0" y1="28" x2="916" y2="28" stroke="#313244" stroke-width="1" />
+  </g>
+
+  <!-- ==================== FLOWCHART ==================== -->
+
+  <!-- 1. Start Pill: PR Event (Terminator / Oval) -->
+  <g transform="translate(350, 75)" filter="url(#cardShadow)">
+    <rect x="0" y="0" width="280" height="42" rx="21" fill="#1e3a8a" stroke="#3b82f6" stroke-width="2" />
+    <text x="140" y="26" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="12" font-weight="700" fill="#93c5fd">
+      🚀 Pull Request Created / Updated
+    </text>
+  </g>
+
+  <!-- Down arrow to CI Orchestrator -->
+  <line x1="490" y1="117" x2="490" y2="145" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arrBlue)" />
+
+  <!-- 2. Trigger Process Node -->
+  <g transform="translate(320, 145)" filter="url(#cardShadow)">
+    <rect x="0" y="0" width="340" height="40" rx="8" fill="#1e293b" stroke="#60a5fa" stroke-width="1.5" />
+    <text x="170" y="25" text-anchor="middle" font-family="'Segoe UI', sans-serif" font-size="12.5" font-weight="600" fill="#f1f5f9">
+      ⚡ Запуск GitHub Actions CI Pipeline (.github/workflows)
+    </text>
+  </g>
+
+  <!-- Down arrow to Parallel Container -->
+  <line x1="490" y1="185" x2="490" y2="215" stroke="#3b82f6" stroke-width="2.5" />
+
+  <!-- Horizontal Distribution Bus across 5 jobs -->
+  <line x1="105" y1="215" x2="875" y2="215" stroke="#3b82f6" stroke-width="2" />
+
+  <!-- Down arrows into 5 job cards -->
+  <line x1="105" y1="215" x2="105" y2="235" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrBlue)" />
+  <line x1="298" y1="215" x2="298" y2="235" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrBlue)" />
+  <line x1="490" y1="215" x2="490" y2="235" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrBlue)" />
+  <line x1="683" y1="215" x2="683" y2="235" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrBlue)" />
+  <line x1="875" y1="215" x2="875" y2="235" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrBlue)" />
+
+  <!-- ==================== 5 PARALLEL JOBS ==================== -->
+  <g transform="translate(25, 235)">
+    <!-- Zone Container -->
+    <rect x="0" y="0" width="930" height="115" rx="10" fill="url(#jobsZoneBg)" stroke="#334155" stroke-width="1" stroke-dasharray="4 4" />
+    <text x="15" y="-6" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" fill="#94a3b8">
+      ПАРАЛЛЕЛЬНЫЕ ПРОВЕРКИ (JOBS)
+    </text>
+
+    <!-- Job 1: Go Lint -->
+    <g transform="translate(15, 15)" filter="url(#cardShadow)">
+      <rect x="0" y="0" width="165" height="85" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1" />
+      <text x="12" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#38bdf8">1. golangci-lint</text>
+      <text x="12" y="40" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">Линтинг кода Go</text>
+      <text x="12" y="56" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">depguard слоев</text>
+      <text x="12" y="72" font-family="'JetBrains Mono', monospace" font-size="9" fill="#64748b">govet, errcheck</text>
+    </g>
+
+    <!-- Job 2: Go Test -->
+    <g transform="translate(200, 15)" filter="url(#cardShadow)">
+      <rect x="0" y="0" width="165" height="85" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1" />
+      <text x="12" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#38bdf8">2. go test</text>
+      <text x="12" y="40" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">Юнит &amp; Интеграция</text>
+      <text x="12" y="56" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">-race (гонки)</text>
+      <text x="12" y="72" font-family="'JetBrains Mono', monospace" font-size="9" fill="#64748b">-count=1 (без кэша)</text>
+    </g>
+
+    <!-- Job 3: Buf Lint -->
+    <g transform="translate(385, 15)" filter="url(#cardShadow)">
+      <rect x="0" y="0" width="165" height="85" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1" />
+      <text x="12" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#38bdf8">3. buf lint</text>
+      <text x="12" y="40" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">Проверка Protobuf</text>
+      <text x="12" y="56" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">AIP стиль &amp; пакеты</text>
+      <text x="12" y="72" font-family="'JetBrains Mono', monospace" font-size="9" fill="#64748b">buf breaking vs main</text>
+    </g>
+
+    <!-- Job 4: Buf Gen Diff -->
+    <g transform="translate(570, 15)" filter="url(#cardShadow)">
+      <rect x="0" y="0" width="165" height="85" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1" />
+      <text x="12" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#38bdf8">4. buf generate</text>
+      <text x="12" y="40" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">Дрифт стабов</text>
+      <text x="12" y="56" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">git diff --exit-code</text>
+      <text x="12" y="72" font-family="'JetBrains Mono', monospace" font-size="9" fill="#64748b">gen/go &amp; gen/python</text>
+    </g>
+
+    <!-- Job 5: MkDocs Build -->
+    <g transform="translate(755, 15)" filter="url(#cardShadow)">
+      <rect x="0" y="0" width="165" height="85" rx="6" fill="#0f172a" stroke="#475569" stroke-width="1" />
+      <text x="12" y="22" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#38bdf8">5. mkdocs build</text>
+      <text x="12" y="40" font-family="'Segoe UI', sans-serif" font-size="10.5" fill="#cbd5e1">Сборка документации</text>
+      <text x="12" y="56" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Флаг --strict</text>
+      <text x="12" y="72" font-family="'JetBrains Mono', monospace" font-size="9" fill="#64748b">Проверка 100% ссылок</text>
+    </g>
+  </g>
+
+  <!-- Output collection bus from jobs -->
+  <line x1="105" y1="350" x2="105" y2="370" stroke="#3b82f6" stroke-width="2" />
+  <line x1="298" y1="350" x2="298" y2="370" stroke="#3b82f6" stroke-width="2" />
+  <line x1="490" y1="350" x2="490" y2="370" stroke="#3b82f6" stroke-width="2" />
+  <line x1="683" y1="350" x2="683" y2="370" stroke="#3b82f6" stroke-width="2" />
+  <line x1="875" y1="350" x2="875" y2="370" stroke="#3b82f6" stroke-width="2" />
+  <line x1="105" y1="370" x2="875" y2="370" stroke="#3b82f6" stroke-width="2" />
+
+  <!-- Down line to Decision Diamond -->
+  <line x1="490" y1="370" x2="490" y2="395" stroke="#3b82f6" stroke-width="2.5" marker-end="url(#arrBlue)" />
+
+  <!-- ==================== DECISION DIAMOND ==================== -->
+  <g transform="translate(490, 435)" filter="url(#cardShadow)">
+    <!-- Diamond Shape (Draw.io style) -->
+    <polygon points="0,-40 100,0 0,40 -100,0" fill="#312e81" stroke="#818cf8" stroke-width="2" />
+    <text x="0" y="-6" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#ffffff">
+      Все проверки
+    </text>
+    <text x="0" y="10" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#a5b4fc">
+      зеленые?
+    </text>
+  </g>
+
+  <!-- ==================== OUTCOME BRANCHES ==================== -->
+
+  <!-- Branch: YES (Right to Green Card) -->
+  <line x1="590" y1="435" x2="680" y2="435" stroke="#22c55e" stroke-width="2.5" marker-end="url(#arrGreen)" />
+  <!-- Pill: Да -->
+  <rect x="615" y="415" width="40" height="20" rx="4" fill="#14532d" stroke="#22c55e" stroke-width="1" />
+  <text x="635" y="429" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#86efac">ДА</text>
+
+  <g transform="translate(685, 405)" filter="url(#cardShadow)">
+    <rect x="0" y="0" width="260" height="60" rx="8" fill="#14532d" stroke="#22c55e" stroke-width="2" />
+    <text x="18" y="26" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#bbf7d0"> CI Passed (Green)</text>
+    <text x="18" y="45" font-family="'Segoe UI', sans-serif" font-size="11" fill="#86efac">Готов к Code Review и аппруву</text>
+  </g>
+
+  <!-- Branch: NO (Left to Red Card) -->
+  <line x1="390" y1="435" x2="300" y2="435" stroke="#ef4444" stroke-width="2.5" marker-end="url(#arrRed)" />
+  <!-- Pill: Нет -->
+  <rect x="325" y="415" width="40" height="20" rx="4" fill="#7f1d1d" stroke="#ef4444" stroke-width="1" />
+  <text x="345" y="429" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#fca5a5">НЕТ</text>
+
+  <g transform="translate(35, 405)" filter="url(#cardShadow)">
+    <rect x="0" y="0" width="260" height="60" rx="8" fill="#7f1d1d" stroke="#ef4444" stroke-width="2" />
+    <text x="18" y="26" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#fecaca">❌ CI Failed: Блокировка</text>
+    <text x="18" y="45" font-family="'Segoe UI', sans-serif" font-size="11" fill="#fca5a5">Возврат автору на исправление</text>
+  </g>
+
+  <!-- Loopback arrow from Fail back to developer -->
+  <path d="M 165 465 L 165 520 L 490 520" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="4 4" />
+  <text x="250" y="512" font-family="'JetBrains Mono', monospace" font-size="10" fill="#f87171">
+    Локальное воспроизведение ошибки и пуш фикса
+  </text>
+
+</svg>

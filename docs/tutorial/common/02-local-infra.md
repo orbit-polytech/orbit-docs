@@ -10,28 +10,7 @@
 
 Локальный стек `infra` поднимает изолированные контейнеры, необходимые для запуска сервисов на машинах разработчиков:
 
-```mermaid
-graph TD
-    subgraph Host["Хост разработчика (Localhost)"]
-        direction TB
-        subgraph Services["Микросервисы в разработке"]
-            GW["gateway-service (:8080)"]
-            TS["tasks-service (:50051)"]
-            AI["ai-service (:50052)"]
-        end
-
-        subgraph Infra["Контейнеры Docker Compose (infra)"]
-            PG[("PostgreSQL 16 + pgvector\n:5432")]
-            RD[("Redis 7.2 Cache\n:6379")]
-            RMQ[("RabbitMQ 3.13 AMQP\n:5672 / Web:15672")]
-        end
-
-        TS -->|Данные задач| PG
-        TS -.->|События TaskCreated| RMQ
-        GW -->|Кэш расписания| RD
-        AI -->|Векторный поиск RAG| PG
-    end
-```
+![Схема локального окружения и Docker Compose стека](img/local-infra-stack.svg)
 
 | Компонент | Образ Docker | Порт на хосте | Роль в проекте |
 | :--- | :--- | :--- | :--- |

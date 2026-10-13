@@ -10,31 +10,8 @@
 
 Сгенерированные утилитой `buf` файлы Protobuf (`rag_pb2.py`, `rag_pb2_grpc.py`) являются артефактами сетевого транспорта и не должны проникать в бизнес-логику:
 
-```mermaid
-graph TD
-    subgraph Transport["Транспортный слой (interfaces/grpc/)"]
-        Servicer["RagGrpcServicer\n(Наследует RagServiceServicer)"]
-        Meta["Извлечение x-user-id из метаданных"]
-        Mappers["Мапперы: Proto Request <-> Domain DTO"]
-    end
+![Архитектура Clean Architecture в ai-service (Python, gRPC, pgvector, Gemini)](img/ai-clean-architecture.svg)
 
-    subgraph Application["Слой сценариев (usecases/)"]
-        SearchUC["RagSearchUseCase\n(Оркестрация поиска и генерации)"]
-    end
-
-    subgraph Domain["Доменное ядро (domain/)"]
-        Models["Чистые dataclass:\nQueryInput, RetrievedChunk, Document"]
-    end
-
-    subgraph Infrastructure["Инфраструктурные адаптеры (infrastructure/)"]
-        PG["PostgresVectorRepository\n(psycopg v3 + pgvector)"]
-        Gemini["GeminiGateway\n(google-genai SDK, text-embedding-004)"]
-    end
-
-    Servicer --> Meta --> Mappers --> SearchUC
-    SearchUC --> Models
-    SearchUC --> PG & Gemini
-```
 
 ---
 

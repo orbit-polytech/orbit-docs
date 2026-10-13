@@ -8,40 +8,7 @@
 
 ## 1. Схема сквозного пайплайна RAG
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Student as Студент (Telegram / Мобилка)
-    participant GW as API Gateway
-    participant AI as ai-service (gRPC)
-    participant Gemini_Embed as Gemini text-embedding-004
-    participant PG as PostgreSQL (pgvector HNSW)
-    participant Gemini_LLM as Gemini 2.0 Flash
-
-    Student->>GW: "Сколько баллов нужно для допуска к экзамену по матанализу?"
-    GW->>AI: gRPC RagService.AskQuestion(query)
-    
-    rect rgb(35, 45, 60)
-    Note over AI,Gemini_Embed: ЭТАП 1: Векторизация запроса
-    AI->>Gemini_Embed: embed_content(query, task_type=RETRIEVAL_QUERY)
-    Gemini_Embed-->>AI: Вектор [768 float]
-    end
-
-    rect rgb(45, 55, 40)
-    Note over AI,PG: ЭТАП 2: Семантический поиск по графу HNSW
-    AI->>PG: SELECT ... ORDER BY embedding <=> $vector ASC LIMIT 3
-    PG-->>AI: Топ-3 релевантных чанка из Положения о БРС
-    end
-
-    rect rgb(50, 40, 55)
-    Note over AI,Gemini_LLM: ЭТАП 3: Синтез ответа с привязкой к фактам (Grounding)
-    AI->>Gemini_LLM: generate_content(SystemPrompt + Chunks + Query, temp=0.2)
-    Gemini_LLM-->>AI: Ответ с цитированием пунктов регламента
-    end
-
-    AI-->>GW: gRPC AskResponse(answer, citations)
-    GW-->>Student: Ответ с указанием ссылки на официальный документ
-```
+![Схема сквозного пайплайна RAG-поиска по регламентам](img/rag-pipeline.svg)
 
 ---
 

@@ -4,60 +4,15 @@
 
 Здесь собраны правила командной разработки, стандарты архитектуры микросервисов, пошаговые руководства и справочники по всем технологиям проекта.
 
+![Orbit AI — Интеллектуальный ассистент Московского Политеха](img/orbit-hero-banner.jpg)
+
 ---
 
 ## 1. Архитектурная схема экосистемы
 
 Система Orbit AI состоит из 13 специализированных репозиториев в организации [**github.com/orbit-polytech**](https://github.com/orbit-polytech):
 
-```mermaid
-flowchart TD
-    subgraph Clients ["Клиенты (Недоверенная зона)"]
-        MOB["📱 mobile<br/>(Flutter 3.x / MVVM)"]
-        BOT["🤖 bot-service<br/>(Python 3.12 / aiogram 3)"]
-        WEB["🌐 Web Client"]
-    end
-
-    subgraph Perimeter ["Периметр безопасности"]
-        GW["🛡️ gateway-service (HTTP :8080)<br/>Валидация JWT Ed25519, Rate Limit, CORS"]
-    end
-
-    subgraph Mesh ["Внутренний доверенный контур (gRPC по HTTP/2)"]
-        AUTH["auth-service<br/>(:50051)"]
-        USERS["users-service<br/>(:50052)"]
-        SCHED["schedule-service<br/>(:50053)"]
-        NAV["navigation-service<br/>(:50054)"]
-        TASKS["tasks-service<br/>(:50055)"]
-        NOTIF["notification-service<br/>(:50056)"]
-        AI["ai-service (Python / RAG)<br/>(:50057)"]
-    end
-
-    subgraph Storage ["Инфраструктура хранения и очередей (infra)"]
-        PG["🐘 PostgreSQL 16<br/>(схемы auth, tasks, schedule, ai)"]
-        REDIS["⚡ Redis 7<br/>(Кэш, Blacklist токенов)"]
-        RMQ["🐇 RabbitMQ 4<br/>(События очередей)"]
-        JAEGER["🔍 Jaeger 2<br/>(Трассировка запросов)"]
-    end
-
-    MOB -->|REST JSON + JWT| GW
-    BOT -->|REST JSON| GW
-    WEB -->|REST JSON| GW
-
-    GW ==>|gRPC + x-user-id| AUTH
-    GW ==>|gRPC + x-user-id| USERS
-    GW ==>|gRPC + x-user-id| SCHED
-    GW ==>|gRPC + x-user-id| NAV
-    GW ==>|gRPC + x-user-id| TASKS
-    GW ==>|gRPC + x-user-id| AI
-
-    TASKS -.->|События task.created| RMQ
-    RMQ -.->|Потребление| NOTIF
-    TASKS --> PG
-    SCHED --> REDIS
-    SCHED --> PG
-    AI --> PG
-    GW --> REDIS
-```
+![Архитектурная схема экосистемы Orbit AI](img/architecture-overview.svg)
 
 ---
 

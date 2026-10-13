@@ -6,42 +6,8 @@
 
 ## 1. Архитектурная схема доставки событий
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Client as Клиент / Gateway
-    participant Service as tasks-service
-    participant DB as PostgreSQL (tasks_db)
-    participant Relay as Outbox Relay (воркер)
-    participant RMQ as RabbitMQ (Exchange: tasks.events)
-    participant Consumer as notification-service
+![Архитектурная схема доставки событий через Transactional Outbox и Idempotent Consumer](img/outbox-delivery-flow.svg)
 
-    Client->>Service: gRPC CreateTask
-    activate Service
-    Note over Service,DB: Единая локальная транзакция
-    Service->>DB: INSERT INTO tasks (...)
-    Service->>DB: INSERT INTO outbox_events (event_id, payload)
-    Service-->>Client: 200 OK (Task создана)
-    deactivate Service
-
-    loop Каждые 500 мс (или pg_notify)
-        Relay->>DB: SELECT * FROM outbox_events WHERE processed_at IS NULL
-        Relay->>RMQ: BasicPublish(exchange, routing_key, payload)
-        Relay->>DB: UPDATE outbox_events SET processed_at = NOW()
-    end
-
-    RMQ->>Consumer: BasicConsume(delivery)
-    activate Consumer
-    Consumer->>Consumer: Проверка idempotency_key (event_id)
-    alt Уже обработано ранее
-        Consumer->>RMQ: msg.Ack(false) (пропуск дубликата)
-    else Новое событие
-        Consumer->>Consumer: Отправка Push / Telegram уведомления
-        Consumer->>Consumer: Фиксация event_id в хранилище
-        Consumer->>RMQ: msg.Ack(false)
-    end
-    deactivate Consumer
-```
 
 ---
 

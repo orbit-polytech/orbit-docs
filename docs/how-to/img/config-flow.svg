@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="cfgBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e1e2e" />
+      <stop offset="100%" stop-color="#181825" />
+    </linearGradient>
+
+    <!-- Card Shadow -->
+    <filter id="cfgShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000000" flood-opacity="0.4" />
+    </filter>
+
+    <!-- Markers -->
+    <marker id="arrCfgBlue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#38bdf8" />
+    </marker>
+    <marker id="arrCfgGreen" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#22c55e" />
+    </marker>
+    <marker id="arrCfgRed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" />
+    </marker>
+  </defs>
+
+  <!-- Container Box -->
+  <rect x="2" y="2" width="956" height="296" rx="14" fill="url(#cfgBg)" stroke="#313244" stroke-width="2" />
+
+  <!-- Header -->
+  <g transform="translate(26, 22)">
+    <circle cx="8" cy="8" r="5" fill="#f59e0b" />
+    <text x="20" y="12" font-family="'JetBrains Mono', monospace" font-size="13" font-weight="700" fill="#cdd6f4">
+      Fail-Fast инициализация конфигурации микросервиса (Twelve-Factor App)
+    </text>
+    <line x1="0" y1="22" x2="905" y2="22" stroke="#313244" stroke-width="1" />
+  </g>
+
+  <!-- ==================== FLOW NODES ==================== -->
+
+  <!-- Node 1: Environment Source -->
+  <g transform="translate(25, 75)" filter="url(#cfgShadow)">
+    <rect x="0" y="0" width="180" height="95" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+    <text x="14" y="24" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#93c5fd">1. Окружение</text>
+    <line x1="10" y1="36" x2="170" y2="36" stroke="#334155" stroke-width="1" />
+    <text x="14" y="56" font-family="'JetBrains Mono', monospace" font-size="10" fill="#cbd5e1">.env файл</text>
+    <text x="14" y="72" font-family="'Segoe UI', sans-serif" font-size="10" fill="#94a3b8">Docker Environment</text>
+    <text x="14" y="88" font-family="'Segoe UI', sans-serif" font-size="9" fill="#64748b">Kubernetes Secrets</text>
+  </g>
+
+  <line x1="205" y1="122" x2="245" y2="122" stroke="#38bdf8" stroke-width="2" marker-end="url(#arrCfgBlue)" />
+
+  <!-- Node 2: config.Load() parser & validator -->
+  <g transform="translate(250, 75)" filter="url(#cfgShadow)">
+    <rect x="0" y="0" width="230" height="95" rx="8" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5" />
+    <text x="14" y="24" font-family="'JetBrains Mono', monospace" font-size="11" font-weight="700" fill="#fde68a">2. config.Load()</text>
+    <line x1="10" y1="36" x2="220" y2="36" stroke="#334155" stroke-width="1" />
+    <text x="14" y="56" font-family="'Segoe UI', sans-serif" font-size="10" fill="#cbd5e1">Парсинг в строгую struct</text>
+    <text x="14" y="72" font-family="'Segoe UI', sans-serif" font-size="10" fill="#fde68a">Валидация диапазонов и портов</text>
+    <text x="14" y="88" font-family="'JetBrains Mono', monospace" font-size="9" fill="#94a3b8">internal/config/config.go</text>
+  </g>
+
+  <!-- Branch 1: Fail-Fast (Up-Right) -->
+  <path d="M 480 100 L 530 100 L 530 80 L 575 80" fill="none" stroke="#ef4444" stroke-width="2" marker-end="url(#arrCfgRed)" />
+  <rect x="495" y="68" width="70" height="18" rx="3" fill="#7f1d1d" />
+  <text x="530" y="81" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="8.5" font-weight="700" fill="#fecaca">ОШИБКА</text>
+
+  <!-- Node: DIE (Fail-Fast) -->
+  <g transform="translate(580, 50)" filter="url(#cfgShadow)">
+    <rect x="0" y="0" width="350" height="60" rx="8" fill="#7f1d1d" stroke="#ef4444" stroke-width="1.5" />
+    <text x="14" y="24" font-family="'Segoe UI', sans-serif" font-size="11.5" font-weight="700" fill="#fecaca">❌ Fail-Fast: log.Fatal &amp; os.Exit(1)</text>
+    <text x="14" y="44" font-family="'Segoe UI', sans-serif" font-size="10" fill="#fca5a5">Падение в первые 5 мс! Сервис с битым конфигом не поднимется</text>
+  </g>
+
+  <!-- Branch 2: Success (Down-Right) -->
+  <path d="M 480 145 L 530 145 L 530 170 L 575 170" fill="none" stroke="#22c55e" stroke-width="2" marker-end="url(#arrCfgGreen)" />
+  <rect x="495" y="152" width="70" height="18" rx="3" fill="#14532d" />
+  <text x="530" y="165" text-anchor="middle" font-family="'JetBrains Mono', monospace" font-size="8.5" font-weight="700" fill="#bbf7d0">УСПЕХ</text>
+
+  <!-- Node: Success (Main & Usecase) -->
+  <g transform="translate(580, 135)" filter="url(#cfgShadow)">
+    <rect x="0" y="0" width="350" height="75" rx="8" fill="#14532d" stroke="#22c55e" stroke-width="1.5" />
+    <text x="14" y="24" font-family="'Segoe UI', sans-serif" font-size="11.5" font-weight="700" fill="#bbf7d0"> cmd/.../main.go (Composition Root)</text>
+    <text x="14" y="44" font-family="'Segoe UI', sans-serif" font-size="10" fill="#86efac">Передача готовых типизированных полей в конструкторы</text>
+    <text x="14" y="60" font-family="'JetBrains Mono', monospace" font-size="9" fill="#dcfce7">NewCreateTaskUseCase(repo, cfg.TaskMaxLimit)</text>
+  </g>
+
+  <!-- Footer Warning -->
+  <g transform="translate(25, 230)">
+    <rect x="0" y="0" width="905" height="48" rx="6" fill="#0f172a" stroke="#dc2626" stroke-width="1" />
+    <text x="14" y="20" font-family="'JetBrains Mono', monospace" font-size="10" font-weight="700" fill="#f87171">
+      ⚠️ ПРАВИЛО ЧИСТОТЫ КОДА:
+    </text>
+    <text x="14" y="38" font-family="'Segoe UI', sans-serif" font-size="10" fill="#cbd5e1">
+      Никакой вызов <tspan font-family="'JetBrains Mono', monospace" fill="#fde68a">os.Getenv()</tspan> за пределами пакета <tspan font-family="'JetBrains Mono', monospace" fill="#bae6fd">internal/config</tspan> не допускается. Нарушение блокируется линтером в CI!
+    </text>
+  </g>
+</svg>
