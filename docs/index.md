@@ -12,7 +12,7 @@
 
 Система Orbit AI состоит из 13 специализированных репозиториев в организации [**github.com/orbit-polytech**](https://github.com/orbit-polytech):
 
-![Архитектурная схема экосистемы Orbit AI](img/architecture-overview.svg)
+![Архитектурная схема экосистемы Orbit AI](image/architecture-overview.png)
 
 ---
 

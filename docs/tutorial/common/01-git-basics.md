@@ -13,7 +13,7 @@
 3. **Линейная история коммитов (Rebase workflow)**:
    Мы не засоряем историю бесконечными коммитами вида `Merge branch 'main' into feature`. Обновление своей рабочей ветки выполняется через `git rebase`.
 
-![Схема Git Workflow: ветки, коммиты и Squash Merge](img/git-workflow.svg)
+![Схема Git Workflow: ветки, коммиты и Squash Merge](image/git-workflow.png)
 
 
 ---

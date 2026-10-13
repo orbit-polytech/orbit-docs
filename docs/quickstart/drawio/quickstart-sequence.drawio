@@ -1,0 +1,137 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="Сквозной сценарий: Dev-логин и создание задачи" id="orbit-qs-sequence">
+    <mxGraphModel dx="1100" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1100" pageHeight="700" background="#ffffff" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Заголовок -->
+        <mxCell id="title" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=15;fontColor=#0f172a;" value="Быстрый старт • Сквозной сценарий: Dev-логин и создание задачи через Gateway Swagger" vertex="1">
+          <mxGeometry x="30" y="20" width="850" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="sub" parent="1" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontFamily=Segoe UI, Arial, sans-serif;fontSize=11;fontColor=#64748b;" value="Пошаговая последовательность вызовов (Dev-Login → Authorize → Create Task)" vertex="1">
+          <mxGeometry x="30" y="45" width="600" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- Участники (Lifelines Headers) -->
+        <mxCell id="p_dev" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0284c7;strokeWidth=1.5;fillColor=#f0f9ff;fontFamily=Segoe UI, Arial, sans-serif;fontColor=#0f172a;" value="&lt;b style=&quot;font-size:12px;color:#0284c7;&quot;&gt;💻 Разработчик&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9.5px;color:#64748b;&quot;&gt;Swagger UI / curl&lt;/span&gt;" vertex="1">
+          <mxGeometry x="30" y="75" width="160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p_gw" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;strokeWidth=1.5;fillColor=#f5f3ff;fontFamily=Segoe UI, Arial, sans-serif;fontColor=#0f172a;" value="&lt;b style=&quot;font-size:12px;color:#6366f1;&quot;&gt;🛡️ HTTP Gateway&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9.5px;color:#64748b;&quot;&gt;localhost:8080&lt;/span&gt;" vertex="1">
+          <mxGeometry x="250" y="75" width="160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p_auth" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#0891b2;strokeWidth=1.5;fillColor=#ecfeff;fontFamily=Segoe UI, Arial, sans-serif;fontColor=#0f172a;" value="&lt;b style=&quot;font-size:12px;color:#0891b2;&quot;&gt;🔑 auth-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9.5px;color:#64748b;&quot;&gt;gRPC :50051&lt;/span&gt;" vertex="1">
+          <mxGeometry x="470" y="75" width="160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p_tasks" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#059669;strokeWidth=1.5;fillColor=#ecfdf5;fontFamily=Segoe UI, Arial, sans-serif;fontColor=#0f172a;" value="&lt;b style=&quot;font-size:12px;color:#059669;&quot;&gt;⚙️ tasks-service&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9.5px;color:#64748b;&quot;&gt;gRPC :50055&lt;/span&gt;" vertex="1">
+          <mxGeometry x="690" y="75" width="160" height="45" as="geometry" />
+        </mxCell>
+        <mxCell id="p_db" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#16a34a;strokeWidth=1.5;fillColor=#f0fdf4;fontFamily=Segoe UI, Arial, sans-serif;fontColor=#0f172a;" value="&lt;b style=&quot;font-size:12px;color:#16a34a;&quot;&gt;🐘 PostgreSQL&lt;/b&gt;&lt;br/&gt;&lt;span style=&quot;font-size:9.5px;color:#64748b;&quot;&gt;tasks_db :5432&lt;/span&gt;" vertex="1">
+          <mxGeometry x="890" y="75" width="140" height="45" as="geometry" />
+        </mxCell>
+
+        <!-- Вертикальные линии жизни (Lifelines) -->
+        <mxCell id="line_dev" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#cbd5e1;strokeWidth=1.5;" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="120" as="sourcePoint" />
+            <mxPoint x="110" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="line_gw" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#cbd5e1;strokeWidth=1.5;" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="120" as="sourcePoint" />
+            <mxPoint x="330" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="line_auth" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#cbd5e1;strokeWidth=1.5;" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="550" y="120" as="sourcePoint" />
+            <mxPoint x="550" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="line_tasks" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#cbd5e1;strokeWidth=1.5;" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="770" y="120" as="sourcePoint" />
+            <mxPoint x="770" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="line_db" parent="1" style="endArrow=none;dashed=1;html=1;strokeColor=#cbd5e1;strokeWidth=1.5;" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="120" as="sourcePoint" />
+            <mxPoint x="960" y="520" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Фаза 1: Dev-логин -->
+        <mxCell id="call_devlogin" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0284c7;strokeWidth=2;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#0369a1;" value="1. POST /v1/auth/dev-login {&quot;telegram_id&quot;: 1001}" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="145" as="sourcePoint" />
+            <mxPoint x="330" y="145" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="call_grpc_devlogin" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#0284c7;strokeWidth=2;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#0369a1;" value="gRPC DevLogin(1001)" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="172" as="sourcePoint" />
+            <mxPoint x="550" y="172" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="resp_jwt" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#0284c7;strokeWidth=1.8;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#0369a1;" value="JWT (Ed25519 Token)" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="550" y="198" as="sourcePoint" />
+            <mxPoint x="330" y="198" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="resp_token" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#0284c7;strokeWidth=1.8;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#0369a1;" value="200 OK: access_token: eyJhbGciOiJFZ..." edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="225" as="sourcePoint" />
+            <mxPoint x="110" y="225" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Разделитель: Шаг авторизации -->
+        <mxCell id="box_auth_step" parent="1" style="rounded=1;whiteSpace=wrap;html=1;strokeColor=#6366f1;strokeWidth=1.5;fillColor=#eef2ff;fontFamily=Segoe UI, Arial, sans-serif;fontStyle=1;fontSize=11;fontColor=#3730a3;" value="🔑 Шаг авторизации: В Swagger UI нажимаем «Authorize» и вставляем полученный Bearer-токен" vertex="1">
+          <mxGeometry x="80" y="255" width="900" height="30" as="geometry" />
+        </mxCell>
+
+        <!-- Фаза 2: Создание задачи -->
+        <mxCell id="call_create_task" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7c3aed;strokeWidth=2;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#6d28d9;" value="2. POST /v1/tasks [Header: Authorization: Bearer &lt;token&gt;]" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="320" as="sourcePoint" />
+            <mxPoint x="330" y="320" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="call_grpc_create" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#7c3aed;strokeWidth=2;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#6d28d9;" value="gRPC CreateTask (Metadata: x-user-id: 1001)" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="355" as="sourcePoint" />
+            <mxPoint x="770" y="355" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="call_sql_insert" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;strokeColor=#059669;strokeWidth=2;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#047857;" value="INSERT INTO tasks (title, due_at, user_id)" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="770" y="390" as="sourcePoint" />
+            <mxPoint x="960" y="390" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="resp_sql_commit" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#059669;strokeWidth=1.8;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#047857;" value="Row committed (SQL OK)" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="960" y="420" as="sourcePoint" />
+            <mxPoint x="770" y="420" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="resp_grpc_task" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#7c3aed;strokeWidth=1.8;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#6d28d9;" value="Task DTO (Protobuf)" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="770" y="450" as="sourcePoint" />
+            <mxPoint x="330" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="resp_created" parent="1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;dashed=1;strokeColor=#059669;strokeWidth=2;fontFamily=Segoe UI, Arial, sans-serif;fontSize=10;fontColor=#047857;" value="201 Created: {&quot;id&quot;: 42, &quot;title&quot;: &quot;...&quot;, &quot;status&quot;: &quot;OPEN&quot;}" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="485" as="sourcePoint" />
+            <mxPoint x="110" y="485" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
