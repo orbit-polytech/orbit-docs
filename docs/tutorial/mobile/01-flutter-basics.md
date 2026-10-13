@@ -10,7 +10,7 @@
 
 В соответствии с решением **ADR-005**, мобильное приложение общается с бэкендом **исключительно через внешний API Gateway по протоколу REST/JSON**:
 
-![Архитектурное позиционирование client-mobile и API Gateway](img/flutter-architecture.svg)
+![Архитектурное позиционирование client-mobile и API Gateway](image/flutter-architecture.png)
 
 ### Почему в мобильном приложении нет gRPC:
 - В репозитории контрактов `contracts` генерация кода под Dart исключена (ADR-005).

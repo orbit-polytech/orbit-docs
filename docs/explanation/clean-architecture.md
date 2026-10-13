@@ -13,7 +13,7 @@
 > **Исходный код может зависеть только от внутренних слоев и никогда не зависит от внешних.**  
 > Внутренний слой ничего не знает о существовании внешнего.
 
-![Схема слоев Clean Architecture и The Dependency Rule](img/clean-architecture-layers.svg)
+![Схема слоев Clean Architecture и The Dependency Rule](image/clean-architecture-layers.png)
 
 ---
 

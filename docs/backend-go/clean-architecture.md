@@ -15,7 +15,7 @@
 
 **Чистая архитектура решает это разделением на независимые слои:**
 
-![Схема слоев Clean Architecture и The Dependency Rule](../explanation/img/clean-architecture-layers.svg)
+![Схема слоев Clean Architecture и The Dependency Rule](../explanation/image/clean-architecture-layers.png)
 
 ---
 

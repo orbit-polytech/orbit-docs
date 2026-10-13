@@ -13,7 +13,7 @@
 - `schedule-service` подключается к базе `schedule_db`;
 - `auth-service` подключается к базе `auth_db`.
 
-![Изолированные базы данных микросервисов (Database per Service)](img/db-per-service.svg)
+![Изолированные базы данных микросервисов (Database per Service)](image/db-per-service.png)
 
 
 > [!CRITICAL] Запрет прямых межсервисных SQL-запросов

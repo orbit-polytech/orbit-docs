@@ -8,7 +8,7 @@ Telegram-бот (**`bot-service`**) предоставляет студента�
 
 ## 1. Архитектура взаимодействия бота и бэкенда
 
-![Архитектура взаимодействия бота и бэкенда через API Gateway](img/bot-gateway-topology.svg)
+![Архитектура взаимодействия бота и бэкенда через API Gateway](image/bot-gateway-topology.png)
 
 
 ---

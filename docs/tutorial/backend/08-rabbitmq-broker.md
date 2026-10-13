@@ -10,7 +10,7 @@
 
 Все события публикуются в центральный обменник типа `topic`:
 
-![Топология RabbitMQ AMQP 0-9-1 и Transactional Outbox](img/rabbitmq-topology.svg)
+![Топология RabbitMQ AMQP 0-9-1 и Transactional Outbox](image/rabbitmq-topology.png)
 
 ### Соглашение об именовании ключей маршрутизации (Routing Keys):
 ```text

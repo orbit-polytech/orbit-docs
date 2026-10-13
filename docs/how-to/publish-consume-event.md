@@ -6,7 +6,7 @@
 
 ## 1. Архитектурная схема доставки событий
 
-![Архитектурная схема доставки событий через Transactional Outbox и Idempotent Consumer](img/outbox-delivery-flow.svg)
+![Архитектурная схема доставки событий через Transactional Outbox и Idempotent Consumer](image/outbox-delivery-flow.png)
 
 
 ---

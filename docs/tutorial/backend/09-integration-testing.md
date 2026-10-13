@@ -133,7 +133,7 @@ func TestPostgresTaskRepository_OptimisticLocking_Concurrent(t *testing.T) {
 
 Тест проверяет всю цепочку: атомарная запись в PostgreSQL -> вычитка воркером -> получение сообщения из очереди RabbitMQ:
 
-![Сквозное тестирование Outbox и доставки в RabbitMQ](img/outbox-test-flow.svg)
+![Сквозное тестирование Outbox и доставки в RabbitMQ](image/outbox-test-flow.png)
 
 
 ```go

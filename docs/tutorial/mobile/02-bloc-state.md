@@ -8,7 +8,7 @@
 
 ## 1. Поток данных в BLoC
 
-![Поток данных в архитектуре BLoC](img/bloc-flow.svg)
+![Поток данных в архитектуре BLoC](image/bloc-flow.png)
 
 
 ---

@@ -6,7 +6,7 @@
 
 ## 1. Схема движения изменений
 
-![Порядок добавления нового gRPC-метода](img/add-grpc-method-flow.svg)
+![Порядок добавления нового gRPC-метода](image/add-grpc-method-flow.png)
 
 ---
 

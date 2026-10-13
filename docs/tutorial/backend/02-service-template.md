@@ -44,7 +44,7 @@ service-root/
 
 Главное правило чистой архитектуры: **внутренние слои ничего не знают о внешних слоях**.
 
-![Слои сервиса и правило зависимостей (Dependency Rule)](img/service-template-layers.svg)
+![Слои сервиса и правило зависимостей (Dependency Rule)](image/service-template-layers.png)
 
 
 ### Зоны ответственности слоёв:

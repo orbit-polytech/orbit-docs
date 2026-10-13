@@ -10,7 +10,7 @@
 
 В модели Polyrepo каждый сервис изолирован, но им необходим общий язык общения. Для этого выделен единый репозиторий **`contracts`**:
 
-![Схема пайплайна Contract-First и Buf CLI](img/contracts-buf-pipeline.svg)
+![Схема пайплайна Contract-First и Buf CLI](image/contracts-buf-pipeline.png)
 
 ### Ключевые архитектурные решения:
 1. **Единый источник истины**:

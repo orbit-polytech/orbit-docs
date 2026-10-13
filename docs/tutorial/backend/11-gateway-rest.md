@@ -8,7 +8,7 @@ Gateway принимает внешние запросы по протоколу
 
 ## 1. Архитектура и поток запроса в Gateway
 
-![Архитектура и конвейер обработки запроса в API Gateway](img/gateway-request-pipeline.svg)
+![Архитектура и конвейер обработки запроса в API Gateway](image/gateway-request-pipeline.png)
 
 
 ---

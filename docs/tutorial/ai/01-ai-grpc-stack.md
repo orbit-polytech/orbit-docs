@@ -10,7 +10,7 @@
 
 Сгенерированные утилитой `buf` файлы Protobuf (`rag_pb2.py`, `rag_pb2_grpc.py`) являются артефактами сетевого транспорта и не должны проникать в бизнес-логику:
 
-![Архитектура Clean Architecture в ai-service (Python, gRPC, pgvector, Gemini)](img/ai-clean-architecture.svg)
+![Архитектура Clean Architecture в ai-service (Python, gRPC, pgvector, Gemini)](image/ai-clean-architecture.png)
 
 
 ---
