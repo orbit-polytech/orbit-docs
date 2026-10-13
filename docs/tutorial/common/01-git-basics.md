@@ -13,19 +13,8 @@
 3. **Линейная история коммитов (Rebase workflow)**:
    Мы не засоряем историю бесконечными коммитами вида `Merge branch 'main' into feature`. Обновление своей рабочей ветки выполняется через `git rebase`.
 
-```mermaid
-gitGraph
-   commit id: "v1.0.0"
-   branch feature/task-filters
-   checkout feature/task-filters
-   commit id: "feat(domain): add task priority filter"
-   checkout main
-   commit id: "fix(auth): validate token exp"
-   checkout feature/task-filters
-   commit id: "test(domain): unit test filters"
-   checkout main
-   merge feature/task-filters id: "PR #42 (Squash & Merge)"
-```
+![Схема Git Workflow: ветки, коммиты и Squash Merge](img/git-workflow.svg)
+
 
 ---
 

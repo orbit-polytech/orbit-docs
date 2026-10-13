@@ -30,7 +30,7 @@
 > Если вы на Windows уже привыкли работать внутри Linux-окружения через WSL 2 (Ubuntu), вы можете продолжать им пользоваться — просто следуйте инструкциям на вкладках **Linux / macOS**. Но если WSL у вас не настроен, ставить его специально не нужно: нативная разработка в Windows через PowerShell и Docker Desktop полностью поддерживается и работает без лишних прослоек.
 
 Чтобы локальная среда на Windows работала без сюрпризов, обратите внимание на три простых правила:
-1. **Путь к рабочей папке (без пробелов и кириллицы)**: Создайте папку проекта прямо в корне диска, например `C:\orbit` (или `D:\orbit`). Если положить репозитории в путь вроде `C:\Users\Иван Иванов\Документы\...`, компилятор Go и Docker-монтирования volumes могут спотыкаться о пробелы и русские буквы в путях.
+1. **Путь к рабочей папке (без пробелов и кириллицы)**: Создайте папку проекта прямо в корне любого удобного диска, например `F:\orbit`, `D:\orbit` или `C:\orbit`. Если положить репозитории в путь вроде `C:\Users\Иван Иванов\Документы\...`, компилятор Go и Docker-монтирования volumes могут спотыкаться о пробелы и русские буквы в путях.
 2. **Кодировка UTF-8 в консоли**: В PowerShell перед началом работы можно выполнить команду `chcp 65001`, чтобы вывод консоли и логи на русском языке отображались без искажений.
 3. **Окончания строк в Git**: Для исключения конфликтов переводов строк (CRLF vs LF) настройте Git: `git config --global core.autocrlf true`.
 
@@ -65,9 +65,10 @@ go install golang.org/x/vuln/cmd/govulncheck@latest
 
 === "Windows (PowerShell)"
     ```powershell
-    # Создаем рабочую папку в корне диска и переходим в неё
-    mkdir C:\orbit
-    cd C:\orbit
+    # Перейдите на ваш рабочий диск (например, F: или D:) и создайте рабочую папку
+    # F:
+    mkdir F:\orbit   # или D:\orbit, C:\orbit (любой удобный вам диск)
+    cd F:\orbit
 
     # Инфраструктура, API-контракты и базовые сервисы
     git clone https://github.com/orbit-polytech/infra.git
@@ -97,7 +98,7 @@ go install golang.org/x/vuln/cmd/govulncheck@latest
 Итоговая структура папок на вашем диске:
 
 ```text
-orbit/  (например, C:\orbit или ~/orbit)
+orbit/  (например, F:\orbit, D:\orbit или ~/orbit)
 ├── infra/
 ├── contracts/
 ├── gateway-service/
@@ -114,7 +115,7 @@ orbit/  (например, C:\orbit или ~/orbit)
 
 === "Windows (PowerShell)"
     ```powershell
-    cd C:\orbit\infra
+    cd infra    # или: cd F:\orbit\infra
     Copy-Item .env.example .env
     ```
 
@@ -131,7 +132,7 @@ orbit/  (например, C:\orbit или ~/orbit)
 === "Windows (PowerShell / OpenSSL)"
     ```powershell
     # Переходим в папку infra (если еще не там) и создаем каталог secrets
-    cd C:\orbit\infra
+    cd infra    # или: cd F:\orbit\infra
     if (-not (Test-Path "secrets")) { New-Item -ItemType Directory -Path "secrets" }
 
     # Генерируем пару ключей Ed25519 через openssl (входит в стандартную поставку Git)
@@ -220,7 +221,7 @@ docker compose exec redis redis-cli ping
 
 === "Windows (PowerShell)"
     ```powershell
-    cd C:\orbit\infra
+    cd infra    # или: cd F:\orbit\infra
     docker compose --profile core up -d
     docker compose ps
     ```
@@ -239,7 +240,7 @@ docker compose exec redis redis-cli ping
 
 === "Windows (PowerShell)"
     ```powershell
-    cd C:\orbit\infra
+    cd infra    # или: cd F:\orbit\infra
     docker compose --profile core up -d
     docker compose stop tasks-service
 
@@ -435,7 +436,7 @@ grpcurl -plaintext localhost:50055 grpc.health.v1.Health/Check
 
 === "Windows (PowerShell)"
     ```powershell
-    cd C:\orbit\mobile
+    cd ..\mobile   # или: cd F:\orbit\mobile
     flutter pub get
     flutter run -t lib/main_development.dart --dart-define=API_URL=http://localhost:8080
     ```
@@ -458,7 +459,7 @@ grpcurl -plaintext localhost:50055 grpc.health.v1.Health/Check
 | Симптом | Причина | Что сделать |
 |---|---|---|
 | `bind: address already in use (5432)` | Порт 5432 занят системным PostgreSQL, установленным ранее как служба Windows/Linux | **На Windows**: откройте диспетчер служб (`Win+R` $\to$ `services.msc`), найдите службу `postgresql-x64...` и остановите её (или в PowerShell: `Stop-Service postgresql*`).<br>**На Linux**: `sudo service postgresql stop`. |
-| Ошибки сборки Go или монтирования volumes в Docker | В пути к папке проекта есть русские буквы или пробелы (например, `C:\Пользователи\Иван\...`) | Переместите проект в простой путь без кириллицы и пробелов: `C:\orbit`. |
+| Ошибки сборки Go или монтирования volumes в Docker | В пути к папке проекта есть русские буквы или пробелы (например, `C:\Пользователи\Иван\...`) | Переместите проект в простой путь без кириллицы и пробелов: `F:\orbit`, `D:\orbit` или `C:\orbit`. |
 | Искаженный вывод кириллицы в консоли Windows | Неверная кодовая страница PowerShell | Выполните в терминале команду `chcp 65001` (переключение на UTF-8). |
 | `openssl` не распознаётся как команда в PowerShell | Путь к OpenSSL из Git не добавлен в системный `PATH` | Используйте прямой путь: `& "C:\Program Files\Git\usr\bin\openssl.exe" ...` либо запустите генерацию ключей в Git Bash (`make keys`). |
 | Сервис падает с `connection refused` к Postgres | БД ещё не успела пройти инициализацию при первом старте | Дождитесь статуса healthy (`docker compose ps`) либо проверьте условия `condition: service_healthy` в `compose.yaml`. |
@@ -470,7 +471,7 @@ grpcurl -plaintext localhost:50055 grpc.health.v1.Health/Check
 
 === "Windows (PowerShell)"
     ```powershell
-    cd C:\orbit\infra
+    cd infra    # или: cd F:\orbit\infra
     docker compose --profile "*" down -v
     ```
 
