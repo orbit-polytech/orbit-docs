@@ -101,7 +101,12 @@ git pull origin main
 git branch -d feat/42-task-deadlines
 ```
 
+> [!TIP] Реальный пример из практики
+> Пошаговый разбор процесса от создания ветки, прохождения ревью до решения проблем с Windows-дрифтом и слияния через Squash смотрите в главе:
+> 👉 [Практический кейс: Создание и защита PR #1 в contracts](../tutorial/common/04-pull-request-review.md#7-pr-1-contracts)
+
 ---
+
 
 ## 3. Что делать при конфликтах слияния
 
