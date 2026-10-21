@@ -3,7 +3,7 @@
 Цель руководства — поднять текущий backend-стенд Orbit AI и проверить Gateway. Для обычного запуска не нужны Go, Python, Flutter, Buf или Goose: сервисы работают в Docker-контейнерах.
 
 !!! info "Статус"
-    Полный Compose-стек проверен в feature-ветках контейнеризации. Автономный запуск из чистого клона `infra` станет общедоступным после публикации образов в GHCR. Текущий статус указан на странице [«Текущее состояние»](../project/current-state.md).
+    Образы Orbit опубликованы в GHCR. Для приватных пакетов нужны персональная авторизация Docker и Read-доступ ко всем четырём пакетам. Публикация образов не заменяет проверку запуска из чистого клона. Сводка компонентов — на странице [«Текущее состояние»](../project/current-state.md).
 
 ## 1. Требования
 
@@ -36,6 +36,12 @@ Copy-Item .env.example .env
 Для запуска и healthcheck достаточно непустых значений Resend. Для **реальной отправки OTP** нужны действующий `RESEND_API_KEY` и разрешённый `RESEND_FROM_EMAIL`. Для Google OAuth дополнительно заполните Google credentials и установите `GOOGLE_OAUTH_ENABLED=true`.
 
 Никогда не добавляйте локальный `.env` в Git.
+
+## Доступ к приватным образам GHCR
+
+Перед первым `task up` выполните [инструкцию авторизации в GHCR](ghcr-access.md): получите Read-доступ, создайте PAT classic с `read:packages`, войдите через `docker login ghcr.io -u YOUR_GITHUB_USERNAME` и проверьте скачивание всех четырёх образов. Для публичных пакетов этот шаг не нужен.
+
+**PAT не записывается в `.env` и не передаётся контейнерам.** Авторизация в реестре не является авторизацией в API Orbit.
 
 ## 3. Запуск
 
@@ -131,7 +137,7 @@ docker compose --profile apps logs jwt-keygen
 
 | Симптом | Что проверить |
 |---|---|
-| Ошибка скачивания `ghcr.io/orbit-polytech/*` | Образы ещё не опубликованы либо package требует авторизации; используйте локальный override |
+| Ошибка скачивания `ghcr.io/orbit-polytech/*` | Проверьте имя/тег и [авторизацию и Read-доступ к пакетам](ghcr-access.md) |
 | Auth не стартует | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `OTP_HMAC_SECRET`, DSN и Redis password |
 | `auth-migrate` завершился не с нулём | Логи мигратора и доступность PostgreSQL |
 | Gateway возвращает `503` | Health Auth и значение `AUTH_GRPC_ADDR` внутри Compose |
