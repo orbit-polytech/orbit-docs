@@ -82,6 +82,7 @@ nav:
   - Быстрый старт:
       - Обзор и правила команды: quickstart/overview.md
       - Запуск проекта с нуля (Tutorial): quickstart/local-setup.md
+      - Доступ к образам GHCR (How-to): quickstart/ghcr-access.md
       - Git & GitHub Flow (How-to): quickstart/git-workflow.md
       - Чек-лист код-ревью (Reference): quickstart/review-checklist.md
       - Базовый онбординг:

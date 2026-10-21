@@ -2,6 +2,7 @@
 > Документация содержит текущую реализацию, feature-ветки, целевую архитектуру и учебные примеры. Всегда проверяйте статус компонента.
 
 ## Start here
+- [GHCR Access](https://orbit-polytech.github.io/orbit-docs/quickstart/ghcr-access/): private-образы, PAT classic read:packages, Docker login, права команды и диагностика; PAT никогда не помещается в .env.
 - [Current State](https://orbit-polytech.github.io/orbit-docs/project/current-state/): реализованные, разрабатываемые и запланированные компоненты.
 - [Current Quickstart](https://orbit-polytech.github.io/orbit-docs/quickstart/local-setup/): запуск PostgreSQL, Redis, Auth и Gateway.
 - [Project Overview](https://orbit-polytech.github.io/orbit-docs/): главная страница базы знаний.
