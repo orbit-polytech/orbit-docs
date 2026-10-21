@@ -1,80 +1,55 @@
-# Сводная таблица портов и переменных окружения
+# Сетевые порты и переменные окружения
 
-В данном справочнике зафиксированы все выделенные порты и стандартные переменные окружения для локального запуска сервисов Orbit AI.
+## Актуальный локальный стенд
 
----
+| Сервис | Протокол | В контейнере | На хосте по умолчанию | Публичный |
+|---|---|---:|---:|---|
+| Gateway | HTTP | 8080 | `127.0.0.1:8080` | Да, локально |
+| Auth | gRPC | 50051 | `127.0.0.1:50051` | Только для диагностики |
+| PostgreSQL | TCP | 5432 | `127.0.0.1:5434` | Нет |
+| Redis | TCP | 6379 | `127.0.0.1:6380` | Нет |
 
-## 1. Реестр портов инфраструктуры и сервисов
+В контейнере нельзя использовать host-порты. Например, Auth подключается к `postgres:5432`, а инструмент на машине разработчика — к `localhost:5434`.
 
-| Сервис / Инфраструктура | Протокол | Внутренний порт (Docker) | Внешний порт (Host) | Назначение |
-| :--- | :--- | :-: | :-: | :--- |
-| **PostgreSQL 16** | TCP | 5432 | **5432** | Общий кластер баз данных (изолированные БД) |
-| **Redis 7** | TCP | 6379 | **6379** | In-memory кэш и блэклист токенов |
-| **RabbitMQ** (AMQP) | TCP | 5672 | **5672** | Брокер сообщений для сервисов |
-| **RabbitMQ Management** | HTTP | 15672 | **15672** | Веб-панель управления очередями (guest / guest) |
-| **gateway-service** | HTTP | 8080 | **8080** | Единая публичная точка входа (REST API / Swagger) |
-| **auth-service** | gRPC | 50051 | 50051 | Сервис аутентификации |
-| **users-service** | gRPC | 50052 | 50052 | Профили студентов и группы |
-| **schedule-service** | gRPC | 50053 | 50053 | Расписание занятий |
-| **navigation-service** | gRPC | 50054 | 50054 | Навигация по корпусам |
-| **tasks-service** | gRPC | 50055 | 50055 | Задачи и дедлайны |
-| **notification-service**| gRPC | 50056 | 50056 | Сервис уведомлений |
-| **ai-service** | gRPC | 50057 | 50057 | AI RAG-поиск по регламентам вуза |
-| **bot-service** | - | - | - | Telegram-бот (работает в режиме polling к Telegram) |
-| **Jaeger UI** | HTTP | 16686 | **16686** | Веб-интерфейс распределенного трейсинга OpenTelemetry |
-| **Prometheus** | HTTP | 9090 | **9090** | Сбор метрик сервисов |
-
----
-
-## 2. Стандартные переменные окружения сервисов
-
-### Базовые настройки среды
+## Переменные `infra/.env`
 
 ```ini
-# Окружение: local | staging | production
-APP_ENV=local
+# Host ports
+GATEWAY_HOST_PORT=8080
+POSTGRES_HOST_PORT=5434
+REDIS_HOST_PORT=6380
+AUTH_GRPC_HOST_PORT=50051
 
-# Уровень логирования: debug | info | warn | error
-LOG_LEVEL=debug
+# PostgreSQL
+POSTGRES_DB=orbit_auth
+POSTGRES_ADMIN_USER=postgres
+POSTGRES_ADMIN_PASSWORD=<local-admin-password>
+APP_DB_USER=orbit_user
+APP_DB_PASSWORD=<local-app-password>
+
+# Redis
+REDIS_PASSWORD=<local-redis-password>
+
+# Auth
+OTP_HMAC_SECRET=<random-secret-at-least-16-characters>
+RESEND_API_KEY=<resend-key>
+RESEND_FROM_EMAIL=<verified-sender>
+
+# Optional Google OAuth
+GOOGLE_OAUTH_ENABLED=false
+AUTH_GOOGLE_CLIENT_ID=
+AUTH_GOOGLE_CLIENT_SECRET=
+AUTH_GOOGLE_REDIRECT_URI=http://localhost:8080/api/v1/auth/oauth/google/callback
 ```
 
-### Подключение к PostgreSQL
+## Правила
 
-Каждый микросервис подключается к своей персональной БД согласно [ADR-002](../explanation/adr/002-database-per-service.md):
+1. `.env.example` содержит только placeholders и безопасные локальные значения.
+2. `.env` не коммитится.
+3. Gateway не получает DSN, Resend key и OTP secret.
+4. Auth не получает публичные административные credentials, если они не нужны приложению.
+5. Внешние клиенты обращаются только к Gateway; прямые порты сервисов предназначены для локальной диагностики.
 
-```ini
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=orbit
-DB_PASSWORD=orbit_dev_secret
-DB_NAME=tasks_db    # tasks_db | schedule_db | auth_db | ai_knowledge_db
-DB_SSLMODE=disable
-```
+## Зарезервированные порты целевой архитектуры
 
-### Подключение к Redis
-
-```ini
-REDIS_ADDR=localhost:6379
-REDIS_PASSWORD=
-REDIS_DB=0
-```
-
-### Подключение к RabbitMQ
-
-```ini
-RABBITMQ_URL=amqp://guest:guest@localhost:5672/
-```
-
-### Настройки безопасности и ключей (JWT)
-
-```ini
-# Публичный ключ Ed25519 (для gateway-service)
-JWT_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-
-# Приватный ключ Ed25519 (строго ТОЛЬКО для auth-service)
-JWT_PRIVATE_KEY_PEM="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-
-# Время жизни токенов
-JWT_ACCESS_TTL=15m
-JWT_REFRESH_TTL=168h
-```
+Порты `50052`–`50057`, RabbitMQ и observability относятся к будущим этапам. См. [канонические значения](canonical-values.md) и [текущее состояние](../project/current-state.md).

@@ -1,186 +1,87 @@
 # 02. Запуск локального окружения (infra)
 
-Микросервисы Orbit AI не хранят дублирующие конфигурации баз данных внутри каждого сервисного репозитория. Вся внешняя инфраструктура (базы данных, кэш, брокер сообщений) централизована в репозитории **`infra`**.
+!!! info "Статус: актуальный сценарий контейнеризации"
+    Руководство относится к стенду PostgreSQL + Redis + Auth + Gateway. RabbitMQ, Jaeger и остальные сервисы будут добавляться отдельными этапами.
 
-В этой главе описан запуск локального окружения с помощью Docker Compose и проверка работоспособности всех узлов.
+## 1. Зачем нужен `infra`
 
----
+Репозиторий `infra` позволяет участнику команды поднять backend без установки Go и без клонирования всех сервисов. Базовый Compose запускает готовые образы; исходники подключаются только через локальный override.
 
-## 1. Состав инфраструктурного стека
-
-Локальный стек `infra` поднимает изолированные контейнеры, необходимые для запуска сервисов на машинах разработчиков:
-
-```mermaid
-flowchart TD
-    subgraph Host ["Локальная машина разработчика"]
-        Dev["Сервисы Orbit AI (tasks-service, gateway, ai-service)"]
-    end
-
-    subgraph DockerInfra ["Docker Compose (репозиторий infra)"]
-        direction TB
-        PG[("PostgreSQL 16 + pgvector<br/>:5432 (auth_db, tasks_db, ai_db)")]
-        Redis[("Redis 7.2<br/>:6379 (Кэш и Blacklist)")]
-        RMQ["RabbitMQ 3.13<br/>:5672 (AMQP) и :15672 (Web UI)"]
-    end
-
-    Dev -->|"localhost:5432"| PG
-    Dev -->|"localhost:6379"| Redis
-    Dev -->|"localhost:5672"| RMQ
-```
-
-| Компонент | Образ Docker | Порт на хосте | Роль в проекте |
-| :--- | :--- | :--- | :--- |
-| **PostgreSQL 16** | `pgvector/pgvector:pg16` | `5432` | Реляционные данные сервисов и векторные эмбеддинги базы знаний Политеха (`vector(1536)`). |
-| **Redis 7.2** | `redis:7.2-alpine` | `6379` | Высокоскоростной кэш расписания (отклик 2–3 мс) и временные ключи идемпотентности. |
-| **RabbitMQ 3.13** | `rabbitmq:3.13-management-alpine` | `5672` (AMQP)<br>`15672` (Web UI) | Асинхронная шина событий для межсервисной интеграции без жесткого связывания. |
-
----
-
-## 2. Клонирование и первый запуск
-
-### Шаг 1. Клонирование репозитория инфраструктуры
-Склонируйте `infra` в отдельную директорию на уровне ваших сервисов:
+## 2. Первый запуск
 
 ```bash
-git clone git@github.com:orbit-polytech/infra.git
+git clone https://github.com/orbit-polytech/infra.git
 cd infra
-```
-
-Рекомендуемая структура папок на диске:
-```text
-workspace/
-├── infra/          # Docker Compose и конфиги инфраструктуры
-├── orbit-docs/           # Документация и эталонные примеры
-├── contracts/      # Protobuf схемы
-├── tasks-service/        # Микросервис задач
-└── gateway-service/      # API Gateway
-```
-
-### Шаг 2. Настройка переменных окружения
-Скопируйте шаблон окружения:
-
-```bash
 cp .env.example .env
+# Заполните локальные секреты
+task up
 ```
 
-Содержимое `.env` по умолчанию настроено для локальной разработки:
-```env
-# PostgreSQL
-POSTGRES_USER=orbit_user
-POSTGRES_PASSWORD=orbit_secret_password
-POSTGRES_HOST_PORT=5432
+Проверьте состояние:
 
-# Redis
-REDIS_HOST_PORT=6379
-
-# RabbitMQ
-RABBITMQ_DEFAULT_USER=orbit_mq
-RABBITMQ_DEFAULT_PASS=orbit_mq_password
-RABBITMQ_AMQP_PORT=5672
-RABBITMQ_MANAGEMENT_PORT=15672
-```
-
-### Шаг 3. Запуск контейнеров в фоновом режиме
 ```bash
-docker compose up -d
+task status
 ```
 
----
+Основные сервисы должны быть `healthy`, а `jwt-keygen` и `auth-migrate` — `Exited (0)`.
 
-## 3. Проверка работоспособности (Healthcheck)
+## 3. Проверка Gateway
 
-### 3.1. Статус контейнеров
-Выполните команду `docker compose ps`. Все сервисы должны находиться в статусе `Up` или `Up (healthy)`:
+```bash
+curl http://localhost:8080/healthz
+curl http://localhost:8080/readyz
+```
+
+Swagger: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html).
+
+## 4. Сети и порты
+
+Внутри Compose сервисы обращаются друг к другу по DNS-именам:
 
 ```text
-NAME                     IMAGE                               COMMAND                  STATUS         PORTS
-orbit-postgres-1         pgvector/pgvector:pg16              "docker-entrypoint.s…"   Up (healthy)   0.0.0.0:5432->5432/tcp
-orbit-redis-1            redis:7.2-alpine                    "docker-entrypoint.s…"   Up (healthy)   0.0.0.0:6379->6379/tcp
-orbit-rabbitmq-1         rabbitmq:3.13-management-alpine    "docker-entrypoint.s…"   Up (healthy)   0.0.0.0:5672->5672/tcp, 0.0.0.0:15672->15672/tcp
+gateway-service -> auth-service:50051
+auth-service    -> postgres:5432
+auth-service    -> redis:6379
 ```
 
-### 3.2. Проверка PostgreSQL
-Убедитесь, что сервер базы данных принимает сетевые подключения:
+На хост по умолчанию публикуются:
+
+- Gateway: `127.0.0.1:8080`;
+- Auth gRPC: `127.0.0.1:50051` для локальной диагностики;
+- PostgreSQL: `127.0.0.1:5434`;
+- Redis: `127.0.0.1:6380`.
+
+## 5. Разработка одного сервиса
 
 ```bash
-docker exec -it orbit-postgres-1 pg_isready -U orbit_user
-# Вывод: /var/run/postgresql:5432 - accepting connections
+cp compose.override.yaml.example compose.override.yaml
 ```
 
-Проверьте наличие расширения `vector`:
+Раскомментируйте `build` только у нужного сервиса:
+
+```yaml
+services:
+  auth-service:
+    build:
+      context: ../auth-service
+      dockerfile: Dockerfile
+```
+
+Затем:
+
 ```bash
-docker exec -it orbit-postgres-1 psql -U orbit_user -d postgres -c "SELECT * FROM pg_extension WHERE extname = 'vector';"
+task build
+docker compose --profile apps up -d --pull never --wait
 ```
 
-### 3.3. Проверка Redis
-Отправьте команду `PING` встроенным клиентом:
+## 6. Управление данными
 
-```bash
-docker exec -it orbit-redis-1 redis-cli ping
-# Ответ: PONG
-```
+- `task down` сохраняет volumes;
+- `task clean` удаляет PostgreSQL, Redis и JWT-ключи;
+- после удаления JWT-томов ранее выданные токены становятся недействительными.
 
-### 3.4. Проверка RabbitMQ Management UI
-Откройте браузер по адресу: **`http://localhost:15672`**.
-* **Логин**: `orbit_mq` (или `guest`)
-* **Пароль**: `orbit_mq_password` (или `guest`)
+## 7. Продолжение
 
-Панель отображает состояние очередей (Queues), обменников (Exchanges) и скорость передачи сообщений.
-
----
-
-## 4. Раздельные базы данных (Database-Per-Service)
-
-Согласно архитектурному решению **ADR-002**, каждый микросервис изолированно владеет своей базой данных. В `infra` при первом старте контейнера выполняется скрипт инициализации `init-databases.sh`, создающий схемы для сервисов:
-
-* `orbit_tasks_db` — база микросервиса задач;
-* `orbit_auth_db` — база сервиса авторизации;
-* `orbit_schedule_db` — база расписания пар;
-* `orbit_ai_db` — база векторных знаний AI.
-
-Сервисы не имеют права подключаться к чужой БД напрямую через SQL (только через сетевые gRPC-вызовы).
-
----
-
-## 5. Управление и устранение неполадок
-
-### Остановка и перезапуск
-```bash
-# Остановить контейнеры (данные в томах сохраняются):
-docker compose stop
-
-# Запустить снова:
-docker compose start
-
-# Просмотр логов в реальном времени:
-docker compose logs -f postgres
-```
-
-### Ошибка «Port is already allocated» (Порт занят)
-Если на вашей машине уже запущен локальный PostgreSQL или Redis:
-```text
-Error response from daemon: driver failed programming external connectivity on endpoint: 
-Bind for 0.0.0.0:5432 failed: port is already allocated
-```
-
-* **Решение 1 (Рекомендуемое)**: Остановите локальную службу:
-  ```bash
-  # Linux:
-  sudo systemctl stop postgresql
-
-  # Windows (PowerShell от администратора):
-  Stop-Service postgresql*
-  ```
-* **Решение 2**: Измените внешний порт в файле `.env` (например, `POSTGRES_HOST_PORT=5433`).
-
-### Полный сброс данных (Hard Reset)
-Если вам нужно полностью стереть локальные данные и пересоздать базы с нуля:
-```bash
-# Остановка с удалением Docker Volumes:
-docker compose down -v
-
-# Чистый перезапуск:
-docker compose up -d
-```
-
-После успешного старта инфраструктуры переходите к изучению контрактов: **[03. Контракты API и Buf (Go и Python)](03-contracts-buf.md)**.
+- [Запуск актуального стенда](../../quickstart/local-setup.md)
+- [Текущее состояние проекта](../../project/current-state.md)
+- [Справочник портов и env](../../reference/ports-and-env.md)

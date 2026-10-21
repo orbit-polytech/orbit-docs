@@ -1,48 +1,51 @@
-# gateway-service (API Gateway)
+# gateway-service
 
 **Репозиторий:** [`orbit-polytech/gateway-service`](https://github.com/orbit-polytech/gateway-service)
 
----
+**Статус:** работает сейчас; контейнеризация находится в feature-ветке.
 
-## 1. Назначение
-Входная точка и периметр безопасности распределенной системы Orbit AI. Принимает внешние HTTP/REST запросы от мобильного приложения на Flutter, веб-интерфейсов и Telegram-бота, валидирует JWT-токены Ed25519, защищает от атак (Rate Limiting, CORS) и транслирует вызовы во внутренний gRPC-контур.
+## Назначение
 
----
+Gateway — единственная HTTP-граница текущего backend-стенда. Он принимает внешние запросы, проверяет access JWT и вызывает Auth по gRPC.
 
-## 2. Технический стек
-- **Язык:** Go 1.24+
-- **HTTP-роутер:** `go-chi/chi/v5`
-- **Протоколы:** Вход — HTTP/1.1 & HTTP/2 (REST/JSON), Выход — gRPC по HTTP/2
-- **Кэш и безопасность:** Redis 7 (проверка блэклиста отозванных JWT по `jti`, Rate Limiting)
-- **Контракты:** Клиенты gRPC из `contracts/gen/go`
+## Реализовано
 
----
+- `/healthz` и `/readyz`;
+- Swagger UI;
+- Email OTP endpoints;
+- refresh и logout;
+- `/api/v1/auth/me`;
+- Google OAuth login/callback;
+- linking, listing и unlinking identities;
+- JWT middleware;
+- CORS, request ID, recovery и структурированное логирование;
+- отображение gRPC-ошибок в HTTP.
 
-## 3. Сетевые порты
-- **Внешний порт (Host/Docker):** `8080` (HTTP REST & Swagger UI)
-- **Метрики Prometheus:** `http://localhost:8080/metrics`
-- **Проверка здоровья (Healthcheck):** `http://localhost:8080/healthz`
+## Не отвечает за
 
----
+- выпуск токенов и хранение сессий;
+- доступ к PostgreSQL Auth;
+- бизнес-логику профилей, задач или расписания.
 
-## 4. Обязательные переменные окружения
+## Порты и зависимости
+
+| Категория | Значение |
+|---|---|
+| HTTP внутри контейнера | `:8080` |
+| Локальный адрес | `127.0.0.1:8080` |
+| Auth | `auth-service:50051` |
+| JWT | Только публичный Ed25519-ключ |
+
+## Основные env
 
 ```ini
-APP_ENV=local
-LOG_LEVEL=debug
-HTTP_PORT=8080
-
-# Redis для блэклиста токенов
-REDIS_ADDR=localhost:6379
-
-# Публичный ключ для проверки подписи JWT Ed25519
-JWT_PUBLIC_KEY_PEM="-----BEGIN PUBLIC KEY-----\n...\n-----END PUBLIC KEY-----"
-
-# Адреса внутренних gRPC-сервисов
-AUTH_GRPC_ADDR=localhost:50051
-USERS_GRPC_ADDR=localhost:50052
-SCHEDULE_GRPC_ADDR=localhost:50053
-NAVIGATION_GRPC_ADDR=localhost:50054
-TASKS_GRPC_ADDR=localhost:50055
-AI_GRPC_ADDR=localhost:50057
+GATEWAY_HOST=0.0.0.0
+GATEWAY_PORT=8080
+AUTH_GRPC_ADDR=auth-service:50051
+JWT_PUBLIC_KEY_PATH=/run/secrets/jwt_public/jwt_ed25519.pub
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+SWAGGER_ENABLED=true
+COOKIE_SECURE=false
 ```
+
+`COOKIE_SECURE=false` допустим только для локального HTTP-стенда. В окружении с HTTPS значение должно быть `true`.
