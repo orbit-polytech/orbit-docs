@@ -1,106 +1,78 @@
-# Orbit AI — Руководство разработчика и стандарты архитектуры
+# Orbit AI — инженерная база знаний
 
-Это центральная база знаний и инженерное руководство проекта **Orbit AI**. Здесь зафиксированы архитектурные стандарты, устройство сервисов и правила командной работы над кодовой базой.
+Orbit AI — экосистема сервисов для студентов Московского Политеха: авторизация, расписание, навигация, задачи и AI-консультант.
 
-Система построена на микросервисной архитектуре из 13 специализированных репозиториев, объединённых общим API Gateway, контрактами Protobuf и асинхронной шиной RabbitMQ. Если вы только подключились к разработке — начните с раздела [Быстрый старт](quickstart/local-setup.md), чтобы развернуть локальное окружение и сделать первый запрос.
+!!! info "Как читать эту документацию"
+    Здесь одновременно описаны **текущая реализация**, **целевая архитектура** и **учебные примеры**. Будущие компоненты не считаются уже работающими. Начните со страницы [«Текущее состояние»](project/current-state.md).
 
----
+<div class="grid cards" markdown>
 
-## 1. Архитектурная схема экосистемы
+-   :material-play-circle: __[Запустить актуальный стенд](quickstart/local-setup.md)__
 
-Система Orbit AI состоит из 13 специализированных репозиториев в организации [**github.com/orbit-polytech**](https://github.com/orbit-polytech):
+    ---
+
+    Поднять PostgreSQL, Redis, Auth и Gateway, проверить healthcheck и открыть Swagger.
+
+-   :material-progress-check: __[Узнать текущее состояние](project/current-state.md)__
+
+    ---
+
+    Что реализовано, что находится в разработке и какие компоненты относятся к целевой архитектуре.
+
+-   :material-sitemap: __[Изучить целевую архитектуру](reference/polyrepo-map.md)__
+
+    ---
+
+    Карта полирепозитория, границы сервисов и план развития экосистемы.
+
+</div>
+
+## Целевая архитектура
+
+Целевая экосистема включает 13 специализированных репозиториев, объединённых API Gateway, Protobuf-контрактами и, на следующих этапах, асинхронной шиной событий.
 
 ![Архитектурная схема экосистемы Orbit AI](image/architecture-overview.png)
 
----
+Схема показывает **целевое состояние**. Реализованный срез перечислен на странице [текущего состояния](project/current-state.md).
 
-## 2. Разделы инженерной базы знаний
+## Разделы базы знаний
 
 <div class="grid cards" markdown>
 
 -   :material-rocket-launch: __[Быстрый старт](quickstart/overview.md)__
-    
-    ---
-    
-    Всё, что нужно для входа в проект:
-    - Правила организации репозиториев `orbit-polytech`;
-    - [Запуск с нуля на ноутбуке (Docker Compose)](quickstart/local-setup.md);
-    - [Git, ветки и GitHub Flow](quickstart/git-workflow.md);
-    - [Чек-лист код-ревью и чистый код](quickstart/review-checklist.md).
+
+    Запуск стенда, правила команды, GitHub Flow и проверка Pull Request.
 
 -   :simple-go: __[Go-бэкенд](backend-go/overview.md)__
-    
-    ---
-    
-    Стандарт микросервисов на Go 1.25+:
-    - [Официальная структура модулей Go](backend-go/overview.md);
-    - [Создание микросервиса с нуля (Tutorial)](backend-go/tutorial.md);
-    - [«Хочу добавить X, куда писать» (How-to)](backend-go/how-to.md);
-    - [Чистая архитектура и DDD](backend-go/clean-architecture.md);
-    - [Справочник слоев и линтер depguard](backend-go/reference.md).
+
+    Clean Architecture, DDD, gRPC, PostgreSQL, тестирование и CI/CD.
 
 -   :material-shield-check: __[HTTP Gateway](gateway/overview.md)__
-    
-    ---
-    
-    Публичный периметр системы (`gateway-service`):
-    - Роутер Chi, санитизация входящих заголовков;
-    - [Обработчики и Middleware](gateway/handlers-and-middleware.md);
-    - [gRPC-клиенты и маппинг ошибок](gateway/grpc-clients.md).
+
+    Публичный HTTP-периметр, middleware и gRPC-клиенты.
 
 -   :simple-python: __[Python & AI](python-ai/overview.md)__
-    
-    ---
-    
-    Сервисы искусственного интеллекта и Telegram-бот:
-    - Пакетный менеджер `uv` и стиль Python 3.12;
-    - [RAG, Gemini API и pgvector (Tutorial)](python-ai/rag-tutorial.md);
-    - [Telegram-бот на aiogram 3 (How-to)](python-ai/bot-guide.md);
-    - [Изоляция и границы Python-стека](python-ai/explanation.md).
+
+    Целевая архитектура RAG, Gemini, pgvector и Telegram-бота.
 
 -   :simple-flutter: __[Flutter & Мобилка](mobile-flutter/overview.md)__
-    
-    ---
-    
-    Мобильное приложение Orbit Mobile:
-    - Стандарт Google Compass App и архитектура MVVM;
-    - [Управление состоянием: Command + Result](mobile-flutter/mvvm-architecture.md);
-    - [Вёрстка адаптивных виджетов и темы Политеха](mobile-flutter/widgets-tutorial.md);
-    - [Безопасное хранение токенов в Keychain/KeyStore](mobile-flutter/network-and-storage.md).
 
--   :material-transit-connection-variant: __[Контракты и Инфра](contracts-infra/overview.md)__
-    
-    ---
-    
-    Принцип API-First и локальное окружение:
-    - [contracts: proto-схемы и Buf CLI](contracts-infra/contracts.md);
-    - [infra: Docker Compose и базы данных](contracts-infra/infra.md);
-    - [Справочник контейнеров и очередей RabbitMQ](contracts-infra/reference.md).
+    Целевая архитектура клиента, состояние UI и безопасная работа с токенами.
+
+-   :material-transit-connection-variant: __[Контракты и инфраструктура](contracts-infra/overview.md)__
+
+    API-first, Buf, Docker Compose и локальные зависимости.
 
 -   :material-lock-check: __[Безопасность и Auth](security/overview.md)__
-    
-    ---
-    
-    Архитектура безопасности и авторизации:
-    - [JWT и асимметричная подпись Ed25519](security/jwt-ed25519.md);
-    - [Сессии, Refresh Tokens и Token Reuse Detection](security/sessions-refresh.md);
-    - [Защита от IDOR, инъекций и подмены ролей](security/validation-defense.md).
+
+    Email OTP, Google OAuth, JWT Ed25519, refresh-сессии и будущие способы входа.
 
 -   :material-book-open-page-variant: __[Справочник](reference/canonical-values.md)__
-    
-    ---
-    
-    Единый источник правды:
-    - [Канонические порты, env-переменные и версии](reference/canonical-values.md);
-    - [Карта 13 репозиториев организации](reference/polyrepo-map.md);
-    - [Соглашения об именовании кода, веток и коммитов](reference/naming-conventions.md).
+
+    Порты, переменные окружения, паспорта сервисов и ADR.
 
 -   :material-robot: __[Для ИИ-агентов](ai/agents.md)__
-    
-    ---
-    
-    Руководство для автономных LLM-инструментов:
-    - [Правила кодогенерации MUST / MUST NOT](ai/agents.md);
-    - [Машиночитаемый индекс llms.txt](ai/llms-guide.md).
+
+    Правила работы с кодом и машиночитаемый индекс `llms.txt`.
 
 </div>
