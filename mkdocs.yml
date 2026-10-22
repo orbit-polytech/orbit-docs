@@ -74,7 +74,10 @@ plugins:
 
 nav:
   - Главная: index.md
-  - Текущее состояние: project/current-state.md
+  - Проект:
+      - Текущее состояние: project/current-state.md
+      - Задачи:
+          - Разработка users-service: project/tasks/users-service.md
 
   # =========================================================================
   # 1. БЫСТРЫЙ СТАРТ
