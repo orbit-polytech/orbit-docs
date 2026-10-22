@@ -1,7 +1,7 @@
 # Техническое задание: Разработка сервиса профилей (users-service) и gRPC-контрактов
 
 - **Исполнитель**: Илья Мозжухин (Backend / Database Engineer)
-- **Ревьюер / Тимлид**: Данил Мусатов
+- **Tech Lead & Software Architect:** Данил Мусатов
 - **Проект**: Orbit AI
 - **Стек**: Go 1.26, gRPC / Protobuf, PostgreSQL 16 (драйвер `pgx/v5`), Goose v3.24.1, Docker, GitHub Actions
 
