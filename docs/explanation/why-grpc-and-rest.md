@@ -13,14 +13,14 @@ flowchart TD
     end
 
     subgraph Perimeter ["Периметр безопасности"]
-        GW["gateway-service (:8080)<br/>REST Router Chi + JWT Verifier"]
+        GW["gateway-service (:8080)<br/>net/http.ServeMux + JWT для защищённых маршрутов"]
     end
 
-    subgraph InternalMesh ["Внутренняя сеть orbit-net (Бинарный gRPC / HTTP/2)"]
+    subgraph InternalMesh ["Внутренняя Compose-сеть (gRPC / HTTP/2)"]
         Auth["auth-service (:50051)"]
-        Tasks["tasks-service (:50055)"]
-        Sched["schedule-service (:50052)"]
-        AI["ai-service (:50054)"]
+        Tasks["tasks-service (:50055, план)"]
+        Sched["schedule-service (:50054)"]
+        AI["ai-service (:50057, план)"]
     end
 
     Mobile ==>|"HTTPS / REST JSON"| GW
@@ -50,7 +50,7 @@ flowchart TD
 
 ## 3. Почему gRPC во внутреннем контуре (Gateway $\rightarrow$ Microservices)
 
-Во внутреннем контуре все сервисы развернуты в единой изолированной Docker-сети `orbit-net`. Здесь ключевую роль играют производительность, строгая типизация и низкие накладные расходы.
+Текущий Compose создаёт общую default-сеть проекта `orbit-infra` (обычно `orbit-infra_default`). Бизнес-сервисы будущих этапов на схеме помечены как план. Здесь ключевую роль играют производительность, строгая типизация и низкие накладные расходы.
 
 ### 1. Бинарная сериализация Protobuf v3
 JSON — текстовый формат, требующий значительных затрат CPU на парсинг строк, экранирование кавычек и преобразование типов. Protocol Buffers упаковывает данные в компактный бинарный поток:
@@ -86,7 +86,7 @@ JSON — текстовый формат, требующий значитель�
 
 - **Выставлять в публичный контур только один порт шлюза (HTTP/8080)** с единой точкой проверки JWT и CORS.
 - **Внутри Docker-сети общаться строго по gRPC** с сгенерированными строго типизированными клиентами.
-- **Использовать автоматическую генерацию OpenAPI спецификации** из Protobuf-описаний (`buf-plugin-openapi`).
+- **Поддерживать актуальную схему API:** текущий Gateway генерирует Swagger из HTTP-аннотаций Swag в `api/docs`; генерация OpenAPI из proto — отдельный возможный подход, не текущий пайплайн.
 </div>
 
 </div>

@@ -2,6 +2,9 @@
 
 **Репозиторий:** [`orbit-polytech/navigation-service`](https://github.com/orbit-polytech/navigation-service)
 
+!!! info "Целевой сервис, не часть текущего стенда"
+    Ниже сохранён проектный паспорт. Прежний порт `50054` уже занят реализованным Schedule. Порт Navigation нужно согласовать до реализации; копировать `50054` в его конфигурацию нельзя. См. [канонические значения](../canonical-values.md).
+
 ---
 
 ## 1. Назначение
@@ -13,13 +16,13 @@
 - **Язык:** Go 1.24+ (Clean Architecture)
 - **База данных:** PostgreSQL 16 (`navigation_db`)
 - **Алгоритмы:** Графовый поиск кратчайшего пути (A* / Дейкстра)
-- **Протокол:** gRPC (порт `50054`)
+- **Протокол:** gRPC (порт требует согласования)
 - **Контракт:** `orbit.navigation.v1.NavigationService`
 
 ---
 
 ## 3. Выделенные порты и база данных
-- **gRPC порт:** `50054`
+- **gRPC порт:** пока не назначен
 - **База данных:** `navigation_db` в PostgreSQL
 - **Healthcheck:** `/grpc.health.v1.Health/Check`
 
@@ -30,7 +33,7 @@
 ```ini
 APP_ENV=local
 LOG_LEVEL=debug
-GRPC_PORT=50054
+# GRPC_PORT=<согласованный-свободный-порт>
 
 DB_HOST=localhost
 DB_PORT=5432

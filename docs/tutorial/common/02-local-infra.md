@@ -1,7 +1,7 @@
 # 02. Запуск локального окружения (infra)
 
 !!! info "Статус: актуальный сценарий контейнеризации"
-    Руководство относится к стенду PostgreSQL + Redis + Auth + Gateway. RabbitMQ, Jaeger и остальные сервисы будут добавляться отдельными этапами.
+    Руководство относится к стенду PostgreSQL + Redis + Auth + Schedule + Gateway. RabbitMQ, Jaeger и остальные сервисы будут добавляться отдельными этапами.
 
 ## 1. Зачем нужен `infra`
 
@@ -13,9 +13,11 @@
 git clone https://github.com/orbit-polytech/infra.git
 cd infra
 cp .env.example .env
-# Заполните локальные секреты
+# Заполните локальные секреты и выполните вход в GHCR (см. ссылку ниже)
 task up
 ```
+
+Для private-пакетов сначала выполните [авторизацию Docker и проверку шести образов](../../quickstart/ghcr-access.md).
 
 Проверьте состояние:
 
@@ -23,7 +25,7 @@ task up
 task status
 ```
 
-Основные сервисы должны быть `healthy`, а `jwt-keygen` и `auth-migrate` — `Exited (0)`.
+Основные сервисы должны быть `healthy`, а `jwt-keygen`, `postgres-init`, `auth-migrate` и `schedule-migrate` — `Exited (0)`.
 
 ## 3. Проверка Gateway
 
@@ -40,6 +42,8 @@ Swagger: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagge
 
 ```text
 gateway-service -> auth-service:50051
+gateway-service -> schedule-service:50054
+schedule-service -> postgres:5432 (orbit_schedule)
 auth-service    -> postgres:5432
 auth-service    -> redis:6379
 ```
@@ -48,6 +52,7 @@ auth-service    -> redis:6379
 
 - Gateway: `127.0.0.1:8080`;
 - Auth gRPC: `127.0.0.1:50051` для локальной диагностики;
+- Schedule gRPC: `127.0.0.1:50054` для локальной диагностики;
 - PostgreSQL: `127.0.0.1:5434`;
 - Redis: `127.0.0.1:6380`.
 
@@ -79,6 +84,12 @@ docker compose --profile apps up -d --pull never --wait
 - `task down` сохраняет volumes;
 - `task clean` удаляет PostgreSQL, Redis и JWT-ключи;
 - после удаления JWT-томов ранее выданные токены становятся недействительными.
+
+Повторная подготовка существующего volume: `task up:deps` → `task db:init` → `task up`. Не удаляйте данные ради появления базы Schedule.
+
+При обновлении готовых образов сначала выполните `docker compose --profile apps pull`, затем `task up`. Локальный `latest` сам по себе не гарантирует актуальную версию.
+
+Публичная проверка: `curl "http://localhost:8080/api/v1/schedule/groups/261-334"`. Первичная синхронизация может ещё идти, даже если Schedule уже `healthy`. См. [API расписания](../../gateway/schedule-api.md).
 
 ## 7. Продолжение
 

@@ -9,6 +9,7 @@
 |---|---|---|---|
 | Gateway HTTP | `gateway-service:8080` | `127.0.0.1:8080` | Реализовано |
 | Auth gRPC | `auth-service:50051` | `127.0.0.1:50051` | Реализовано |
+| Schedule gRPC | `schedule-service:50054` | `127.0.0.1:50054` | Реализовано |
 | PostgreSQL | `postgres:5432` | `127.0.0.1:5434` | Реализовано |
 | Redis | `redis:6379` | `127.0.0.1:6380` | Реализовано |
 
@@ -18,7 +19,11 @@ Host-порты могут быть изменены в `.env`. Межконте
 
 | Переменная | Потребитель | Назначение |
 |---|---|---|
-| `POSTGRES_DSN` | Auth | Строка подключения приложения к PostgreSQL |
+| `POSTGRES_DSN` | Auth / Schedule | Отдельное значение DSN для базы каждого сервиса |
+| `SCHEDULE_POSTGRES_DB` | Compose / postgres-init | Имя базы Schedule, по умолчанию `orbit_schedule` |
+| `SCHEDULE_GRPC_ADDR` | Gateway | Адрес Schedule: `schedule-service:50054` |
+| `SCHEDULE_RPC_TIMEOUT` | Gateway | Таймаут Schedule RPC, в Compose `5s` |
+| `SCHEDULE_SYNC_ENABLED` | Schedule через Compose | Фоновая синхронизация; в Compose по умолчанию `true` |
 | `REDIS_ADDR` | Auth | Адрес Redis внутри Compose |
 | `REDIS_PASSWORD` | Redis, Auth | Пароль локального Redis |
 | `OTP_HMAC_SECRET` | Auth | HMAC-секрет для OTP, минимум 16 символов |
@@ -42,6 +47,8 @@ Host-порты могут быть изменены в `.env`. Межконте
 | Readiness | `http://localhost:8080/readyz` |
 | Swagger UI | `http://localhost:8080/swagger/index.html` |
 | Auth API | `http://localhost:8080/api/v1/auth/...` |
+| Поиск групп (без JWT) | `http://localhost:8080/api/v1/schedule/groups?query=261` |
+| Расписание текущей недели (без JWT) | `http://localhost:8080/api/v1/schedule/groups/261-334` |
 | Google callback | `http://localhost:8080/api/v1/auth/oauth/google/callback` |
 
 ## Целевая архитектура
@@ -51,8 +58,7 @@ Host-порты могут быть изменены в `.env`. Межконте
 | Компонент | Планируемый порт | Статус |
 |---|---:|---|
 | Users gRPC | 50052 | Запланировано |
-| Schedule gRPC | 50053 | Запланировано |
-| Navigation gRPC | 50054 | Запланировано |
+| Navigation gRPC | Требует согласования | Запланировано; прежний `50054` занят Schedule |
 | Tasks gRPC | 50055 | Учебный пример / запланировано |
 | Notification gRPC | 50056 | Запланировано |
 | AI gRPC | 50057 | Запланировано |
@@ -60,3 +66,5 @@ Host-порты могут быть изменены в `.env`. Межконте
 | Jaeger UI | 16686 | Запланировано |
 
 Актуальный статус компонентов находится на странице [«Текущее состояние»](../project/current-state.md).
+
+Для текущего Schedule закреплены `50054`, база `orbit_schedule`, контракт `v0.4.0`, максимум 93 календарных дня и зона `Europe/Moscow`. Старые схемы с `50053` не являются источником конфигурации. Назначать новый порт Navigation нужно отдельно, не копируя занятую цифру.

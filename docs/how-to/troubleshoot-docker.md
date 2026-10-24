@@ -1,141 +1,91 @@
-# Что делать, если упал Docker или занят порт
+# Диагностика Docker-стенда
 
-Локальное окружение Orbit AI (`infra`) объединяет несколько сервисов инфраструктуры (PostgreSQL 16, Redis 7, RabbitMQ, Jaeger). В данном руководстве собраны типовые проблемы при запуске контейнеров и проверенные способы их решения.
+Текущий `infra` запускает PostgreSQL, Redis, Auth, Schedule, Gateway и четыре one-shot сервиса. RabbitMQ и Jaeger пока не развёрнуты.
 
----
+## Сначала статус и логи
 
-## 1. Проблема №1: Ошибка «Address already in use» (Порт занят)
+Из каталога `infra`:
 
-При выполнении команды `docker compose up -d` появляется ошибка:
-
-```text
-Error response from daemon: driver failed programming external connectivity on endpoint orbit-postgres: 
-Bind for 0.0.0.0:5432 failed: port is already allocated
+```bash
+task status
+docker compose --profile apps logs --tail 100 postgres-init auth-migrate schedule-migrate
+docker compose --profile apps logs --tail 100 auth-service schedule-service gateway-service
 ```
 
-### Причина
-На вашей локальной машине уже запущен системный сервис PostgreSQL (или Redis / RabbitMQ), установленный напрямую в операционную систему, либо остался зависший старый контейнер.
+`jwt-keygen`, `postgres-init`, `auth-migrate` и `schedule-migrate` в `Exited (0)` — нормальный результат, не CrashLoop. Ненулевой код требует изучения логов. Сохраните имя сервиса, тег образа и сообщение ошибки; не отправляйте секреты `.env` или Docker config.
 
-### Решение
+## Не скачивается private-образ
 
-#### На Windows (PowerShell):
+Проверьте [вход в GHCR и Read-доступ ко всем шести пакетам](../quickstart/ghcr-access.md). `Login Succeeded` не гарантирует права чтения конкретного пакета. `manifest unknown` также может означать отсутствие опубликованного тега.
+
+Если падает **CI на `setup-buildx-action` при скачивании `moby/buildkit`**, это ещё не сборка Dockerfile и не доступ к private-образу Orbit в GHCR. Изучите полный лог с именем реестра, повторите временно неудавшуюся job и проверьте доступ к реестру builder-образа. Предупреждение Node `punycode` само по себе не причина ошибки Docker daemon. Не добавляйте PAT команды в workflow вслепую.
+
+## Занят порт
+
+Дефолты на хосте: PostgreSQL `5434`, Redis `6380`, Gateway `8080`, Auth `50051`, Schedule `50054`. Меняйте только нужный `*_HOST_PORT` в `.env`, а не межконтейнерный адрес.
+
 ```powershell
-# 1. Находим идентификатор процесса (PID), занявшего порт 5432
-Get-NetTCPConnection -LocalPort 5432 | Select-Object LocalPort, OwningProcess
-
-# 2. Узнаем имя процесса по его PID (например, 1234)
-Get-Process -Id 1234
-
-# 3. Останавливаем системную службу Postgres (если запущена служба Windows)
-Stop-Service -Name postgresql*
-
-# Или принудительно завершаем процесс:
-Stop-Process -Id 1234 -Force
+# PowerShell: пример для PostgreSQL
+Get-NetTCPConnection -LocalPort 5434 | Select-Object LocalPort, OwningProcess
 ```
 
-#### На Linux / macOS (Bash):
 ```bash
-# 1. Поиск процесса, слушающего порт 5432
-sudo lsof -i :5432
-# или
-sudo netstat -nlp | grep :5432
-
-# 2. Если запущена локальная служба systemd:
-sudo systemctl stop postgresql
-
-# 3. Если это зависший Docker контейнер:
-docker ps -q --filter "publish=5432" | xargs -r docker stop
+# Linux/macOS
+lsof -i :5434
+docker ps --filter "publish=5434"
 ```
 
----
+Сначала определите владельца порта. Не завершайте чужие процессы и не останавливайте все PostgreSQL-службы без необходимости.
 
-## 2. Проблема №2: Контейнер падает при старте (CrashLoop)
+## Старая база и ошибка мигратора
 
-Контейнер находится в статусе `Restarting (1)` или сразу переходит в `Exited`.
-
-### Диагностика
-Не перезапускайте docker вслепую — посмотрите последние 100 строк логов упавшего сервиса:
+Скрипты `docker-entrypoint-initdb.d` не запускаются повторно на существующем PostgreSQL volume. Для добавления Schedule в текущем стеке предусмотрен `postgres-init`:
 
 ```bash
-docker compose logs --tail 100 -f postgres
+task up:deps
+task db:init
+task up
 ```
 
-### Частые причины:
-1. **Неверные права на примонтированный том (Volume):** в логах `Permission denied`.  
-   Решение: проверьте права на папку с данными.
-2. **Ошибки синтаксиса в скриптах инициализации SQL:** скрипт в `init-databases.sql` упал с синтаксической ошибкой.  
-   Решение: исправьте SQL-скрипт и выполните сброс тома.
+Это не замена Goose-миграциям и не способ сбросить административный пароль. Проверьте `POSTGRES_DB`, `SCHEDULE_POSTGRES_DB`, credentials и фактическое наличие базы Auth. Повторная подготовка обновляет пароль существующей app-роли из `APP_DB_PASSWORD`. См. [подробности infra](../contracts-infra/infra.md).
 
----
+## Контейнеры healthy, но расписание отвечает 503
 
-## 3. Проблема №3: Полный сброс тестовой БД и очередей (Reset Volumes)
+Schedule может ещё не иметь снимка выбранной группы. Проверьте логи синхронизации, доступность `rasp.dmami.ru`, `SCHEDULE_SYNC_ENABLED`, адрес `SCHEDULE_GRPC_ADDR` и срок RPC. Healthcheck не ждёт обхода всех групп.
 
-Если после экспериментов с миграциями база данных находится в неконсистентном состоянии, либо в очередях RabbitMQ скопились старые сообщения, сделайте чистый перезапуск инфраструктуры с удалением томов:
+`404` — группа отсутствует в локальном реестре; `503` — снимок не готов либо upstream недоступен; пустой `200` — другой случай. См. [API и диагностику расписания](../gateway/schedule-api.md).
+
+## Изменения конфигурации или latest не применились
 
 ```bash
-# 1. Останавливаем контейнеры и полностью удаляем примонтированные volumes
-docker compose down -v
-
-# 2. Запускаем заново с чистыми базами данных
-docker compose up -d
+# После публикации новых образов
+docker compose --profile apps pull
+task up
 ```
 
-> [!WARNING] Внимание
-> Флаг `-v` удаляет все данные внутри контейнеров (таблицы в Postgres, кэш в Redis). Используйте его только в локальной среде разработки.
+`restart` не перечитывает env из Compose и не меняет образ контейнера. Для локально собранных сервисов не перетирайте изменения pull: используйте сценарий override из [Quickstart](../quickstart/local-setup.md).
 
----
+## Контейнеры не видят друг друга
 
-## 4. Проблема №4: Сервисы не видят друг друга (`lookup postgres: no such host`)
+Сравните Compose-проект и сети:
 
-Микросервис не может подключиться к базе данных или RabbitMQ, выдавая ошибку DNS: `dial tcp: lookup postgres: no such host`.
-
-### Причина
-Контейнеры запущены в разных изолированных Docker-сетях.
-
-### Проверка и решение:
 ```bash
-# 1. Проверяем список существующих сетей
+docker compose --profile apps ps -a
 docker network ls
-
-# 2. Инспектируем общую сеть orbit-net
-docker network inspect orbit-net
+docker network inspect orbit-infra_default
 ```
 
-Убедитесь, что в файле `docker-compose.yml` у всех сервисов указана единая сеть:
+`orbit-infra_default` — обычное имя сети для текущего `name: orbit-infra`; при переопределении имени проекта оно меняется. Отдельную сеть `orbit-net` текущий Compose не объявляет. Внутри контейнеров нужны DNS-адреса `postgres:5432`, `redis:6379`, `auth-service:50051`, `schedule-service:50054`, а не `localhost` и не host-порты.
 
-```yaml
-networks:
-  - orbit-net
+## Освобождение места и полный сброс
 
-networks:
-  orbit-net:
-    driver: bridge
-```
-
----
-
-## 5. Проблема №5: Закончилось свободное место на диске
-
-После десятков сборок образов Docker забивает диск промежуточными слоями и dangling-образами.
-
-Очистите кэш сборщика и неиспользуемые объекты:
+Сначала оцените использование:
 
 ```bash
-# Удаление висячих слоев и остановленных контейнеров
-docker system prune -f
-
-# Полная глубокая очистка кэша сборки BuildKit
-docker builder prune -a -f
+docker system df
 ```
 
----
+Очистка build cache — отдельное действие, например `docker builder prune`. Не удаляйте volumes для исправления скачивания образа, неизвестного порта или отсутствующего снимка расписания.
 
-## 6. Сводная таблица спасательных команд
-
-| Команда | Действие |
-| :--- | :--- |
-| `docker compose ps` | Показать статус здоровья всех контейнеров (`healthy` / `unhealthy`) |
-| `docker compose logs -f <service>` | Потоковый просмотр логов конкретного сервиса |
-| `docker compose restart <service>` | Быстрый перезапуск одного сервиса без остановки остальных |
-| `docker compose down -v` | Остановка и полное удаление локальных баз данных (чистый старт) |
-| `docker system df` | Оценка использования дискового пространства Docker |
+!!! danger "Только намеренный полный сброс локального стенда"
+    `task clean` удаляет данные PostgreSQL, Redis и оба JWT-тома. После запуска будут новые ключи, старые JWT перестанут приниматься. Делайте резервную копию нужных данных. Обычный `task down` сохраняет volumes.

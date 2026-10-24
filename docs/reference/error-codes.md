@@ -1,44 +1,54 @@
-# Спецификация кодов ошибок
+# Коды ошибок текущего Gateway
 
-В системе Orbit AI ошибки строго типизированы и однозначно транслируются между тремя уровнями представления:
-1. **Доменные ошибки Go / Python:** типизированные `var Err... = errors.New(...)`.
-2. **Статусные коды gRPC:** стандартные коды пакета `google.golang.org/grpc/codes`.
-3. **HTTP-коды шлюза Gateway:** канонические статусы RFC 9110 с телом ошибки в формате JSON.
+HTTP-шлюз преобразует gRPC status в HTTP-код и JSON. Актуальная реализация — `gateway-service/internal/transport/http/httputil/grpc_error.go`.
 
----
+## Маппинг gRPC → HTTP
 
-## 1. Сводная таблица маппинга ошибок
+| gRPC | HTTP | `error.code` |
+|---|---|---|
+| `InvalidArgument` | `400` | `INVALID_ARGUMENT` |
+| `NotFound` | `404` | `NOT_FOUND` |
+| `AlreadyExists` | `409` | `ALREADY_EXISTS` |
+| `PermissionDenied` | `403` | `PERMISSION_DENIED` |
+| `Unauthenticated` | `401` | `UNAUTHENTICATED` |
+| `ResourceExhausted` | `429` | `RESOURCE_EXHAUSTED` |
+| `FailedPrecondition` | `400` | `FAILED_PRECONDITION` |
+| `Aborted` | `409` | `ABORTED` |
+| `OutOfRange` | `400` | `OUT_OF_RANGE` |
+| `Unimplemented` | `501` | `UNIMPLEMENTED` |
+| `Internal` | `500` | `INTERNAL` |
+| `Unavailable` | `503` | `UNAVAILABLE` |
+| `DeadlineExceeded` | `504` | `DEADLINE_EXCEEDED` |
+| Остальные, включая `Unknown` и `Canceled` | `500` | `INTERNAL` |
 
-| Доменная ошибка | gRPC Status Code | HTTP Status | Описание для клиента |
-| :--- | :--- | :-: | :--- |
-| `ErrTaskNotFound`<br/>`ErrUserNotFound` | `codes.NotFound` | **404 Not Found** | Запрашиваемый ресурс не найден или у вас нет прав на его просмотр. |
-| `ErrEmptyTitle`<br/>`ErrInvalidDeadline`<br/>`ErrInvalidPriority` | `codes.InvalidArgument` | **400 Bad Request** | Некорректные параметры запроса (ошибка валидации схемы/инварианта). |
-| `ErrInvalidStatusTransition`<br/>`ErrCannotCompleteCanceled` | `codes.FailedPrecondition` | **412 Precondition Failed** | Недопустимый переход состояния сущности (например, попытка завершить отмененную задачу). |
-| `ErrVersionConflict` | `codes.Aborted` | **409 Conflict** | Оптимистичная блокировка: запись была обновлена другим параллельным процессом. |
-| `ErrEmptyOwnerID`<br/>`ErrInvalidToken` | `codes.Unauthenticated` | **401 Unauthorized** | Отсутствует или недействителен токен аутентификации. |
-| `ErrAccessDenied`<br/>`ErrInsufficientRoles` | `codes.PermissionDenied` | **403 Forbidden** | Пользователь аутентифицирован, но не обладает достаточными ролями (например, не староста). |
-| `ErrRateLimitExceeded` | `codes.ResourceExhausted` | **429 Too Many Requests** | Превышен лимит запросов в секунду / минуту. |
-| `context.DeadlineExceeded` | `codes.DeadlineExceeded` | **504 Gateway Timeout** | Время ожидания ответа от нижележащего микросервиса истекло. |
-| `context.Canceled` | `codes.Canceled` | **499 Client Closed Request** | Клиент разорвал сетевое соединение до получения ответа. |
-| Внутренняя непредвиденная ошибка | `codes.Internal` | **500 Internal Server Error** | Сбой на стороне сервера. Внутренние детали ошибки логируются, но скрываются от клиента. |
+Не следует ожидать `412`, `422` или `499` от текущего общего маппера. Специализированные HTTP-обработчики могут формировать собственные ошибки; ориентируйтесь на Swagger и код соответствующего endpoint.
 
----
-
-## 2. Стандартный формат тела ошибки в REST API (OpenAPI)
-
-При возникновении ошибки шлюз `gateway-service` возвращает ответ со следующим телом:
+## Формат ответа
 
 ```json
 {
   "error": {
-    "code": "TASK_NOT_FOUND",
-    "message": "задача не найдена",
-    "details": [],
-    "request_id": "018f2345-6789-7abc-def0-123456789abc"
+    "code": "UNAVAILABLE",
+    "message": "сервис временно недоступен"
   }
 }
 ```
 
-- **`code`:** машиночитаемый строковый код ошибки для использования в мобильном приложении (BLoC / UI стейты).
-- **`message`:** локализованное понятное сообщение для пользователя.
-- **`request_id`:** уникальный идентификатор запроса для поиска трейса в логах и Jaeger.
+`details` и `request_id` в текущий JSON DTO не входят. Идентификатор запроса передаётся в заголовке **`X-Request-ID`** и используется при поиске логов. Для `Internal`, `Unknown`, `Unavailable` и `DeadlineExceeded` Gateway скрывает внутренние сообщения upstream.
+
+При `401` общий gRPC-маппер выставляет `WWW-Authenticate: Bearer`. При `ResourceExhausted` с gRPC `RetryInfo` возможен `Retry-After` с округлением задержки вверх до целой секунды.
+
+## Ошибки расписания
+
+| Доменная причина | gRPC | HTTP |
+|---|---|---|
+| `ErrInvalidInput`, `ErrInvalidDateRange`, `ErrDateRangeTooLong` | `InvalidArgument` | `400` |
+| `ErrGroupNotFound` | `NotFound` | `404` |
+| `ErrScheduleNotReady` | `Unavailable` | `503` |
+| Истёкший deadline | `DeadlineExceeded` | `504` |
+
+`503` может означать отсутствие первого снимка, даже если контейнер Schedule — `healthy`. Устаревший, но сохранённый снимок может возвращаться с `200` и `metadata.is_stale=true`. См. [диагностику расписания](../gateway/schedule-api.md).
+
+## Учебные и будущие сервисы
+
+Доменные ошибки Tasks/Users и правила сокрытия чужого ресурса обсуждаются в учебных разделах и задачах. Они не доказывают наличие соответствующих маршрутов в текущем Gateway. При подключении сервиса его доменные ошибки сопоставляются с общим маппером явно; нельзя автоматически переносить из учебного примера коды вроде `TASK_NOT_FOUND` в опубликованный REST-контракт.

@@ -2,6 +2,10 @@
 
 Данное руководство описывает стандартизированный процесс создания нового Go-микросервиса в экосистеме Orbit AI на базе эталонного репозитория-шаблона `orbit-service-template`.
 
+
+!!! info "Учебный сценарий"
+    Существование и доступность `orbit-service-template` нужно проверить перед использованием. Дерево готового Tasks сохранено в `orbit-docs/examples/tasks-service`. Порт `50059` ниже — только пример для локального прототипа; согласуйте свободный порт до подключения. `50054` уже занят Schedule. Новому сервису не нужны Redis/RabbitMQ и actor-interceptor, если этого не требует его сценарий; публичное расписание — пример сервиса без actor.
+
 ---
 
 ## 1. Концепция и предварительные условия
@@ -91,7 +95,7 @@ APP_ENV=local
 LOG_LEVEL=debug
 
 # Уникальный gRPC-порт для study-service
-GRPC_PORT=50054
+GRPC_PORT=50059
 
 # Подключение к базе данных PostgreSQL (выделенная БД сервиса)
 DB_HOST=localhost
@@ -109,44 +113,24 @@ RABBITMQ_URL=amqp://guest:guest@localhost:5672/
 
 ### Шаг 5. Регистрация базы данных и сервиса в `infra`
 
-Для локальной разработки всей командой зарегистрируйте базу данных и запуск сервиса в репозитории `infra`:
+Базовый `infra/compose.yaml` — потребитель готовых образов, а не сборочный контекст соседних репозиториев.
 
-1. В скрипт инициализации баз данных `infra/scripts/init-databases.sql` добавьте создание отдельной БД:
-
-```sql
-CREATE DATABASE study_db;
-GRANT ALL PRIVILEGES ON DATABASE study_db TO orbit;
-```
-
-2. В `infra/docker-compose.yml` добавьте секцию сборки сервиса:
+1. Согласуйте контракт, отдельную базу, порт и необходимые зависимости. Миграции Goose храните в новом сервисе. Создание базы/роли добавьте в provisioner `infra/scripts/initdb/01-init-user.sh` отдельным проверенным изменением; `init-databases.sql` сейчас не используется. Проверьте повторный запуск на существующем volume.
+2. Настройте Dockerfile и CI публикации образа сервиса и при необходимости мигратора в GHCR. Выдайте потребителям Read-доступ.
+3. В базовый `compose.yaml` добавьте `image:`, явный набор env, healthcheck и зависимости. Не добавляйте `build: context: ../...` и не предполагайте наличие RabbitMQ/`orbit-net` в текущем стенде.
+4. Сборку исходников подключайте **только в локальном `compose.override.yaml`**. Иллюстрация структуры override:
 
 ```yaml
+services:
   study-service:
     build:
       context: ../study-service
       dockerfile: Dockerfile
-    container_name: orbit-study-service
-    restart: unless-stopped
-    ports:
-      - "50054:50054"
-    environment:
-      - APP_ENV=production
-      - LOG_LEVEL=info
-      - GRPC_PORT=50054
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=orbit
-      - DB_PASSWORD=orbit_dev_secret
-      - DB_NAME=study_db
-      - DB_SSLMODE=disable
-    depends_on:
-      postgres:
-        condition: service_healthy
-      rabbitmq:
-        condition: service_healthy
-    networks:
-      - orbit-net
 ```
+
+Это дополнение к заранее описанному базовому сервису, не полный запускаемый Compose. Добавьте такой фрагмент в шаблон override, сам локальный файл не коммитьте.
+
+5. Добавьте новый образ в список [доступа GHCR](../quickstart/ghcr-access.md), обновите [порты/env](../reference/ports-and-env.md), статус, Quickstart и проверьте запуск из одного клона `infra`.
 
 ---
 
@@ -171,7 +155,7 @@ go run ./cmd/study-service/main.go
 При успешном запуске в консоли появится структурированный лог:
 
 ```json
-{"time":"2026-10-12T12:00:00Z","level":"INFO","msg":"gRPC-сервер запущен","port":50054,"env":"local"}
+{"time":"2026-10-12T12:00:00Z","level":"INFO","msg":"gRPC-сервер запущен","port":50059,"env":"local"}
 ```
 
 ---
@@ -194,7 +178,7 @@ go run ./cmd/study-service/main.go
 
 - **Создавать репозиторий через GitHub кнопку «Use this template».** Получается чистая история коммитов с первого дня.
 - **Выполнять `go mod edit -module github.com/orbit-polytech/<service-name>`.** Все импорты строго изолированы и однозначны.
-- **Сверять номер порта с реестром `reference/ports-and-env.md`** и фиксировать его в `.env` и `docker-compose.yml`.
+- **Сверять номер порта с реестром `reference/ports-and-env.md`** и фиксировать его в конфигурации приложения и `compose.yaml`.
 - **Создавать отдельную БД в PostgreSQL с отдельным владельцем**, чтобы сервисы не связывались на уровне внешних ключей (Foreign Keys).
 </div>
 

@@ -4,7 +4,16 @@
 
 ---
 
-## 1. Маршрутизация на `go-chi/chi`
+## 1. Текущая маршрутизация
+
+В `main` используется **`net/http.ServeMux`**, файл `internal/transport/http/router.go`. Поиск групп и чтение расписания зарегистрированы через `HandleFunc` без JWT middleware. Защищённые Auth-маршруты оборачиваются в `middleware.Auth` явно. Внешний префикс — `/api/v1`, а не `/v1`.
+
+Для Schedule handler читает `group`, необязательные `date_from`/`date_to`, создаёт контекст с `SCHEDULE_RPC_TIMEOUT`, вызывает gRPC и преобразует DTO. Выбор недели остаётся в usecase Schedule. См. [полный API](schedule-api.md).
+
+## 2. Учебный вариант маршрутизации на `go-chi/chi`
+
+!!! info "Целевая схема, не текущий роутер"
+    Пример ниже сохранён для обучения. Tasks, Telegram endpoint, chi и показанные Redis rate limits не подключены в текущем Gateway. Его нельзя копировать как список уже работающих endpoint.
 
 Все эндпоинты регистрируются в едином файле `internal/httpapi/router.go`. Маршруты разделены на публичные (без авторизации, но со строгим ограничением частоты по IP) и защищённые (требующие валидного JWT):
 
@@ -49,7 +58,7 @@ func NewRouter(deps Dependencies) http.Handler {
 
 ---
 
-## 2. Безопасный приём JSON (`readJSON`)
+## 3. Безопасный приём JSON (`readJSON`)
 
 HTTP-обработчик обязан защищать сервис от атак типа Slowloris и переполнения памяти слишком большим телом запроса:
 
@@ -68,7 +77,7 @@ func readJSON(w http.ResponseWriter, r *http.Request, dst any) error {
 
 ---
 
-## 3. Типовой обработчик эндпоинта
+## 4. Типовой учебный обработчик эндпоинта
 
 Обработчик в Gateway делает ровно четыре действия:
 1. Читает и декодирует JSON.

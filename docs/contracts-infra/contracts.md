@@ -1,6 +1,6 @@
 # Репозиторий contracts: Protobuf и Buf CLI
 
-Все gRPC-контракты и схемы событий экосистемы Orbit AI живут в едином репозитории [**`contracts`**](https://github.com/orbit-polytech/contracts). Сервисы не хранят копии `.proto` файлов у себя, а используют сгенерированный код.
+Согласованные gRPC-контракты экосистемы Orbit AI живут в едином репозитории [**`contracts`**](https://github.com/orbit-polytech/contracts). Сервисы не хранят копии `.proto` файлов у себя, а используют сгенерированный код.
 
 ---
 
@@ -8,33 +8,32 @@
 
 ```text
 contracts/
-├── proto/
-│   └── orbit/
-│       ├── common/
-│       │   └── v1/
-│       │       └── pagination.proto      # Общие структуры пагинации
-│       ├── auth/
-│       │   └── v1/
-│       │       └── auth_service.proto    # Контракт сервиса авторизации
-│       ├── users/
-│       │   └── v1/
-│       │       └── users_service.proto   # Профили и группы студентов
-│       ├── tasks/
-│       │   └── v1/
-│       │       ├── tasks_service.proto   # CRUD операций над задачами
-│       │       └── task.proto            # Модель учебной задачи
-│       └── events/
-│           └── v1/
-│               └── task_events.proto     # Protobuf-схемы для RabbitMQ
-├── gen/
-│   ├── go/                               # Сгенерированный Go-код (коммитится в Git)
-│   └── python/                           # Сгенерированный Python-код
-├── buf.yaml                              # Конфигурация Buf v2 (линтер и breaking changes)
-├── buf.gen.yaml                          # Генерация плагинами buf.build
+├── proto/orbit/
+│   ├── auth/v1/
+│   │   ├── auth.proto
+│   │   ├── oauth.proto
+│   │   └── identity.proto
+│   └── schedule/v1/
+│       └── schedule.proto
+├── gen/go/                 # сгенерированный код
+├── buf.yaml
+├── buf.gen.yaml
+├── Taskfile.yml
 ├── go.mod
-├── Makefile
 └── README.md
 ```
+
+Срез `v0.4.0`: пакет `orbit.schedule.v1` содержит `SearchGroups` и `GetGroupSchedule`. В ответ чтения добавлены `date_from = 6` и `date_to = 7`; номера старых полей не меняются. Gateway и Schedule используют эту версию модуля. Users, Tasks, общие pagination-схемы и события добавляются после согласования; учебные proto Tasks находятся отдельно в `orbit-docs/examples/tasks-service`.
+
+Подключение Go-модуля из корня репозитория сервиса:
+
+```bash
+go get github.com/orbit-polytech/contracts@v0.4.0
+go mod tidy
+```
+
+Путь импорта пакета: `github.com/orbit-polytech/contracts/gen/go/orbit/schedule/v1`. Версия `v0.4.0` — версия Go-модуля, `orbit.schedule.v1` — версия protobuf-пакета; это разные уровни версионирования.
+
 
 > [!IMPORTANT]
 > Путь к `.proto` файлу строго соответствует пакету Protobuf: файл с декларацией `package orbit.tasks.v1;` обязан лежать в каталоге `proto/orbit/tasks/v1/`. Это требование Buf CLI и стандарт экосистемы Google.
@@ -59,7 +58,7 @@ contracts/
    }
    ```
 7. **Изолированные Request и Response**: каждый RPC-метод обязан иметь свои собственные сообщения `XxxRequest` и `XxxResponse`, даже если на текущем этапе они не содержат полей. Это гарантирует возможность расширения API в будущем без поломки обратной совместимости.
-8. **Временные типы**: строго `google.protobuf.Timestamp`, а для промежутков — `google.protobuf.Duration`. Использование обычных строк или `int64` миллисекунд запрещено.
+8. **Временные типы**: для момента времени используйте `google.protobuf.Timestamp`, для длительности — `google.protobuf.Duration`. Календарные даты Schedule передаются строками `YYYY-MM-DD`, время пары — `HH:mm` вместе с `time_zone`. Это не момент UTC; нельзя заменять календарную дату timestamp без изменения семантики.
 9. **Удаление полей**: номера полей Protobuf никогда не переиспользуются. При удалении поля его номер и имя объявляются зарезервированными: `reserved 4; reserved "old_field";`.
 
 ---
@@ -84,28 +83,24 @@ breaking:
 
 ```yaml
 version: v2
-managed:
-  enabled: true
-  override:
-    - file_option: go_package_prefix
-      value: github.com/orbit-polytech/contracts/gen/go
 plugins:
-  - remote: buf.build/protocolbuffers/go
+  - remote: buf.build/protocolbuffers/go:v1.36.5
     out: gen/go
     opt:
       - paths=source_relative
-  - remote: buf.build/grpc/go
+  - remote: buf.build/grpc/go:v1.5.1
     out: gen/go
     opt:
       - paths=source_relative
-inputs:
-  - directory: proto
 ```
+
+В `v0.4.0` настроена генерация Go. Python/Dart не следует считать уже генерируемыми артефактами: клиенты приложения используют REST, а будущие плагины добавляются отдельным изменением.
+
 
 Команды проверки и кодогенерации:
 
 ```bash
 buf lint                 # Проверка стиля и оформления proto-схем
-buf breaking --against . # Проверка на случайное нарушение обратной совместимости
-buf generate             # Кодогенерация в gen/go и gen/python
+buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.4.0' # согласованная база сравнения
+buf generate             # Кодогенерация в gen/go
 ```

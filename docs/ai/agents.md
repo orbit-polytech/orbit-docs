@@ -14,9 +14,15 @@
 * **MUST**: Любой метод изменения агрегата (`task.Complete()`) инкапсулирует бизнес-инварианты. Инкремент версии агрегата выполняется **репозиторием** при сохранении, а не доменным методом.
 * **MUST NOT**: Никогда не используйте `panic()` в продовом коде. Все ошибки возвращаются явно через сигнатуру `error`.
 
+### Текущая реализация Schedule:
+* **MUST**: Сохранять публичные SearchGroups/GetGroupSchedule без зависимости от профиля Users и JWT.
+* **MUST**: Вычислять период по умолчанию в `internal/usecase`, не в Gateway: текущая неделя Пн–Вс в `Europe/Moscow`; только date_from — один день; только date_to — ошибка; максимум 93 дня включительно.
+* **MUST**: Чтение выполняется из PostgreSQL-снимка; обращения к источнику — только через фоновый syncer с общим rate limiter.
+* **MUST NOT**: Считать Redis-кэш, чётность недель, сессию, presets или on-demand sync реализованными без проверки кода.
+
 ### Безопасность и авторизация:
 * **MUST NOT**: Никогда не принимайте `user_id` или роль из входящего JSON/Protobuf DTO от клиента. Они берутся **строго из криптографически проверенного контекста Gateway** (`x-user-id`).
-* **MUST**: Любой сценарий доступа к ресурсу проверяет принадлежность (`task.IsOwnedBy(actor)`). При несовпадении возвращается `ErrTaskNotFound` (404), а не 403.
+* **MUST**: Любой сценарий доступа к персональному ресурсу проверяет принадлежность (`task.IsOwnedBy(actor)`). При несовпадении возвращается `ErrTaskNotFound` (404), а не 403.
 * **MUST**: Все SQL-запросы обязаны быть параметризованными (`$1`, `$2`). Конкатенация строк в SQL запрещена.
 * **MUST**: Для подписи JWT используется алгоритм **Ed25519 (EdDSA)**. Симметричный HS256 запрещен.
 
@@ -44,7 +50,7 @@
 | **Интерфейсы портов** | `<сервис>/internal/app/ports.go` |
 | **Адаптер PostgreSQL** | `<сервис>/internal/adapters/postgres/` |
 | **gRPC Обработчик** | `<сервис>/internal/transport/grpc/handler.go` |
-| **Схемы БД PostgreSQL** | `infra/postgres/init/01-schemas.sql` |
+| **Миграции PostgreSQL** | `<сервис>/migrations/` (Goose); provisioner: `infra/scripts/initdb/01-init-user.sh` |
 | **Docker Compose** | `infra/compose.yaml` |
 
 ---
@@ -62,7 +68,7 @@ golangci-lint run ./...
 # 2. Проверка Protobuf-схем
 cd contracts
 buf lint
-buf breaking --against .
+buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.4.0'
 
 # 3. Проверка Python-сервиса
 cd <python-service>
@@ -77,5 +83,6 @@ flutter analyze
 
 # 5. Проверка документации MkDocs
 cd orbit-docs
-.venv/Scripts/mkdocs build --strict
+python scripts/check-doc-links.py
+mkdocs build --strict
 ```

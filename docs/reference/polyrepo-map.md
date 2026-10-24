@@ -7,11 +7,11 @@
 | Репозиторий | Назначение | Статус |
 |---|---|---|
 | [`contracts`](https://github.com/orbit-polytech/contracts) | Protobuf-контракты и сгенерированный Go-код | **Работает сейчас** |
-| [`infra`](https://github.com/orbit-polytech/infra) | Docker Compose, PostgreSQL, Redis, keygen и миграции | **В разработке** — полный стек в feature-ветке |
+| [`infra`](https://github.com/orbit-polytech/infra) | Docker Compose, PostgreSQL, Redis, keygen и миграции | **Работает сейчас** — Auth, Schedule, Gateway и one-shot сервисы в `main` |
 | [`gateway-service`](https://github.com/orbit-polytech/gateway-service) | Публичный HTTP API Gateway | **Работает сейчас** |
 | [`auth-service`](https://github.com/orbit-polytech/auth-service) | Email OTP, JWT, refresh-сессии, Google OAuth и identities | **Работает сейчас** |
 | [`users-service`](https://github.com/orbit-polytech/users-service) | Профили, группы и роли | **Запланировано** — репозиторий пуст |
-| `schedule-service` | Расписание, парсинг и кэширование | **Запланировано** |
+| [`schedule-service`](https://github.com/orbit-polytech/schedule-service) | Регулярное расписание, фоновая синхронизация и PostgreSQL-снимки | **Работает сейчас** |
 | `navigation-service` | Корпуса, аудитории и маршруты | **Запланировано** |
 | `tasks-service` | Задачи и дедлайны | **Учебный пример / запланировано** |
 | `notification-service` | Push/Telegram-уведомления и события | **Запланировано** |
@@ -42,4 +42,4 @@
                     [ notification ]
 ```
 
-На текущем этапе рабочий путь ограничен связкой Gateway → Auth → PostgreSQL/Redis.
+Текущие рабочие пути: Gateway → Auth → PostgreSQL/Redis и публичный Gateway → Schedule → PostgreSQL. Schedule обновляет снимки через фоновую синхронизацию с `rasp.dmami.ru`, не обращаясь к Users/Auth за профилем посетителя.
