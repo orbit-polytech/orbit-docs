@@ -1,31 +1,28 @@
 # Справочник контейнеров и инфраструктуры
 
-В этом справочнике сведены все параметры портов, дефолтных кредов для разработки и очередей RabbitMQ.
+## Текущий стенд
 
----
-
-## 1. Порты инфраструктурных контейнеров
-
-| Контейнер | Назначение | Порт хоста | Локальные креды (dev) |
+| Компонент | Внутри Compose | На хосте по умолчанию | Конфигурация |
 |---|---|---|---|
-| **`postgres`** | PostgreSQL 16 + pgvector | `127.0.0.1:5432` | user: `orbit`, password: `orbit_local_pass`, db: `orbit` |
-| **`redis`** | In-memory кэш и rate limiting | `127.0.0.1:6379` | пароль отсутствует (только loopback) |
-| **`rabbitmq`** | AMQP брокер очередей | `127.0.0.1:5672` | guest / guest |
-| **`rabbitmq` (UI)** | Панель управления брокером | `127.0.0.1:15672`| guest / guest |
-| **`jaeger` (UI)** | Веб-интерфейс трассировки | `127.0.0.1:16686`| авторизация не требуется |
-| **`jaeger` (OTLP)**| OTLP gRPC приёмник трейсов | `127.0.0.1:4317` | — |
+| PostgreSQL 16 | `postgres:5432` | `127.0.0.1:5434` | Auth: `POSTGRES_DB`, Schedule: `SCHEDULE_POSTGRES_DB` |
+| Redis 7 | `redis:6379` | `127.0.0.1:6380` | Пароль обязателен, используется Auth |
+| Auth gRPC | `auth-service:50051` | `127.0.0.1:50051` | Приватный JWT-том |
+| Schedule gRPC | `schedule-service:50054` | `127.0.0.1:50054` | PostgreSQL и внешний источник, без Redis |
+| Gateway HTTP | `gateway-service:8080` | `127.0.0.1:8080` | Auth/Schedule gRPC, публичный JWT-том |
 
----
+Локальные пароли берутся из собственного `.env`; общие рабочие credentials не распространяются через документацию. Полный список env — в [справочнике](../reference/ports-and-env.md).
 
-## 2. Именование очередей и Routing Keys в RabbitMQ
+`jwt-keygen`, `postgres-init`, `auth-migrate`, `schedule-migrate` — one-shot сервисы, ожидаемый итог `Exited (0)`. Подробнее: [infra и порядок запуска](infra.md).
 
-Очереди сообщений именуются по стандарту: `<сервис-источник>.<сущность>.<событие>`
+## Целевой событийный контур (не развёрнут)
 
-| Топик / Exchange | Routing Key | Очередь потребителя | Описание события |
+RabbitMQ, Jaeger и pgvector пока не входят в текущий Compose. Ниже сохранены **проектные примеры** будущих exchange/routing keys; это не опубликованный контракт событий.
+
+| Топик / Exchange | Routing Key | Очередь потребителя | Описание |
 |---|---|---|---|
-| `orbit.events` | `tasks.task.created` | `notification.tasks` | Создана новая задача, запланировать напоминание студенту |
-| `orbit.events` | `tasks.task.completed` | `notification.tasks` | Задача выполнена, отменить уведомления |
-| `orbit.events` | `schedule.lesson.changed`| `notification.schedule`| Пара перенесена в другую аудиторию или отменена |
-| `orbit.events` | `auth.user.registered` | `users.sync` | Первичная регистрация студента через Telegram |
+| `orbit.events` | `tasks.task.created` | `notification.tasks` | Создана задача |
+| `orbit.events` | `tasks.task.completed` | `notification.tasks` | Задача выполнена |
+| `orbit.events` | `schedule.lesson.changed` | `notification.schedule` | Изменение занятия |
+| `orbit.events` | `auth.user.registered` | `users.sync` | Регистрация аккаунта |
 
-Exchange во всех сервисах объявляется как `topic` с флагом `durable: true`.
+Планируемый exchange — `topic`, `durable: true`. Имена, payload и гарантии доставки нужно согласовать в `contracts` до реализации. Schedule сейчас не публикует события и не зависит от RabbitMQ.

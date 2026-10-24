@@ -131,6 +131,7 @@ nav:
   - HTTP Gateway:
       - Обзор шлюза gateway-service: gateway/overview.md
       - Обработчики и middleware: gateway/handlers-and-middleware.md
+      - Публичное API расписания: gateway/schedule-api.md
       - Маршрутизация и клиенты gRPC: gateway/grpc-clients.md
       - REST-слой Gateway (Подробный гайд): tutorial/backend/11-gateway-rest.md
 

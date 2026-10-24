@@ -1,6 +1,11 @@
 # Маршрутизация и gRPC-клиенты в Gateway
 
-Gateway выступает в роли клиента ко всем внутренним микросервисам Orbit AI. В этом разделе описывается организация gRPC-соединений, пулов, таймаутов и обработка сбоев.
+В текущем `main` подключены Auth и Schedule: `internal/infrastructure/authclient` и `internal/infrastructure/scheduleclient`. Соединения долгоживущие; таймаут каждого RPC задаётся от HTTP-контекста. Schedule получает `SCHEDULE_GRPC_ADDR` (в Compose `schedule-service:50054`) и `SCHEDULE_RPC_TIMEOUT` (`5s`).
+
+Пустые `date_from`/`date_to` передаются в Schedule без вычисления дат в Gateway; фактические границы ответа возвращаются клиенту. Общий маппер находится в `internal/transport/http/httputil/grpc_error.go`.
+
+!!! info "Ниже — учебная схема расширения"
+    Фабрика `internal/clients`, Tasks и код `writeError` ниже показывают возможную организацию будущих интеграций. Это не дерево текущего репозитория. Реальные файлы перечислены в [обзоре Gateway](overview.md).
 
 ---
 
@@ -64,7 +69,7 @@ resp, err := h.tasksClient.GetTask(ctx, &tasksv1.GetTaskRequest{Id: taskID})
 
 ## 3. Таблица маппинга ошибок (gRPC $\rightarrow$ HTTP)
 
-Вспомогательная функция `writeError` в `internal/httpapi/errors.go` транслирует статусы по стандарту Google AIP-193:
+Текущий `httputil.WriteGRPCError` преобразует статусы следующим образом. Полная таблица и JSON — в [справочнике ошибок](../reference/error-codes.md):
 
 | Код статуса gRPC | HTTP статус | Описание для клиента |
 |---|---|---|
@@ -74,7 +79,7 @@ resp, err := h.tasksClient.GetTask(ctx, &tasksv1.GetTaskRequest{Id: taskID})
 | `codes.NotFound` | **404 Not Found** | Запрашиваемый ресурс не существует |
 | `codes.AlreadyExists` | **409 Conflict** | Ресурс с таким ключом уже создан |
 | `codes.Aborted` | **409 Conflict** | Конфликт параллельного изменения (оптимистичная блокировка) |
-| `codes.FailedPrecondition` | **422 Unprocessable** | Действие недопустимо в текущем состоянии |
+| `codes.FailedPrecondition` | **400 Bad Request** | Действие недопустимо в текущем состоянии |
 | `codes.ResourceExhausted` | **429 Too Many Requests** | Превышен лимит запросов или квота |
 | `codes.Unavailable` | **503 Service Unavailable** | Целевой микросервис временно недоступен |
 | `codes.DeadlineExceeded` | **504 Gateway Timeout** | Время ожидания ответа сервиса истекло |

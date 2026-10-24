@@ -12,12 +12,12 @@
 
 | Репозиторий | Что внутри | Основной стек |
 |---|---|---|
-| [`contracts`](https://github.com/orbit-polytech/contracts) | Proto-файлы gRPC-контрактов и сгенерированный код для Go, Python, Dart | Buf CLI, Protobuf v3 |
-| [`infra`](https://github.com/orbit-polytech/infra) | Docker Compose для разработки, схемы PostgreSQL, RabbitMQ, Jaeger | Docker Compose, PostgreSQL 16, Redis 7, RabbitMQ |
+| [`contracts`](https://github.com/orbit-polytech/contracts) | Proto-файлы Auth/Schedule и сгенерированный Go-код; остальные контракты добавляются по мере реализации | Buf CLI, Protobuf v3 |
+| [`infra`](https://github.com/orbit-polytech/infra) | Текущий Compose: PostgreSQL, Redis, Auth, Schedule, Gateway и one-shot сервисы | Docker Compose, PostgreSQL 16, Redis 7 |
 | [`gateway-service`](https://github.com/orbit-polytech/gateway-service) | Единый публичный HTTP API шлюз для мобилки и внешних клиентов | Go 1.25, HTTP/REST, gRPC-клиенты, JWT verifier |
-| [`auth-service`](https://github.com/orbit-polytech/auth-service) | Вход через Telegram, сессии, выпуск и ротация Ed25519 JWT | Go 1.25, gRPC, PostgreSQL, Redis |
+| [`auth-service`](https://github.com/orbit-polytech/auth-service) | Email OTP, Google OAuth, identities, сессии и Ed25519 JWT | Go 1.25, gRPC, PostgreSQL, Redis |
 | [`users-service`](https://github.com/orbit-polytech/users-service) | Профили студентов, учебные группы, права и роли | Go 1.25, gRPC, PostgreSQL |
-| [`schedule-service`](https://github.com/orbit-polytech/schedule-service) | Парсинг и отдача расписания занятий, кэширование пар | Go 1.25, gRPC, Redis, PostgreSQL |
+| [`schedule-service`](https://github.com/orbit-polytech/schedule-service) | Публичное регулярное расписание, синхронизация и PostgreSQL-снимки | Go, gRPC `:50054`, PostgreSQL |
 | [`navigation-service`](https://github.com/orbit-polytech/navigation-service) | Корпуса Политеха (БС, АВ, ПР), аудитории, построение маршрутов | Go 1.25, gRPC, PostgreSQL |
 | [`tasks-service`](https://github.com/orbit-polytech/tasks-service) | Учебные задачи, дедлайны лабораторных работ (эталонный сервис) | Go 1.25, gRPC, Clean Architecture, PostgreSQL |
 | [`notification-service`](https://github.com/orbit-polytech/notification-service) | Очередь отправки push-уведомлений и Telegram-сообщений | Go 1.25, gRPC, RabbitMQ Consumer |
@@ -30,6 +30,8 @@
 > Пока отдельный репозиторий сервиса не создан, его код можно прототипировать локально или в `orbit-docs/examples/`, но переносить в отдельный репозиторий нужно сразу, как только над сервисом начинает работать второй человек.
 
 ---
+
+Версии инструментов для конкретного репозитория берите из `go.mod`, `pyproject.toml` и Dockerfile, а не из общей таблицы. Статусы будущих сервисов — на странице [текущего состояния](../project/current-state.md).
 
 ## Обязательное содержимое каждого репозитория
 

@@ -6,6 +6,9 @@
 
 ---
 
+!!! info "Целевой клиент"
+    Ниже сохранён пример структуры Flutter-приложения. В текущем backend публичное расписание работает без входа, Tasks и AI — будущие интеграции. Не показывайте окно входа при обычном просмотре расписания. Реальные URL и JSON — в [API расписания](../../gateway/schedule-api.md).
+
 ## 1. Архитектурное позиционирование в системе
 
 ```mermaid
@@ -18,15 +21,15 @@ flowchart TD
     
     subgraph Internal["Внутренний контур (gRPC)"]
         Auth["auth-service (:50051)"]
-        Tasks["tasks-service (:50052)"]
-        Schedule["schedule-service (:50053)"]
-        AI["ai-service (:50054)"]
+        Tasks["tasks-service (:50055, план)"]
+        Schedule["schedule-service (:50054)"]
+        AI["ai-service (:50057, план)"]
     end
     
-    App -->|HTTPS / REST + JWT| GW
+    App -->|REST; JWT только для защищённых действий| GW
     GW -->|gRPC + x-user-id| Auth
     GW -->|gRPC + x-user-id| Tasks
-    GW -->|gRPC + x-user-id| Schedule
+    GW -->|gRPC без JWT| Schedule
     GW -->|gRPC + x-user-id| AI
 ```
 

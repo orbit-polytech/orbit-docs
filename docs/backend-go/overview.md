@@ -1,6 +1,6 @@
 # Go-бэкенд: Архитектура и структура микросервисов
 
-Все бэкенд-сервисы команды Orbit AI на Go (`auth-service`, `users-service`, `schedule-service`, `navigation-service`, `tasks-service`, `notification-service`) имеют **абсолютно одинаковую** внутреннюю архитектуру. Разобравшись в устройстве одного сервиса, вы сможете мгновенно ориентироваться в любом другом.
+Все бэкенд-сервисы команды Orbit AI на Go (`auth-service`, `users-service`, `schedule-service`, `navigation-service`, `tasks-service`, `notification-service`) следуют общим принципам портов и адаптеров, но не обязаны иметь побайтово одинаковое дерево каталогов. Ниже — учебная структура Tasks. В текущем Schedule сценарии находятся в `internal/usecase`, адаптер PostgreSQL — в `internal/infrastructure`, а `internal/app` собирает зависимости и управляет жизненным циклом. См. [паспорт Schedule](../reference/services/schedule.md).
 
 ---
 

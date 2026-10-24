@@ -5,6 +5,7 @@
 - Сайт: https://orbit-polytech.github.io/orbit-docs/
 - Текущее состояние проекта: https://orbit-polytech.github.io/orbit-docs/project/current-state/
 - Быстрый старт: https://orbit-polytech.github.io/orbit-docs/quickstart/local-setup/
+- Публичное API расписания: https://orbit-polytech.github.io/orbit-docs/gateway/schedule-api/
 
 Документация описывает как уже реализованные компоненты, так и целевую архитектуру. Статус каждого направления фиксируется на странице текущего состояния.
 

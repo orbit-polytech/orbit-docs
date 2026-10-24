@@ -3,7 +3,7 @@
 Цель руководства — поднять текущий backend-стенд Orbit AI и проверить Gateway. Для обычного запуска не нужны Go, Python, Flutter, Buf или Goose: сервисы работают в Docker-контейнерах.
 
 !!! info "Статус"
-    Образы Orbit опубликованы в GHCR. Для приватных пакетов нужны персональная авторизация Docker и Read-доступ ко всем четырём пакетам. Публикация образов не заменяет проверку запуска из чистого клона. Сводка компонентов — на странице [«Текущее состояние»](../project/current-state.md).
+    Образы Orbit опубликованы в GHCR. Для приватных пакетов нужны персональная авторизация Docker и Read-доступ ко всем шести пакетам. Публикация образов не заменяет проверку запуска из чистого клона. Сводка компонентов — на странице [«Текущее состояние»](../project/current-state.md).
 
 ## 1. Требования
 
@@ -39,7 +39,7 @@ Copy-Item .env.example .env
 
 ## Доступ к приватным образам GHCR
 
-Перед первым `task up` выполните [инструкцию авторизации в GHCR](ghcr-access.md): получите Read-доступ, создайте PAT classic с `read:packages`, войдите через `docker login ghcr.io -u YOUR_GITHUB_USERNAME` и проверьте скачивание всех четырёх образов. Для публичных пакетов этот шаг не нужен.
+Перед первым `task up` выполните [инструкцию авторизации в GHCR](ghcr-access.md): получите Read-доступ, создайте PAT classic с `read:packages`, войдите через `docker login ghcr.io -u YOUR_GITHUB_USERNAME` и проверьте скачивание всех шести образов. Для публичных пакетов этот шаг не нужен.
 
 **PAT не записывается в `.env` и не передаётся контейнерам.** Авторизация в реестре не является авторизацией в API Orbit.
 
@@ -57,11 +57,14 @@ task status
 | `postgres` | `Up (healthy)` |
 | `redis` | `Up (healthy)` |
 | `jwt-keygen` | `Exited (0)` |
+| `postgres-init` | `Exited (0)` |
 | `auth-migrate` | `Exited (0)` |
+| `schedule-migrate` | `Exited (0)` |
 | `auth-service` | `Up (healthy)` |
+| `schedule-service` | `Up (healthy)` |
 | `gateway-service` | `Up (healthy)` |
 
-`jwt-keygen` и `auth-migrate` — one-shot контейнеры. Их состояние `Exited (0)` означает успешное завершение, а не ошибку.
+`jwt-keygen`, `postgres-init`, `auth-migrate` и `schedule-migrate` — one-shot контейнеры. Их состояние `Exited (0)` означает успешное завершение, а не ошибку.
 
 ## 4. Проверка
 
@@ -85,12 +88,24 @@ curl http://localhost:8080/readyz
 
 В текущем API нет `/v1/auth/dev-login` и `/v1/tasks`: эти сценарии относятся к целевой архитектуре и учебному примеру.
 
+### Проверка публичного расписания
+
+После первого запуска worker загружает группы в фоне. `healthy` не означает, что снимок каждой группы уже готов. Без JWT и без профиля выполните:
+
+```bash
+curl "http://localhost:8080/api/v1/schedule/groups?query=261&limit=20"
+curl "http://localhost:8080/api/v1/schedule/groups/261-334"
+```
+
+Второй запрос выбирает текущую неделю по Москве. В ответе проверяйте `date_from`, `date_to`, `time_zone`, `metadata` и `days`. `503` при отсутствии первого снимка отличается от пустого `200` и от `404` неизвестной группы. Полные правила и диагностика — в [API расписания](../gateway/schedule-api.md).
+
 ## 5. Команды управления
 
 | Команда | Назначение |
 |---|---|
 | `task up` | Запустить полный стенд |
 | `task up:deps` | Запустить только PostgreSQL и Redis |
+| `task db:init` | Повторно подготовить роль, базу Schedule и права, не удаляя volume |
 | `task status` | Показать все контейнеры, включая завершившиеся one-shot |
 | `task logs` | Следить за логами |
 | `task down` | Остановить стенд, сохранив данные и JWT-ключи |
@@ -107,7 +122,8 @@ Backend-разработчик может собрать изменяемый с
 orbit/
 ├── infra/
 ├── auth-service/
-└── gateway-service/
+├── gateway-service/
+└── schedule-service/   # нужен только при его локальной разработке
 ```
 
 В `infra`:
@@ -123,15 +139,29 @@ task build
 docker compose --profile apps up -d --pull never --wait --wait-timeout 120
 ```
 
-Файл `compose.override.yaml` локальный и не должен попадать в Git.
+Файл `compose.override.yaml` локальный и не должен попадать в Git. Если меняете миграции Schedule, подключите сборку `schedule-migrate` из того же исходного кода.
 
-## 7. Диагностика
+## 7. Обновление уже запущенного стенда
+
+После публикации новых образов и обновления `infra` скачайте их явно: одного `task up` недостаточно, чтобы гарантированно обновить локальный `latest`.
+
+```bash
+git pull --ff-only
+docker compose --profile apps pull
+task up
+task status
+```
+
+База Schedule на старом PostgreSQL volume подготавливается one-shot сервисом `postgres-init` до миграций. Не выполняйте `task clean` или `down -v` ради добавления Schedule. При ручной диагностике: `task up:deps`, затем `task db:init`, затем `task up`. Подробности о паролях и существующих базах — в [infra](../contracts-infra/infra.md).
+
+## 8. Диагностика
 
 ```bash
 task status
 docker compose --profile apps logs auth-service
 docker compose --profile apps logs gateway-service
 docker compose --profile apps logs auth-migrate
+docker compose --profile apps logs postgres-init schedule-migrate schedule-service
 docker compose --profile apps logs jwt-keygen
 ```
 
@@ -140,5 +170,7 @@ docker compose --profile apps logs jwt-keygen
 | Ошибка скачивания `ghcr.io/orbit-polytech/*` | Проверьте имя/тег и [авторизацию и Read-доступ к пакетам](ghcr-access.md) |
 | Auth не стартует | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `OTP_HMAC_SECRET`, DSN и Redis password |
 | `auth-migrate` завершился не с нулём | Логи мигратора и доступность PostgreSQL |
-| Gateway возвращает `503` | Health Auth и значение `AUTH_GRPC_ADDR` внутри Compose |
+| Gateway возвращает `503` на Auth | Health Auth и `AUTH_GRPC_ADDR` |
+| `503` на расписании | Health Schedule, `SCHEDULE_GRPC_ADDR`, готовность снимка, логи синхронизации и `SCHEDULE_SYNC_ENABLED` |
+| `postgres-init` / `schedule-migrate` завершился с ошибкой | Логи, существующая база Auth, admin credentials и права приложения; не удалять volume вслепую |
 | После `task clean` токены не принимаются | Это ожидаемо: была создана новая пара JWT-ключей |

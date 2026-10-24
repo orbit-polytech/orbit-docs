@@ -4,7 +4,7 @@
 ## Start here
 - [GHCR Access](https://orbit-polytech.github.io/orbit-docs/quickstart/ghcr-access/): private-образы, PAT classic read:packages, Docker login, права команды и диагностика; PAT никогда не помещается в .env.
 - [Current State](https://orbit-polytech.github.io/orbit-docs/project/current-state/): реализованные, разрабатываемые и запланированные компоненты.
-- [Current Quickstart](https://orbit-polytech.github.io/orbit-docs/quickstart/local-setup/): запуск PostgreSQL, Redis, Auth и Gateway.
+- [Current Quickstart](https://orbit-polytech.github.io/orbit-docs/quickstart/local-setup/): запуск PostgreSQL, Redis, Auth, Schedule и Gateway.
 - [Project Overview](https://orbit-polytech.github.io/orbit-docs/): главная страница базы знаний.
 - [Team Rules](https://orbit-polytech.github.io/orbit-docs/quickstart/overview/): GitHub Flow и соглашения команды.
 
@@ -14,6 +14,10 @@
 - [How-to Matrix](https://orbit-polytech.github.io/orbit-docs/backend-go/how-to/): куда вносить разные типы изменений.
 - [Clean Architecture](https://orbit-polytech.github.io/orbit-docs/backend-go/clean-architecture/): Domain, use cases, ports and adapters.
 - [Layer Reference](https://orbit-polytech.github.io/orbit-docs/backend-go/reference/): разрешённые зависимости и depguard.
+
+## Schedule
+- [Schedule API](https://orbit-polytech.github.io/orbit-docs/gateway/schedule-api/): публичные маршруты без JWT, неделя по Москве, необязательные даты, максимум 93 дня, JSON и диагностика 503.
+- [Schedule Service](https://orbit-polytech.github.io/orbit-docs/reference/services/schedule/): PostgreSQL orbit_schedule, gRPC 50054, фоновая синхронизация; Redis/RabbitMQ не используются.
 
 ## Gateway
 - [Gateway Overview](https://orbit-polytech.github.io/orbit-docs/gateway/overview/): ответственность HTTP-шлюза.
@@ -47,3 +51,4 @@
 2. Целевая архитектура не доказывает наличие реализации.
 3. Учебный `examples/tasks-service` не является развернутым production-сервисом.
 4. Перед изменением кода загружайте актуальный репозиторий, ветку, конфигурацию и тесты.
+5. Неделя по умолчанию вычисляется в usecase Schedule, не в Gateway; contracts v0.4.0. Фильтрация чётности, сессия, on-demand sync, presets и grid ещё не реализованы.

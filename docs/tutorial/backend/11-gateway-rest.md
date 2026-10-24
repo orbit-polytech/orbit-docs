@@ -6,6 +6,9 @@ Gateway принимает внешние запросы по протоколу
 
 ---
 
+!!! info "Учебный REST-слой Tasks"
+    Ниже сохранены примеры архитектуры и кода для будущих персональных задач. Текущий Gateway использует `net/http.ServeMux`, префикс `/api/v1`, Auth и публичный Schedule. Расписание не проходит JWT middleware. Примеры `/v1/tasks`, rate limiting и actor-контекста не являются текущими маршрутами; актуальное поведение — в [обзоре Gateway](../../gateway/overview.md) и [API расписания](../../gateway/schedule-api.md).
+
 ## 1. Архитектура и поток запроса в Gateway
 
 ```mermaid

@@ -6,12 +6,15 @@
 
 ---
 
+!!! info "Текущее локальное окружение"
+    Auth использует `POSTGRES_DB` (обычно `orbit_auth`), Schedule — `SCHEDULE_POSTGRES_DB` (обычно `orbit_schedule`). Базы отдельные, но сейчас им выдана общая непривилегированная роль `APP_DB_USER`; отдельные роли сервисов и миграций остаются целевым усилением. `postgres-init` подготавливает базу Schedule на существующем volume; Goose-миграции находятся в репозиториях сервисов, не в учебном SQL ниже.
+
 ## 1. Архитектурный принцип: Database-per-Service (ADR-002)
 
 В соответствии с решением **ADR-002**, каждый микросервис владеет собственной изолированной базой данных:
 - `tasks-service` подключается к базе `tasks_db`;
-- `schedule-service` подключается к базе `schedule_db`;
-- `auth-service` подключается к базе `auth_db`.
+- `schedule-service` подключается к базе `orbit_schedule`;
+- `auth-service` подключается к базе `orbit_auth`.
 
 ```mermaid
 flowchart LR
@@ -31,8 +34,8 @@ flowchart LR
     end
 
     DBTasks[("tasks_db")]
-    DBSched[("schedule_db")]
-    DBAuth[("auth_db")]
+    DBSched[("orbit_schedule")]
+    DBAuth[("orbit_auth")]
 
     AppTasks -->|"Собственный пул pgx"| DBTasks
     AppSched -->|"Собственный пул pgx"| DBSched
@@ -43,7 +46,7 @@ flowchart LR
 
 
 > [!CRITICAL] Запрет прямых межсервисных SQL-запросов
-> Микросервису `tasks-service` категорически запрещено обращаться к таблицам пользователей `users_db` или расписания `schedule_db`. Любое межсервисное взаимодействие выполняется только через gRPC-клиенты или события RabbitMQ.
+> Микросервису `tasks-service` категорически запрещено обращаться к таблицам пользователей `users_db` или расписания `orbit_schedule`. Любое межсервисное взаимодействие выполняется только через gRPC-клиенты или события RabbitMQ.
 
 ---
 

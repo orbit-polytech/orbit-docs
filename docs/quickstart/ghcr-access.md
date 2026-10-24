@@ -6,7 +6,7 @@
 
 ### 1. Проверьте доступ к пакетам
 
-Попросите администратора предоставить вашей учётной записи или команде право **Read** на все четыре пакета:
+Попросите администратора предоставить вашей учётной записи или команде право **Read** на все шесть пакетов:
 
 | Пакет | Назначение |
 |---|---|
@@ -14,6 +14,8 @@
 | `ghcr.io/orbit-polytech/auth-migrate` | Миграции PostgreSQL |
 | `ghcr.io/orbit-polytech/auth-service` | Сервис аутентификации |
 | `ghcr.io/orbit-polytech/gateway-service` | HTTP API и Swagger |
+| `ghcr.io/orbit-polytech/schedule-service` | Публичное расписание и синхронизация |
+| `ghcr.io/orbit-polytech/schedule-migrate` | Миграции базы Schedule |
 
 **Членство в организации само по себе не гарантирует доступ к каждому private-пакету.** PAT действует с правами владельца и не добавляет отсутствующие права.
 
@@ -55,9 +57,11 @@ docker pull ghcr.io/orbit-polytech/auth-keygen:latest
 docker pull ghcr.io/orbit-polytech/auth-migrate:latest
 docker pull ghcr.io/orbit-polytech/auth-service:latest
 docker pull ghcr.io/orbit-polytech/gateway-service:latest
+docker pull ghcr.io/orbit-polytech/schedule-service:latest
+docker pull ghcr.io/orbit-polytech/schedule-migrate:latest
 ```
 
-Ожидайте успешное скачивание либо сообщение `Image is up to date` для **каждого** образа. Если в локальном `.env` переопределены `JWT_KEYGEN_IMAGE`, `AUTH_MIGRATE_IMAGE`, `AUTH_SERVICE_IMAGE` или `GATEWAY_SERVICE_IMAGE`, проверяйте соответствующие имена и теги. Авторизация едина для `ghcr.io`, а доступ проверяется отдельно для каждого пакета.
+Ожидайте успешное скачивание либо сообщение `Image is up to date` для **каждого** образа. Если в локальном `.env` переопределены `JWT_KEYGEN_IMAGE`, `AUTH_MIGRATE_IMAGE`, `AUTH_SERVICE_IMAGE`, `GATEWAY_SERVICE_IMAGE`, `SCHEDULE_SERVICE_IMAGE` или `SCHEDULE_MIGRATE_IMAGE`, проверяйте соответствующие имена и теги. Авторизация едина для `ghcr.io`, а доступ проверяется отдельно для каждого пакета.
 
 После [клонирования `infra` и заполнения `.env`](local-setup.md) запустите из каталога `infra`:
 
@@ -82,7 +86,7 @@ docker logout ghcr.io
 
 ## Администратору: предоставить доступ
 
-Проверьте настройки **каждого из четырёх пакетов** на [странице Packages организации](https://github.com/orgs/orbit-polytech/packages).
+Проверьте настройки **каждого из шести пакетов** на [странице Packages организации](https://github.com/orgs/orbit-polytech/packages).
 
 Есть два способа выдать людям право чтения:
 
@@ -94,7 +98,7 @@ docker logout ghcr.io
 !!! info "Доступ человека и GitHub Actions — разные настройки"
     **Manage Actions access → Add repository** предоставляет доступ workflow указанного репозитория через `GITHUB_TOKEN`. Добавление туда `infra` не предоставляет автоматически его участникам доступ с персональных компьютеров. В CI используйте `GITHUB_TOKEN` с необходимыми правами, а не персональный PAT разработчика.
 
-Для проверки попросите участника с ролью Read выполнить вход и четыре `docker pull`. Успешное скачивание администратором не доказывает доступ остальных участников. Не меняйте видимость пакетов на Public только ради исправления ошибки доступа.
+Для проверки попросите участника с ролью Read выполнить вход и шесть `docker pull`. Успешное скачивание администратором не доказывает доступ остальных участников. Не меняйте видимость пакетов на Public только ради исправления ошибки доступа.
 
 ## Диагностика
 
@@ -102,7 +106,7 @@ docker logout ghcr.io
 |---|---|
 | `unauthorized`, `denied`, `403` | Вход именно в `ghcr.io`, логин владельца PAT, срок действия, `read:packages`, Read-доступ пользователя, SSO и политику организации |
 | Вход успешен, pull запрещён | `Login Succeeded` не доказывает право чтения конкретного пакета; проверьте Manage access/Inherited access |
-| Один образ скачивается, другой нет | Доступ отдельно к каждому из четырёх пакетов |
+| Один образ скачивается, другой нет | Доступ отдельно к каждому из шести пакетов |
 | `manifest unknown` / `not found` | Имя и тег, факт публикации; для private-пакета сначала исключите отсутствие доступа |
 | `no matching manifest` | Архитектуру компьютера и платформы опубликованного образа; смена токена это не исправит |
 | В одном терминале работает, в другом нет | Пользователя ОС, `sudo`, WSL и переменную `DOCKER_CONFIG` |

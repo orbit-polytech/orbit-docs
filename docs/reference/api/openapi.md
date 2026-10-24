@@ -1,44 +1,52 @@
-# Спецификация внешнего REST API (OpenAPI)
+# Внешнее HTTP API и Swagger
 
-Шлюз `gateway-service` предоставляет единый унифицированный REST/JSON API для мобильного приложения на Flutter, веб-интерфейсов и сторонних интеграций.
+- **База URL:** `http://localhost:8080/api/v1`.
+- **Swagger UI:** `http://localhost:8080/swagger/index.html`.
+- **Схема JSON:** `http://localhost:8080/swagger/doc.json`.
 
-- **Базовый URL (локально):** `http://localhost:8080/api/v1`
-- **Интерактивный Swagger UI:** `http://localhost:8080/swagger/index.html`
-- **Спецификация OpenAPI v3 (JSON):** `http://localhost:8080/swagger/doc.json`
+Точная схема поставляется вместе с Gateway из генерируемого `api/docs`. Не следует называть её OpenAPI 3 без проверки поля версии в JSON: текущая генерация Swag использует формат Swagger 2.0. Ниже разделены работающие маршруты и проектные примеры.
 
----
+## Текущее API Auth
 
-## 1. Аутентификация (`/api/v1/auth`)
+| Метод | Путь | Назначение |
+|---|---|---|
+| POST | `/auth/send-code` | Запрос Email OTP |
+| POST | `/auth/verify-code` | Подтверждение OTP и вход/регистрация |
+| POST | `/auth/refresh` | Ротация сессии |
+| POST | `/auth/logout` | Завершение сессии |
+| GET | `/auth/me` | Проверенный JWT-контекст; требуется Bearer JWT |
+| GET | `/auth/oauth/{provider}/login` | Начало OAuth |
+| GET / POST | `/auth/oauth/{provider}/callback` | OAuth callback |
+| POST | `/auth/identities/link/begin` | Начало привязки; требуется Bearer JWT |
+| POST | `/auth/identities/link/finish` | Завершение протокола привязки |
+| GET | `/auth/identities` | Список identities; требуется Bearer JWT |
+| DELETE | `/auth/identities/{provider}` | Отвязка; требуется Bearer JWT |
 
-Все защищенные эндпоинты требуют передачи токена доступа в HTTP-заголовке:
-`Authorization: Bearer <access_jwt_token>`
+Пути в таблице относительны к `/api/v1`. Поддерживаемый внешний OAuth provider сейчас — Google. Отсутствие JWT middleware не отменяет проверки OTP, OAuth state, binding cookie, refresh-токена и других требований конкретного endpoint; формат запроса смотрите в Swagger.
 
-### `POST /api/v1/auth/login`
-Вход в систему по email (или логину) и паролю учетной записи.
+**Парольного `POST /api/v1/auth/login` сейчас нет.** Текущий вход — Email OTP или Google OAuth. `/auth/me` не заменяет будущий профиль Users.
 
-- **Request Body:**
-```json
-{
-  "email": "student@mail.ru",
-  "password": "SecurePassword123"
-}
-```
+## Текущее API расписания — без JWT
 
-- **Response 200 OK:**
-```json
-{
-  "access_token": "eyJhbGciOiJFZERTQ...",
-  "refresh_token": "def018f2...",
-  "expires_in": 900,
-  "token_type": "Bearer"
-}
-```
+| Метод | Путь | Назначение |
+|---|---|---|
+| GET | `/schedule/groups?query=261&limit=20` | Поиск групп |
+| GET | `/schedule/groups/261-334` | Текущая неделя по Москве |
+| GET | `/schedule/groups/261-334?date_from=2026-10-24` | Один день |
+| GET | `/schedule/groups/261-334?date_from=2026-10-19&date_to=2026-10-25` | Явный период |
 
----
+Обе даты необязательны; только `date_to` недопустим. Максимум — 93 дня включительно. В JSON используются `group_title`, `slot_number`, `subject`, `start_time`, `end_time`, `metadata`, `date_from`, `date_to`, `time_zone` — не старые проектные поля `group_id`, `pair_number`, `discipline` и `is_even_week`.
 
-## 2. Управление задачами (`/api/v1/tasks`)
+Полная схема с примерами, пустыми ответами и ошибками: [публичное API расписания](../../gateway/schedule-api.md). Общий [формат ошибок](../error-codes.md).
 
-### `GET /api/v1/tasks`
+## Будущие API: проектные примеры
+
+!!! warning "Не реализовано в текущем Gateway"
+    Ниже сохранены идеи Tasks и AI. Пути, enum, поля и ответы не являются опубликованными контрактами. Перед реализацией нужно согласовать `contracts` и отдельно обновить Swagger. AI-помощник планируется только для авторизованных пользователей; гостевой доступ к расписанию не означает гостевой доступ к AI.
+
+### Управление задачами (`/api/v1/tasks`)
+
+#### `GET /api/v1/tasks`
 Получение списка задач аутентифицированного пользователя с пагинацией и фильтрацией.
 
 - **Query-параметры:**
@@ -65,7 +73,7 @@
 }
 ```
 
-### `POST /api/v1/tasks`
+#### `POST /api/v1/tasks`
 Создание новой задачи.
 
 - **Request Body:**
@@ -81,44 +89,10 @@
 
 ---
 
-## 3. Расписание занятий (`/api/v1/schedule`)
 
-### `GET /api/v1/schedule/groups/{group_id}`
-Получение расписания учебной группы на текущую неделю с учетом числителя и знаменателя.
+### AI RAG-ассистент (`/api/v1/ai/query`)
 
-- **Параметры пути:**
-  * `group_id`: номер группы (например, `261-334`).
-
-- **Response 200 OK:**
-```json
-{
-  "group_id": "261-334",
-  "is_even_week": false,
-  "days": [
-    {
-      "day_of_week": 1,
-      "date": "2026-10-12",
-      "lessons": [
-        {
-          "pair_number": 1,
-          "time_start": "09:00",
-          "time_end": "10:30",
-          "discipline": "Введение в проектную деятельность",
-          "teacher": "Иванов И. И.",
-          "campus": "Большая Семёновская (БС)",
-          "room": "А-401"
-        }
-      ]
-    }
-  ]
-}
-```
-
----
-
-## 4. AI RAG-ассистент (`/api/v1/ai/query`)
-
-### `POST /api/v1/ai/query`
+#### `POST /api/v1/ai/query`
 Интеллектуальный вопрос ассистенту по регламентам, стипендиям, БРС и навигации Московского Политеха.
 
 - **Request Body:**

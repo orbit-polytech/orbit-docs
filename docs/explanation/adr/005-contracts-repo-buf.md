@@ -23,9 +23,9 @@
    - Автоматический линтинг Protobuf-стиля (`buf lint`).
    - Контроль обратной совместимости (`buf breaking --against ".git#branch=main"`).
 3. **Генерация артефактов:**
-   - **Для Go:** код генерируется в поддиректорию `gen/go/` и подключается бэкенд-сервисами как стандартный Go-модуль (`go get github.com/orbit-polytech/contracts/gen/go/...`).
-   - **Для Python:** код генерируется в `gen/python/` и подключается в `ai-service`.
-   - **Для Dart/Flutter:** плагин `buf-plugin-openapi` генерирует единую OpenAPI v3 спецификацию (`gen/openapi/orbit-api.swagger.json`). Мобильные разработчики используют генерацию Dart DTO из OpenAPI через OpenAPI Generator или пишут чистые DTO по контракту.
+   - **Для Go (реализовано):** код генерируется в `gen/go/`, подключается корневой модуль `github.com/orbit-polytech/contracts@v0.4.0`; импортируется пакет из `gen/go/orbit/...`. В текущем релизе — Auth и Schedule.
+   - **Для Python (план):** добавить генерацию и способ доставки пакета перед реализацией `ai-service`. `gen/python/` не является текущим опубликованным артефактом.
+   - **Для Dart/Flutter:** REST/JSON через Gateway. Текущая Swagger-схема генерируется Swag из HTTP-аннотаций Gateway в `api/docs`, не proto-плагином в `contracts`. Генерация клиента из этой схемы — отдельный этап мобильной разработки.
 
 ---
 

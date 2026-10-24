@@ -6,6 +6,9 @@
 
 ---
 
+!!! info "Текущий contracts и учебный Tasks — разные каталоги"
+    В `contracts@v0.4.0` находятся `proto/orbit/auth/v1` и `proto/orbit/schedule/v1`, Go-код — в `gen/go`. Ниже сохранён учебный Tasks из `orbit-docs/examples/tasks-service`: его `api/proto`, `pkg/api` и managed mode не являются путями/настройками корневого `contracts`. Python-генерация пока не подключена. Актуальное дерево и команды — в [справочнике contracts](../../contracts-infra/contracts.md).
+
 ## 1. Концепция Contract-First и роль `contracts`
 
 В модели Polyrepo каждый сервис изолирован, но им необходим общий язык общения. Для этого выделен единый репозиторий **`contracts`**:
@@ -105,7 +108,7 @@ flowchart LR
 * `managed.enabled: true`: режим Managed Mode автоматически проставляет необходимые для компилятора Go пакетные метаданные (`go_package`), избавляя от необходимости хардкодить `option go_package` в каждом `.proto`-файле.
 * `plugins`: плагины `protocolbuffers/go` (создаёт структуры DTO) и `grpc/go` (создаёт интерфейсы клиентских и серверных стабов).
 
-Для Python и сервиса искусственного интеллекта аналогичная секция плагинов генерирует Stubs:
+Для будущего Python-сервиса секцию плагинов нужно добавить и проверить отдельно. Иллюстративный фрагмент, не готовая конфигурация текущего contracts:
 ```yaml
   - remote: buf.build/grpc/python
     out: gen/python
