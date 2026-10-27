@@ -35,6 +35,13 @@ REDIS_PASSWORD=<local-redis-password>
 
 # Schedule: параметр Compose, включает синхронизацию
 SCHEDULE_SYNC_ENABLED=true
+SCHEDULE_CACHE_TTL=24h
+SCHEDULE_CACHE_JITTER=2h
+SCHEDULE_FRESHNESS_TTL=24h
+SCHEDULE_SYNC_INTERVAL=6h
+SCHEDULE_SYNC_RPS=2
+SCHEDULE_SOURCE_BASE_URL=https://rasp.dmami.ru
+SCHEDULE_SHUTDOWN_TIMEOUT=10s
 
 # Auth
 OTP_HMAC_SECRET=<random-secret-at-least-16-characters>
@@ -56,9 +63,20 @@ AUTH_GOOGLE_REDIRECT_URI=http://localhost:8080/api/v1/auth/oauth/google/callback
 
 `.env` служит источником подстановки `${...}` в Compose, а не автоматически передаётся целиком каждому контейнеру. Приложения получают только значения, явно перечисленные в `environment`.
 
-Для Schedule сейчас зафиксированы в Compose: `SCHEDULE_GRPC_PORT=50054`, `SCHEDULE_FRESHNESS_TTL=24h`, `SCHEDULE_SYNC_INTERVAL=6h`, `SCHEDULE_SYNC_RPS=2`, `SCHEDULE_SOURCE_BASE_URL=https://rasp.dmami.ru`, `SCHEDULE_SHUTDOWN_TIMEOUT=10s`. Gateway получает `SCHEDULE_GRPC_ADDR=schedule-service:50054` и `SCHEDULE_RPC_TIMEOUT=5s`.
+Для Schedule в Compose фиксированы адрес прослушивания `0.0.0.0:50054` и подключение Redis `redis:6379`, база `0`; пароль берётся из `REDIS_PASSWORD`. Gateway получает `SCHEDULE_GRPC_ADDR=schedule-service:50054` и `SCHEDULE_RPC_TIMEOUT=5s`.
 
-Добавление этих имён в `infra/.env` само по себе не переопределит захардкоженные значения: нужно явно изменить Compose/локальный override. При запуске бинарника из IDE задайте env самому процессу; код сервиса не обязан читать `.env` автоматически. Дефолты самого Schedule — в [паспорте](services/schedule.md).
+| Параметр из `.env` | Дефолт Compose | Назначение |
+|---|---|---|
+| `SCHEDULE_CACHE_TTL` | `24h` | Срок хранения кэша |
+| `SCHEDULE_CACHE_JITTER` | `2h` | Случайная положительная добавка `0..2h` |
+| `SCHEDULE_FRESHNESS_TTL` | `24h` | Порог устаревания расписания; не TTL Redis |
+| `SCHEDULE_SYNC_ENABLED` | `true` | Включение синхронизации |
+| `SCHEDULE_SYNC_INTERVAL` | `6h` | Интервал планового обхода |
+| `SCHEDULE_SYNC_RPS` | `2` | Скорость пополнения общего token bucket; ёмкость 5 допускает всплески |
+| `SCHEDULE_SOURCE_BASE_URL` | `https://rasp.dmami.ru` | Источник расписания |
+| `SCHEDULE_SHUTDOWN_TIMEOUT` | `10s` | Время корректного завершения |
+
+Эти параметры уже связаны с `${...}` в Compose и переопределяются через `.env`. Для остальных настроек сначала проверьте `environment` и локальный override. При запуске из IDE передайте env самому процессу; чтение файла `.env` приложением не подразумевается. После изменения env пересоздайте контейнеры.
 
 ## Правила
 

@@ -55,3 +55,10 @@ COOKIE_SECURE=false
 `COOKIE_SECURE=false` допустим только для локального HTTP-стенда. В окружении с HTTPS значение должно быть `true`.
 
 Подробнее: [публичное API расписания](../../gateway/schedule-api.md). Gateway не вычисляет неделю по умолчанию — это правило usecase Schedule.
+
+
+## Метаданные текущего API расписания
+
+Gateway использует `contracts v0.5.0` и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
+
+См. [публичное API расписания](../../gateway/schedule-api.md).

@@ -7,7 +7,7 @@
 ---
 
 !!! info "Текущий contracts и учебный Tasks — разные каталоги"
-    В `contracts@v0.4.0` находятся `proto/orbit/auth/v1` и `proto/orbit/schedule/v1`, Go-код — в `gen/go`. Ниже сохранён учебный Tasks из `orbit-docs/examples/tasks-service`: его `api/proto`, `pkg/api` и managed mode не являются путями/настройками корневого `contracts`. Python-генерация пока не подключена. Актуальное дерево и команды — в [справочнике contracts](../../contracts-infra/contracts.md).
+    В `contracts@v0.5.0` находятся `proto/orbit/auth/v1` и `proto/orbit/schedule/v1`, Go-код — в `gen/go`. Ниже сохранён учебный Tasks из `orbit-docs/examples/tasks-service`: его `api/proto`, `pkg/api` и managed mode не являются путями/настройками корневого `contracts`. Python-генерация пока не подключена. Актуальное дерево и команды — в [справочнике contracts](../../contracts-infra/contracts.md).
 
 ## 1. Концепция Contract-First и роль `contracts`
 
