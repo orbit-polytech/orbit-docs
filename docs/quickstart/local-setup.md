@@ -90,14 +90,14 @@ curl http://localhost:8080/readyz
 
 ### Проверка публичного расписания
 
-После первого запуска worker загружает группы в фоне. `healthy` не означает, что снимок каждой группы уже готов. Без JWT и без профиля выполните:
+После первого запуска worker загружает группы в фоне. `healthy` не означает, что расписание каждой группы уже загружено. Без JWT и без профиля выполните:
 
 ```bash
 curl "http://localhost:8080/api/v1/schedule/groups?query=261&limit=20"
 curl "http://localhost:8080/api/v1/schedule/groups/261-334"
 ```
 
-Второй запрос выбирает текущую неделю по Москве. В ответе проверяйте `date_from`, `date_to`, `time_zone`, `metadata` и `days`. `503` при отсутствии первого снимка отличается от пустого `200` и от `404` неизвестной группы. Полные правила и диагностика — в [API расписания](../gateway/schedule-api.md).
+Второй запрос выбирает текущую неделю по Москве. В ответе проверяйте `date_from`, `date_to`, `time_zone`, `metadata` и `days`. Если расписание ещё не загружено, подтверждённое задание даёт `200 PENDING_SYNC`; после загрузки — `200 READY`. Без данных и доступной очереди возможен `503`. Пустой `READY` и `404` неизвестной группы — отдельные состояния. Проверяйте также `metadata.status`, `published_from` и `published_to`. Полные правила и диагностика — в [API расписания](../gateway/schedule-api.md).
 
 ## 5. Команды управления
 
@@ -171,6 +171,6 @@ docker compose --profile apps logs jwt-keygen
 | Auth не стартует | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `OTP_HMAC_SECRET`, DSN и Redis password |
 | `auth-migrate` завершился не с нулём | Логи мигратора и доступность PostgreSQL |
 | Gateway возвращает `503` на Auth | Health Auth и `AUTH_GRPC_ADDR` |
-| `503` на расписании | Health Schedule, `SCHEDULE_GRPC_ADDR`, готовность снимка, логи синхронизации и `SCHEDULE_SYNC_ENABLED` |
+| `503` на расписании | Health Schedule, `SCHEDULE_GRPC_ADDR`, доступность Redis/очереди, логи синхронизации и `SCHEDULE_SYNC_ENABLED` |
 | `postgres-init` / `schedule-migrate` завершился с ошибкой | Логи, существующая база Auth, admin credentials и права приложения; не удалять volume вслепую |
 | После `task clean` токены не принимаются | Это ожидаемо: была создана новая пара JWT-ключей |

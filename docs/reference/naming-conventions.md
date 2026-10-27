@@ -21,6 +21,6 @@
 | **Перечисления Protobuf** | `UPPER_SNAKE_CASE` с префиксом | `TASK_STATUS_OPEN`, `TASK_STATUS_DONE` | `OPEN`, `STATUS_OPEN` |
 | **Таблицы PostgreSQL** | `snake_case` во множественном числе | `tasks`, `sessions`, `refresh_tokens` | `Task`, `TBL_TASKS` |
 | **Колонки PostgreSQL** | `snake_case` | `id`, `owner_id`, `created_at` | `ID`, `createdAt` |
-| **Ключи Redis** | Двоеточия `<сервис>:<сущность>:<id>` | `schedule:group:261-334`, `auth:blacklist:<jti>`| `scheduleGroup261334` |
+| **Ключи Redis** | Двоеточия `<сервис>:<сущность>:<id>` | `schedule:cache:v1:group:261-334:regular`, `auth:blacklist:<jti>`| `scheduleGroup261334` |
 | **Очереди RabbitMQ** | Точки `<сервис>.<сущность>.<событие>` | `tasks.task.created`, `schedule.lesson.moved` | `TasksQueue` |
 | **Переменные окружения** | `UPPER_SNAKE_CASE` | `DATABASE_URL`, `GRPC_ADDR`, `APP_ENV` | `database_url`, `GrpcAddr` |
