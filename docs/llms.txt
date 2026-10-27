@@ -16,8 +16,9 @@
 - [Layer Reference](https://orbit-polytech.github.io/orbit-docs/backend-go/reference/): разрешённые зависимости и depguard.
 
 ## Schedule
-- [Schedule API](https://orbit-polytech.github.io/orbit-docs/gateway/schedule-api/): публичные маршруты без JWT, неделя по Москве, необязательные даты, максимум 93 дня, JSON и диагностика 503.
-- [Schedule Service](https://orbit-polytech.github.io/orbit-docs/reference/services/schedule/): PostgreSQL orbit_schedule, gRPC 50054, фоновая синхронизация; Redis/RabbitMQ не используются.
+- [Schedule API](https://orbit-polytech.github.io/orbit-docs/gateway/schedule-api/): публичные маршруты без JWT, неделя по Москве, необязательные даты, максимум 93 дня, READY/PENDING_SYNC, период публикации и диагностика 503.
+- [Schedule Diagnostics](https://orbit-polytech.github.io/orbit-docs/how-to/schedule-sync-diagnostics/): кэш, Streams, pending, lag, повторы и проверка загруженного расписания.
+- [Schedule Service](https://orbit-polytech.github.io/orbit-docs/reference/services/schedule/): PostgreSQL orbit_schedule, gRPC 50054, Redis-кэш, Redis Streams и распределённая фоновая синхронизация; RabbitMQ не используется.
 
 ## Gateway
 - [Gateway Overview](https://orbit-polytech.github.io/orbit-docs/gateway/overview/): ответственность HTTP-шлюза.
@@ -51,4 +52,4 @@
 2. Целевая архитектура не доказывает наличие реализации.
 3. Учебный `examples/tasks-service` не является развернутым production-сервисом.
 4. Перед изменением кода загружайте актуальный репозиторий, ветку, конфигурацию и тесты.
-5. Неделя по умолчанию вычисляется в usecase Schedule, не в Gateway; contracts v0.4.0. Фильтрация чётности, сессия, on-demand sync, presets и grid ещё не реализованы.
+5. Неделя по умолчанию вычисляется в usecase Schedule, не в Gateway; contracts v0.5.0. Redis-кэш и фоновое обновление по запросу реализованы; metadata содержит status и published_from/published_to. Сессия, API-фильтр подгрупп, универсальная чётность, presets и grid ещё не реализованы.

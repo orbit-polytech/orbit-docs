@@ -11,7 +11,7 @@
 | [`gateway-service`](https://github.com/orbit-polytech/gateway-service) | Публичный HTTP API Gateway | **Работает сейчас** |
 | [`auth-service`](https://github.com/orbit-polytech/auth-service) | Email OTP, JWT, refresh-сессии, Google OAuth и identities | **Работает сейчас** |
 | [`users-service`](https://github.com/orbit-polytech/users-service) | Профили, группы и роли | **Запланировано** — репозиторий пуст |
-| [`schedule-service`](https://github.com/orbit-polytech/schedule-service) | Регулярное расписание, фоновая синхронизация и PostgreSQL-снимки | **Работает сейчас** |
+| [`schedule-service`](https://github.com/orbit-polytech/schedule-service) | Регулярное расписание, PostgreSQL, Redis-кэш и распределённая синхронизация | **Работает сейчас** |
 | `navigation-service` | Корпуса, аудитории и маршруты | **Запланировано** |
 | `tasks-service` | Задачи и дедлайны | **Учебный пример / запланировано** |
 | `notification-service` | Push/Telegram-уведомления и события | **Запланировано** |
@@ -42,4 +42,4 @@
                     [ notification ]
 ```
 
-Текущие рабочие пути: Gateway → Auth → PostgreSQL/Redis и публичный Gateway → Schedule → PostgreSQL. Schedule обновляет снимки через фоновую синхронизацию с `rasp.dmami.ru`, не обращаясь к Users/Auth за профилем посетителя.
+Текущие рабочие пути: Gateway → Auth → PostgreSQL/Redis и публичный Gateway → Schedule → Redis/PostgreSQL. Schedule обновляет расписание через Redis Streams и фоновую синхронизацию с `rasp.dmami.ru`, не обращаясь к Users/Auth за профилем посетителя.

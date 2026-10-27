@@ -24,8 +24,8 @@ Host-порты могут быть изменены в `.env`. Межконте
 | `SCHEDULE_GRPC_ADDR` | Gateway | Адрес Schedule: `schedule-service:50054` |
 | `SCHEDULE_RPC_TIMEOUT` | Gateway | Таймаут Schedule RPC, в Compose `5s` |
 | `SCHEDULE_SYNC_ENABLED` | Schedule через Compose | Фоновая синхронизация; в Compose по умолчанию `true` |
-| `REDIS_ADDR` | Auth | Адрес Redis внутри Compose |
-| `REDIS_PASSWORD` | Redis, Auth | Пароль локального Redis |
+| `REDIS_ADDR` | Auth, Schedule | Адрес Redis внутри Compose |
+| `REDIS_PASSWORD` | Redis, Auth, Schedule | Пароль локального Redis |
 | `OTP_HMAC_SECRET` | Auth | HMAC-секрет для OTP, минимум 16 символов |
 | `RESEND_API_KEY` | Auth | Ключ Resend для реальной отправки OTP |
 | `RESEND_FROM_EMAIL` | Auth | Разрешённый отправитель Resend |
@@ -67,4 +67,4 @@ Host-порты могут быть изменены в `.env`. Межконте
 
 Актуальный статус компонентов находится на странице [«Текущее состояние»](../project/current-state.md).
 
-Для текущего Schedule закреплены `50054`, база `orbit_schedule`, контракт `v0.4.0`, максимум 93 календарных дня и зона `Europe/Moscow`. Старые схемы с `50053` не являются источником конфигурации. Назначать новый порт Navigation нужно отдельно, не копируя занятую цифру.
+Для текущего Schedule закреплены `50054`, база `orbit_schedule`, контракт `v0.5.0`, максимум 93 календарных дня и зона `Europe/Moscow`. Старые схемы с `50053` не являются источником конфигурации. Назначать новый порт Navigation нужно отдельно, не копируя занятую цифру.

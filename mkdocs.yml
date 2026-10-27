@@ -221,6 +221,7 @@ nav:
           - Как написать и накатить миграцию БД: how-to/database-migration.md
           - Как опубликовать и прослушать событие: how-to/publish-consume-event.md
           - Как работать с Redis кэшем: how-to/redis-cache.md
+          - Диагностика синхронизации расписания: how-to/schedule-sync-diagnostics.md
           - Как настроить отладку в VS Code: how-to/debug-vscode.md
           - Что делать, если упал Docker: how-to/troubleshoot-docker.md
           - Что делать при конфликтах слияния в Git: how-to/resolve-git-conflicts.md

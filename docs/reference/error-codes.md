@@ -44,10 +44,12 @@ HTTP-шлюз преобразует gRPC status в HTTP-код и JSON. Акт�
 |---|---|---|
 | `ErrInvalidInput`, `ErrInvalidDateRange`, `ErrDateRangeTooLong` | `InvalidArgument` | `400` |
 | `ErrGroupNotFound` | `NotFound` | `404` |
-| `ErrScheduleNotReady` | `Unavailable` | `503` |
+| Нет расписания и невозможно подтвердить постановку обновления (`ErrScheduleNotReady` в ошибочном пути) | `Unavailable` | `503` |
 | Истёкший deadline | `DeadlineExceeded` | `504` |
 
-`503` может означать отсутствие первого снимка, даже если контейнер Schedule — `healthy`. Устаревший, но сохранённый снимок может возвращаться с `200` и `metadata.is_stale=true`. См. [диагностику расписания](../gateway/schedule-api.md).
+Отсутствие загруженного расписания само по себе не ошибка: при подтверждённом новом или существующем задании ответ — `200`, `metadata.status=PENDING_SYNC`. Если поставить задание невозможно и сохранённых данных нет — `503`. Недоступность gRPC upstream также даёт `503`.
+
+Сохранённое расписание возвращается с `200 READY`, в том числе с `metadata.is_stale=true`; ошибка фонового обновления не должна скрывать доступные данные. `UNSPECIFIED` означает неизвестное состояние, не готовность и не ожидание. См. [API](../gateway/schedule-api.md) и [диагностику](../how-to/schedule-sync-diagnostics.md).
 
 ## Учебные и будущие сервисы
 

@@ -5,9 +5,9 @@
 | Компонент | Внутри Compose | На хосте по умолчанию | Конфигурация |
 |---|---|---|---|
 | PostgreSQL 16 | `postgres:5432` | `127.0.0.1:5434` | Auth: `POSTGRES_DB`, Schedule: `SCHEDULE_POSTGRES_DB` |
-| Redis 7 | `redis:6379` | `127.0.0.1:6380` | Пароль обязателен, используется Auth |
+| Redis 7 | `redis:6379` | `127.0.0.1:6380` | Пароль обязателен; Auth и Schedule, раздельные пространства ключей |
 | Auth gRPC | `auth-service:50051` | `127.0.0.1:50051` | Приватный JWT-том |
-| Schedule gRPC | `schedule-service:50054` | `127.0.0.1:50054` | PostgreSQL и внешний источник, без Redis |
+| Schedule gRPC | `schedule-service:50054` | `127.0.0.1:50054` | PostgreSQL, Redis-кэш и Streams; источник вызывается фоновыми воркерами |
 | Gateway HTTP | `gateway-service:8080` | `127.0.0.1:8080` | Auth/Schedule gRPC, публичный JWT-том |
 
 Локальные пароли берутся из собственного `.env`; общие рабочие credentials не распространяются через документацию. Полный список env — в [справочнике](../reference/ports-and-env.md).

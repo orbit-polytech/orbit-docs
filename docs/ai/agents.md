@@ -17,8 +17,8 @@
 ### Текущая реализация Schedule:
 * **MUST**: Сохранять публичные SearchGroups/GetGroupSchedule без зависимости от профиля Users и JWT.
 * **MUST**: Вычислять период по умолчанию в `internal/usecase`, не в Gateway: текущая неделя Пн–Вс в `Europe/Moscow`; только date_from — один день; только date_to — ошибка; максимум 93 дня включительно.
-* **MUST**: Чтение выполняется из PostgreSQL-снимка; обращения к источнику — только через фоновый syncer с общим rate limiter.
-* **MUST NOT**: Считать Redis-кэш, чётность недель, сессию, presets или on-demand sync реализованными без проверки кода.
+* **MUST**: Чтение использует общий Redis-кэш расписания с fallback в PostgreSQL; календарная нарезка выполняется в usecase. Запрос может поставить фоновое задание в Redis Streams, но не должен обращаться к источнику синхронно. Все исходящие запросы используют общий распределённый rate limiter.
+* **MUST NOT**: Считать сессию, API-фильтр подгрупп, универсальную чётность недель, presets или grid реализованными. Redis-кэш и фоновое обновление по запросу уже есть; `PENDING_SYNC` допустим только при подтверждённом задании. Не выдавать пустой `READY` за отсутствие группы.
 
 ### Безопасность и авторизация:
 * **MUST NOT**: Никогда не принимайте `user_id` или роль из входящего JSON/Protobuf DTO от клиента. Они берутся **строго из криптографически проверенного контекста Gateway** (`x-user-id`).
@@ -68,7 +68,7 @@ golangci-lint run ./...
 # 2. Проверка Protobuf-схем
 cd contracts
 buf lint
-buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.4.0'
+buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.4.0' # историческая база совместимости; не версия зависимости сервисов
 
 # 3. Проверка Python-сервиса
 cd <python-service>
