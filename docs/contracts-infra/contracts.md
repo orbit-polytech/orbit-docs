@@ -23,16 +23,16 @@ contracts/
 └── README.md
 ```
 
-Срез `v0.4.0`: пакет `orbit.schedule.v1` содержит `SearchGroups` и `GetGroupSchedule`. В ответ чтения добавлены `date_from = 6` и `date_to = 7`; номера старых полей не меняются. Gateway и Schedule используют эту версию модуля. Users, Tasks, общие pagination-схемы и события добавляются после согласования; учебные proto Tasks находятся отдельно в `orbit-docs/examples/tasks-service`.
+Срез `v0.5.0`: пакет `orbit.schedule.v1` содержит `SearchGroups` и `GetGroupSchedule`. Ответ чтения содержит `date_from = 6` и `date_to = 7`; номера старых полей не меняются. В `ScheduleMetadata` добавлены `status = 4` (`UNSPECIFIED`, `READY`, `PENDING_SYNC`), `published_from = 5` и `published_to = 6`. Старые номера полей сохранены. Gateway и Schedule используют эту версию модуля. Users, Tasks, общие pagination-схемы и события добавляются после согласования; учебные proto Tasks находятся отдельно в `orbit-docs/examples/tasks-service`.
 
 Подключение Go-модуля из корня репозитория сервиса:
 
 ```bash
-go get github.com/orbit-polytech/contracts@v0.4.0
+go get github.com/orbit-polytech/contracts@v0.5.0
 go mod tidy
 ```
 
-Путь импорта пакета: `github.com/orbit-polytech/contracts/gen/go/orbit/schedule/v1`. Версия `v0.4.0` — версия Go-модуля, `orbit.schedule.v1` — версия protobuf-пакета; это разные уровни версионирования.
+Путь импорта пакета: `github.com/orbit-polytech/contracts/gen/go/orbit/schedule/v1`. Версия `v0.5.0` — версия Go-модуля, `orbit.schedule.v1` — версия protobuf-пакета; это разные уровни версионирования.
 
 
 > [!IMPORTANT]
@@ -94,7 +94,7 @@ plugins:
       - paths=source_relative
 ```
 
-В `v0.4.0` настроена генерация Go. Python/Dart не следует считать уже генерируемыми артефактами: клиенты приложения используют REST, а будущие плагины добавляются отдельным изменением.
+В `v0.5.0` настроена генерация Go. Python/Dart не следует считать уже генерируемыми артефактами: клиенты приложения используют REST, а будущие плагины добавляются отдельным изменением.
 
 
 Команды проверки и кодогенерации:

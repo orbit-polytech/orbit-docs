@@ -84,3 +84,10 @@ resp, err := h.tasksClient.GetTask(ctx, &tasksv1.GetTaskRequest{Id: taskID})
 | `codes.Unavailable` | **503 Service Unavailable** | Целевой микросервис временно недоступен |
 | `codes.DeadlineExceeded` | **504 Gateway Timeout** | Время ожидания ответа сервиса истекло |
 | `codes.Internal` | **500 Internal Error** | Непредвиденная внутренняя ошибка |
+
+
+## Метаданные текущего API расписания
+
+Gateway использует `contracts v0.5.0` и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
+
+См. [публичное API расписания](schedule-api.md).

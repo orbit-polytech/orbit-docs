@@ -7,7 +7,7 @@
 | Сервис | Роль |
 |---|---|
 | `postgres` | PostgreSQL 16; отдельные базы Auth и Schedule |
-| `redis` | OTP, OAuth state, rate limits Auth |
+| `redis` | OTP, OAuth state и rate limits Auth; кэш расписания, Streams и координация Schedule |
 | `jwt-keygen` | One-shot подготовка пары Ed25519, без сети |
 | `postgres-init` | One-shot создание роли/базы Schedule и настройка прав |
 | `auth-migrate` | One-shot миграции Goose базы Auth |
@@ -25,7 +25,7 @@ RabbitMQ, Jaeger, pgvector, AI и остальные бизнес-сервисы
 1. PostgreSQL и Redis проходят healthcheck.
 2. `postgres-init` подготавливает роль и базу Schedule; keygen независимо готовит ключи.
 3. Оба мигратора ждут успешного `postgres-init`.
-4. Auth ждёт свои миграции, Redis и keygen; Schedule — свои миграции и PostgreSQL.
+4. Auth ждёт свои миграции, Redis и keygen; Schedule — свои миграции, PostgreSQL и Redis.
 5. Gateway стартует после healthcheck Auth и Schedule и завершения keygen.
 
 Завершившиеся one-shot контейнеры должны иметь `Exited (0)`. Healthcheck Schedule не подтверждает готовность всех групп: первичная синхронизация продолжается в фоне.
