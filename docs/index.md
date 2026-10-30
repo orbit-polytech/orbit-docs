@@ -11,7 +11,7 @@ Orbit AI — экосистема сервисов для студентов М�
 
     ---
 
-    Поднять PostgreSQL, Redis, Auth, Schedule и Gateway, проверить healthcheck и открыть Swagger.
+    Поднять базовый стек Auth/Schedule/Gateway; отдельно подключить AI и pgvector через профиль `all`.
 
 -   :material-progress-check: __[Узнать текущее состояние](project/current-state.md)__
 
@@ -57,7 +57,7 @@ Orbit AI — экосистема сервисов для студентов М�
 
 -   :simple-python: __[Python & AI](python-ai/overview.md)__
 
-    Целевая архитектура RAG, Gemini, pgvector и Telegram-бота.
+    Текущий Groq/FastEmbed/RAG, потоковый AI API и отдельно учебные варианты Gemini/Telegram.
 
 -   :simple-flutter: __[Flutter & Мобилка](mobile-flutter/overview.md)__
 
@@ -80,3 +80,8 @@ Orbit AI — экосистема сервисов для студентов М�
     Правила работы с кодом и машиночитаемый индекс `llms.txt`.
 
 </div>
+
+
+## AI уже подключён
+
+AI доступен авторизованным пользователям через потоковый [AI API](gateway/ai-api.md). Для запуска нужен [AI-профиль](how-to/ai-local-stack.md); обычный `task up` его не включает. База знаний наполняется отдельной операцией. См. [текущие ограничения](python-ai/current-limitations.md): наличие ответа не гарантирует подтверждение источниками.

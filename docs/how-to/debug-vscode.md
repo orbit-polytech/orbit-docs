@@ -38,19 +38,12 @@
       ]
     },
     {
-      "name": "Python: Запуск ai-service (FastAPI/Uvicorn)",
+      "name": "Python: Запуск ai-service (gRPC)",
       "type": "debugpy",
       "request": "launch",
-      "module": "uvicorn",
-      "args": [
-        "src.main:app",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "8000",
-        "--reload"
-      ],
-      "jinja": true,
+      "module": "orbit_ai",
+      "cwd": "${workspaceFolder}",
+      "args": [],
       "justMyCode": true,
       "envFile": "${workspaceFolder}/.env"
     },
@@ -152,3 +145,8 @@ grpcurl -plaintext -H "x-user-id: 018f2345-6789-7abc-def0-123456789abc" localhos
 </div>
 
 </div>
+
+
+## Текущий AI при отладке
+
+Откройте корень `ai-service`, выполните `uv sync --locked` и выберите `.venv` как Python interpreter. Модуль запуска — `orbit_ai`, не Uvicorn/FastAPI. Настройте локальный `.env`, примените миграции и не поднимайте второй процесс на уже занятом `50057`. Для изолированного backend debug достаточно [зависимостей infra](../how-to/ai-local-stack.md). Tasks/Flutter в общей конфигурации выше — учебный/целевой пример, не готовый production-клиент.
