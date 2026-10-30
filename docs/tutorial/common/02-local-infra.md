@@ -1,7 +1,7 @@
 # 02. Запуск локального окружения (infra)
 
 !!! info "Статус: актуальный сценарий контейнеризации"
-    Руководство относится к стенду PostgreSQL + Redis + Auth + Schedule + Gateway. RabbitMQ, Jaeger и остальные сервисы будут добавляться отдельными этапами.
+    Руководство относится к стенду PostgreSQL + Redis + Auth + Schedule + Gateway. Это профиль `apps` без AI. AI/pgvector уже добавлены отдельно через `ai`/`all`: [инструкция](../../how-to/ai-local-stack.md). RabbitMQ и Jaeger остаются будущими этапами.
 
 ## 1. Зачем нужен `infra`
 
@@ -62,7 +62,7 @@ auth-service    -> redis:6379
 cp compose.override.yaml.example compose.override.yaml
 ```
 
-Раскомментируйте `build` только у нужного сервиса:
+В текущем шаблоне build-блоки активны у всех сервисов. Удалите/закомментируйте лишние и оставьте только нужный:
 
 ```yaml
 services:

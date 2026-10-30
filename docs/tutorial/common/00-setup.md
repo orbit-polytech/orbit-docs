@@ -190,10 +190,10 @@ buf --version
 
 Для сервиса искусственного интеллекта (`ai-service`) и Telegram-бота (`bot-service`):
 
-1. **Python 3.12+**:
+1. **Python 3.13+ для текущего ai-service**:
    === "Windows"
        ```powershell
-       winget install Python.Python.3.12
+       winget install Python.Python.3.13
        # Или скачайте установщик с python.org (отметьте галочку "Add python.exe to PATH")
        ```
    === "Linux"
