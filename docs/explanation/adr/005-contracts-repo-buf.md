@@ -23,8 +23,8 @@
    - Автоматический линтинг Protobuf-стиля (`buf lint`).
    - Контроль обратной совместимости (`buf breaking --against ".git#branch=main"`).
 3. **Генерация артефактов:**
-   - **Для Go (реализовано):** код генерируется в `gen/go/`, подключается корневой модуль `github.com/orbit-polytech/contracts@v0.5.0`; импортируется пакет из `gen/go/orbit/...`. В текущем релизе — Auth и Schedule.
-   - **Для Python (план):** добавить генерацию и способ доставки пакета перед реализацией `ai-service`. `gen/python/` не является текущим опубликованным артефактом.
+   - **Для Go (реализовано):** код генерируется в `gen/go/`, подключается корневой модуль `github.com/orbit-polytech/contracts@<tag>`; импортируется пакет из `gen/go/orbit/...`. Gateway с AI использует `v0.5.2`; пакет включает Auth, Schedule и AI.
+   - **Для Python (реализовано):** `gen/python/orbit`, gRPC, `.pyi` и `py.typed`; устанавливаемый `orbit-contracts` через корневой `pyproject.toml`. AI закрепляет Git-тег `v0.5.2`; это не утверждение о публикации пакета в PyPI.
    - **Для Dart/Flutter:** REST/JSON через Gateway. Текущая Swagger-схема генерируется Swag из HTTP-аннотаций Gateway в `api/docs`, не proto-плагином в `contracts`. Генерация клиента из этой схемы — отдельный этап мобильной разработки.
 
 ---

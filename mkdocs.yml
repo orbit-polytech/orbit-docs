@@ -132,6 +132,7 @@ nav:
       - Обзор шлюза gateway-service: gateway/overview.md
       - Обработчики и middleware: gateway/handlers-and-middleware.md
       - Публичное API расписания: gateway/schedule-api.md
+      - AI API и SSE: gateway/ai-api.md
       - Маршрутизация и клиенты gRPC: gateway/grpc-clients.md
       - REST-слой Gateway (Подробный гайд): tutorial/backend/11-gateway-rest.md
 
@@ -140,7 +141,12 @@ nav:
   # =========================================================================
   - Python & AI:
       - Обзор сервисов ai-service и bot-service: python-ai/overview.md
-      - RAG, Gemini и pgvector (Tutorial): python-ai/rag-tutorial.md
+      - Поток AI-запроса: python-ai/request-flow.md
+      - База знаний и ingestion: python-ai/knowledge-ingestion.md
+      - Ограничения текущего AI: python-ai/current-limitations.md
+      - Запуск стенда с AI: how-to/ai-local-stack.md
+      - Диагностика AI: how-to/ai-diagnostics.md
+      - Альтернативный RAG с Gemini (Tutorial): python-ai/rag-tutorial.md
       - Telegram-бот на aiogram 3 (How-to): python-ai/bot-guide.md
       - Архитектура и ограничения (Explanation): python-ai/explanation.md
       - Углублённый gRPC-стек AI: tutorial/ai/01-ai-grpc-stack.md

@@ -4,7 +4,7 @@
 ## Start here
 - [GHCR Access](https://orbit-polytech.github.io/orbit-docs/quickstart/ghcr-access/): private-образы, PAT classic read:packages, Docker login, права команды и диагностика; PAT никогда не помещается в .env.
 - [Current State](https://orbit-polytech.github.io/orbit-docs/project/current-state/): реализованные, разрабатываемые и запланированные компоненты.
-- [Current Quickstart](https://orbit-polytech.github.io/orbit-docs/quickstart/local-setup/): запуск PostgreSQL, Redis, Auth, Schedule и Gateway.
+- [Current Quickstart](https://orbit-polytech.github.io/orbit-docs/quickstart/local-setup/): базовый профиль apps без AI; AI запускается отдельно через all.
 - [Project Overview](https://orbit-polytech.github.io/orbit-docs/): главная страница базы знаний.
 - [Team Rules](https://orbit-polytech.github.io/orbit-docs/quickstart/overview/): GitHub Flow и соглашения команды.
 
@@ -38,9 +38,15 @@
 - [Sessions and Refresh](https://orbit-polytech.github.io/orbit-docs/security/sessions-refresh/): ротация и reuse detection.
 - [Validation and Defense](https://orbit-polytech.github.io/orbit-docs/security/validation-defense/): IDOR, SQL injection и mass assignment.
 
+## AI implementation
+- [AI API](https://orbit-polytech.github.io/orbit-docs/gateway/ai-api/): JWT, POST SSE, UUIDv4, replay, cancel, ошибки.
+- [AI Local Stack](https://orbit-polytech.github.io/orbit-docs/how-to/ai-local-stack/): profiles apps/ai/all, pgvector, Alembic, existing volumes.
+- [Knowledge Ingestion](https://orbit-polytech.github.io/orbit-docs/python-ai/knowledge-ingestion/): versioning, demo fixtures are not verified regulations.
+- [AI Limitations](https://orbit-polytech.github.io/orbit-docs/python-ai/current-limitations/): no multi-turn prompt history, no Schedule tool, no distributed cancellation.
+
 ## Target architecture and learning tracks
 - [Polyrepo Map](https://orbit-polytech.github.io/orbit-docs/reference/polyrepo-map/): текущие и запланированные репозитории.
-- [Python and AI](https://orbit-polytech.github.io/orbit-docs/python-ai/overview/): целевой Python/AI-контур.
+- [Python and AI](https://orbit-polytech.github.io/orbit-docs/python-ai/overview/): текущий Groq/FastEmbed/RAG, отдельно учебные альтернативы.
 - [Flutter](https://orbit-polytech.github.io/orbit-docs/mobile-flutter/overview/): целевая архитектура мобильного клиента.
 - [ADR Index](https://orbit-polytech.github.io/orbit-docs/explanation/adr/001-polyrepo/): архитектурные решения.
 

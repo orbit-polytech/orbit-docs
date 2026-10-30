@@ -6,7 +6,7 @@
 
 ## 1. Текущая маршрутизация
 
-В `main` используется **`net/http.ServeMux`**, файл `internal/transport/http/router.go`. Поиск групп и чтение расписания зарегистрированы через `HandleFunc` без JWT middleware. Защищённые Auth-маршруты оборачиваются в `middleware.Auth` явно. Внешний префикс — `/api/v1`, а не `/v1`.
+В `main` используется **`net/http.ServeMux`**, файл `internal/transport/http/router.go`. Поиск групп и чтение расписания зарегистрированы через `HandleFunc` без JWT middleware. Защищённые AI и Auth-маршруты оборачиваются в `middleware.Auth` явно. Внешний префикс — `/api/v1`, а не `/v1`.
 
 Для Schedule handler читает `group`, необязательные `date_from`/`date_to`, создаёт контекст с `SCHEDULE_RPC_TIMEOUT`, вызывает gRPC и преобразует DTO. Выбор недели остаётся в usecase Schedule. См. [полный API](schedule-api.md).
 
@@ -121,6 +121,11 @@ func (h *TasksHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 ## Метаданные текущего API расписания
 
-Gateway использует `contracts v0.5.0` и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
+Gateway использует `contracts v0.5.2` (Schedule API совместим с `v0.5.0`) и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
 
 См. [публичное API расписания](schedule-api.md).
+
+
+## AI handlers
+
+Текущие AI handlers находятся в `internal/transport/http/v1/ai`: валидация, проверенный actor, gRPC → SSE и отмена. Полные DTO, события и обработка ошибок до/после начала потока описаны в [AI API](ai-api.md); учебные JSON handlers выше не заменяют потоковую обработку.

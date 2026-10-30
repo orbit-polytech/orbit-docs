@@ -22,3 +22,12 @@ mkdocs serve
 python scripts/check-doc-links.py
 mkdocs build --strict
 ```
+
+
+## Текущий AI-контур
+
+- [Запуск стенда с AI](https://orbit-polytech.github.io/orbit-docs/how-to/ai-local-stack/)
+- [AI API: JWT, SSE и отмена](https://orbit-polytech.github.io/orbit-docs/gateway/ai-api/)
+- [Ограничения реализации](https://orbit-polytech.github.io/orbit-docs/python-ai/current-limitations/)
+
+`task up` в infra запускает `apps` без AI; совместный стенд использует профиль `all`. Учебные структуры проектов и `examples/tasks-service` сохранены отдельно от работающих production-компонентов.

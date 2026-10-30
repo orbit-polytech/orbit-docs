@@ -1,6 +1,45 @@
-# Python & AI: Сервисы ai-service и bot-service
+# Python & AI: текущая реализация и учебные примеры
 
-В проекте Orbit AI стек Python 3.12 используется строго для двух специализированных задач:
+Рабочий `ai-service` использует Python 3.13+, uv, grpc.aio, Groq, FastEmbed и PostgreSQL/pgvector. Telegram `bot-service` остаётся целевой интеграцией, не запущенным компонентом стенда.
+
+## Текущая структура ai-service
+
+```text
+ai-service/
+├── src/orbit_ai/
+│   ├── __main__.py           # сборка зависимостей, warmup и lifecycle
+│   ├── config/              # pydantic-settings
+│   ├── domain/              # сущности, состояния, порты
+│   ├── application/         # chat stream и отмена
+│   ├── infrastructure/      # Groq, FastEmbed, RAG, PostgreSQL
+│   ├── presentation/grpc/   # servicer и health
+│   └── scripts/             # ingestion demo
+├── migrations/              # Alembic
+├── tests/                   # unit, transport, integration
+├── pyproject.toml
+├── uv.lock
+└── Dockerfile
+```
+
+Domain не зависит от транспорта/провайдера. Application управляет сценарием через порты, Infrastructure реализует внешние зависимости, Presentation преобразует gRPC. Точка входа собирает эти слои. Структура не требует размещать бизнес-правила в gRPC servicer.
+
+- [Паспорт сервиса](../reference/services/ai.md)
+- [Поток запроса](request-flow.md)
+- [База знаний и ingestion](knowledge-ingestion.md)
+- [Ограничения](current-limitations.md)
+- [AI HTTP/SSE API](../gateway/ai-api.md)
+- [Запуск в Docker](../how-to/ai-local-stack.md)
+
+**Исходное дерево:** [src/orbit_ai](https://github.com/orbit-polytech/ai-service/tree/main/src/orbit_ai).
+
+---
+
+!!! warning "Сохранённый учебный пример — не текущее устройство сервиса"
+    Ниже сохранены исходная структура и примеры Gemini/Python 3.12 для обучения и сравнения архитектур. Пути `app/adapters/transport`, зависимости, требования к логам и env этого примера не описывают текущий `main`. Актуальный код использует `application/infrastructure/presentation`, Python 3.13 и Groq/FastEmbed. Не копируйте старый pyproject поверх рабочего.
+
+# Исторический учебный вариант Python/AI
+
+В исходном учебном варианте стек Python 3.12 рассматривался для двух специализированных задач:
 1. [**`ai-service`**](https://github.com/orbit-polytech/ai-service) — микросервис искусственного интеллекта, реализующий Retrieval-Augmented Generation (RAG), генерацию эмбеддингов через Google Gemini API и векторный поиск ближайших соседей в PostgreSQL (`pgvector`).
 2. [**`bot-service`**](https://github.com/orbit-polytech/bot-service) — официальный Telegram-бот для студентов Политеха на базе асинхронного фреймворка `aiogram 3.x`.
 

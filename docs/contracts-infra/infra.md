@@ -6,19 +6,21 @@
 
 | Сервис | Роль |
 |---|---|
-| `postgres` | PostgreSQL 16; отдельные базы Auth и Schedule |
+| `postgres` | PostgreSQL 16; pgvector, отдельные базы Auth, Schedule, AI и AI test |
 | `redis` | OTP, OAuth state и rate limits Auth; кэш расписания, Streams и координация Schedule |
 | `jwt-keygen` | One-shot подготовка пары Ed25519, без сети |
-| `postgres-init` | One-shot создание роли/базы Schedule и настройка прав |
+| `postgres-init` | One-shot подготовка app-роли, баз Schedule/AI/AI test, vector и прав |
 | `auth-migrate` | One-shot миграции Goose базы Auth |
 | `schedule-migrate` | One-shot миграции Goose базы Schedule |
 | `auth-service` | gRPC Auth, `50051` |
 | `schedule-service` | gRPC Schedule, `50054`, фоновая синхронизация |
-| `gateway-service` | HTTP API Auth и публичного расписания, Swagger, `8080` |
+| `gateway-service` | HTTP Auth, публичное расписание, защищённый AI SSE, Swagger, `8080` |
+| `ai-migrate` | One-shot Alembic для `orbit_ai`, тот же образ, что AI |
+| `ai-service` | gRPC AI, `50057`, Groq и RAG |
 
-PostgreSQL и Redis запускаются без профиля. Приложения и one-shot сервисы включены в профили `apps` и `all`; **`task up` выбирает `apps`**. `docker compose up -d` без профиля не эквивалентен полному стенду.
+PostgreSQL и Redis запускаются без профиля. Auth/Schedule/Gateway и их one-shot сервисы включены в `apps`/`all`; AI и его мигратор — в `ai`/`all`; provisioner — в `apps`/`ai`/`all`. **`task up` выбирает `apps`, без AI**. `docker compose up -d` без профиля не эквивалентен полному стенду.
 
-RabbitMQ, Jaeger, pgvector, AI и остальные бизнес-сервисы пока не входят в актуальный Compose.
+AI и pgvector уже входят в Compose. RabbitMQ, Jaeger и остальные будущие бизнес-сервисы не входят. Для совместного запуска используйте `--profile all`: [запуск с AI](../how-to/ai-local-stack.md).
 
 ## Порядок запуска и готовность
 
@@ -41,7 +43,7 @@ task status
 
 | Команда | Назначение |
 |---|---|
-| `task up` | Полный стек с ожиданием готовности контейнеров |
+| `task up` | Профиль `apps` с ожиданием готовности, без AI |
 | `task up:deps` | Только PostgreSQL и Redis |
 | `task db:init` / `task init:db` | Повторная подготовка роли, базы Schedule и прав |
 | `task build` | Локальная сборка подключённых через override сервисов |
@@ -85,9 +87,14 @@ task up
 
 ```bash
 cp compose.override.yaml.example compose.override.yaml
-# Раскомментируйте build только у изменяемых сервисов
+# Оставьте build только у изменяемых сервисов: шаблон содержит активные блоки для всех
 task build
 docker compose --profile apps up -d --pull never --wait --wait-timeout 120
 ```
 
 `compose.override.yaml` автоматически объединяется с базовым файлом и не коммитится. Для локальных миграций Schedule подключите также сборку `schedule-migrate`; иначе схема может не соответствовать изменённому коду. Полная инструкция — [Quickstart](../quickstart/local-setup.md).
+
+
+## AI и миграции
+
+`ai-migrate` ждёт PostgreSQL и provisioner; `ai-service` ждёт успешные миграции. Gateway не зависит от health AI. Подготовка `orbit_ai_test` не применяет к ней Alembic автоматически. Подробные команды обновления существующего volume, локальной сборки и остановки всего стека — [запуск с AI](../how-to/ai-local-stack.md).

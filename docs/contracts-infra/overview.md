@@ -10,14 +10,14 @@
 
 Вместо того чтобы копировать `.proto` файлы вручную между репозиториями сервисов, все схемы Protobuf v3 централизованно хранятся в `contracts`.
 
-С помощью **Buf CLI** схемы валидируются и проверяются на обратную совместимость. В `contracts@v0.5.0` находятся Auth и Schedule, генерируется Go-код в `gen/go/`. Сервисы подключают корневой модуль `github.com/orbit-polytech/contracts@v0.5.0`, а импортируют конкретный пакет из `gen/go/orbit/...`. Python-генерация и новые контракты добавляются отдельно. См. [дерево и команды](contracts.md).
+С помощью **Buf CLI** схемы проверяются и генерируются в Go и Python. Текущий AI подключает `contracts@v0.5.2`; Python-пакет содержит gRPC-код, `.pyi` и `py.typed`. Go импортирует пакеты из `github.com/orbit-polytech/contracts/gen/go/orbit/...`, но версионируется корневой модуль. См. [дерево и команды](contracts.md).
 
 ---
 
 ## 2. Репозиторий `infra`
 
-Репозиторий `infra` поднимает PostgreSQL 16, Redis 7, Auth, Schedule, Gateway, keygen, provisioner и миграторы. `task up` включает профиль `apps`; без профиля запускаются только базовые зависимости. `all` также включает приложения. Профилей `core`/`ai` и `compose.debug.yaml` в текущей конфигурации нет.
+Репозиторий `infra` поднимает PostgreSQL 16 с pgvector, Redis 7, Auth, Schedule, Gateway и AI с one-shot сервисами. `task up` включает `apps` без AI; `ai` запускает AI и его зависимости, `all` — совместный стенд. Без профиля запускаются базовые зависимости.
 
-Базовый Compose использует готовые GHCR-образы без исходников соседних сервисов. Локальная сборка включается через `compose.override.yaml`. gRPC порты Auth и Schedule доступны на loopback для диагностики. RabbitMQ, Jaeger и pgvector — будущие этапы, не скрытые зависимости текущего стенда.
+Базовый Compose использует готовые GHCR-образы, локальная сборка — override. Host gRPC порты ограничены loopback. RabbitMQ/Jaeger остаются будущими этапами.
 
-Далее: [актуальный infra](infra.md), [порты](../reference/ports-and-env.md), [доступ к private-пакетам](../quickstart/ghcr-access.md).
+Далее: [infra](infra.md), [запуск с AI](../how-to/ai-local-stack.md), [порты](../reference/ports-and-env.md), [GHCR](../quickstart/ghcr-access.md).

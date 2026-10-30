@@ -1,48 +1,45 @@
-# ai-service (AI RAG и Gemini Сервис)
+# ai-service — потоковый AI и RAG
 
-**Репозиторий:** [`orbit-polytech/ai-service`](https://github.com/orbit-polytech/ai-service)
+**Репозиторий:** [orbit-polytech/ai-service](https://github.com/orbit-polytech/ai-service). **Статус:** реализация в `main`, подключена к Gateway и профилям `ai` / `all` в infra.
 
----
+## Назначение и границы
 
-## 1. Назначение
-Сервис искусственного интеллекта на Python. Реализует пайплайн генеративно-поисковой модели (RAG — Retrieval-Augmented Generation) по официальным регламентам Московского Политеха (положения о БРС, стипендиях, общежитиях, справках военкомата, переводе на бюджет). Находит релевантные фрагменты через векторный поиск в `pgvector` и формирует точный ответ с цитированием документов через Google Gemini API.
+Генерация потоковых ответов, поиск по базе знаний, цитаты, сохранение результата и проверка владения диалогом. Сервис не выпускает JWT, не хранит профиль Users и пока не вызывает Schedule как инструмент.
 
----
+## Текущий стек
 
-## 2. Технический стек
-- **Язык и рантайм:** Python 3.12+ (uv / pip)
-- **gRPC сервер:** `grpcio` (асинхронный сервер `grpc.aio`)
-- **База данных и векторный индекс:** PostgreSQL 16 + расширение `pgvector`, индекс `HNSW` (`vector_cosine_ops`), размерность `vector(768)`
-- **Эмбеддинги:** Google `text-embedding-004` через SDK `google-genai`
-- **Генеративная LLM:** Google `gemini-2.0-flash`
-- **Драйвер БД:** `psycopg` (v3) с пулом соединений и регистрацией векторов
+| Слой | Реализация |
+|---|---|
+| Runtime | Python 3.13+, uv, `uv.lock` |
+| Транспорт | `grpc.aio`, порт `50057`, health protocol |
+| Генерация | Groq через OpenAI-совместимый SDK; модель задаётся `AI_MODEL` |
+| Эмбеддинги | FastEmbed, `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, 384 измерения |
+| Хранилище | SQLAlchemy asyncio + asyncpg; PostgreSQL 16 + pgvector |
+| Миграции | Alembic, отдельный `ai-migrate` |
+| Контракты | Python-пакет `orbit-contracts` из Git по тегу `v0.5.2` |
 
----
+База приложения — `orbit_ai`; изолированная база интеграционных тестов — `orbit_ai_test`. Между контейнерами используется `postgres:5432`, с хоста по умолчанию `localhost:5434`. Не переносите сюда старые `ai_knowledge_db`, `vector(768)` или Gemini env из учебного примера.
 
-## 3. Выделенные порты и база данных
-- **gRPC порт:** `50057`
-- **База данных:** `ai_knowledge_db` в PostgreSQL
-- **Таблица документов:** `knowledge_chunks` с полем `embedding vector(768)`
+## Запрос и безопасность
 
----
+Gateway проверяет Bearer JWT и передаёт `x-user-id` в gRPC metadata. AI требует идентичность и проверяет владельца. Этот заголовок сам по себе не является криптографической аутентификацией: прямой gRPC доступ должен быть ограничен доверенной сетью, локальный порт — loopback.
 
-## 4. Обязательные переменные окружения
+RPC: `ChatStream` и `CancelGeneration`. HTTP-клиент использует [AI API Gateway](../../gateway/ai-api.md), а не прямой порт сервиса.
 
-```ini
-APP_ENV=local
-LOG_LEVEL=info
-GRPC_PORT=50057
+## Конфигурация
 
-# Подключение к PostgreSQL с pgvector
-DB_HOST=localhost
-DB_PORT=5432
-DB_USER=orbit
-DB_PASSWORD=orbit_dev_secret
-DB_NAME=ai_knowledge_db
-DB_SSLMODE=disable
+Актуальный шаблон — [`.env.example`](https://github.com/orbit-polytech/ai-service/blob/main/.env.example). Основные параметры: `DATABASE_URL`, `GROQ_API_KEY`, `AI_MODEL`, `RAG_ENABLED`, `EMBEDDING_MODEL_NAME`, `RAG_MIN_SIMILARITY`, `RAG_TOP_K`, лимиты и таймауты `AI_*`. В `APP_ENV=production` отсутствие ключа или DSN останавливает запуск. В development без ключа используется FakeLLMClient — это не реальная генерация.
 
-# Google Gemini API
-GEMINI_API_KEY="AIzaSy..."
-GEMINI_MODEL="gemini-2.0-flash"
-EMBEDDING_MODEL="text-embedding-004"
-```
+Настройки процесса и переменные, передаваемые Compose, различаются: произвольная строка в `infra/.env` не добавляет параметр контейнеру. См. [справочник env](../ports-and-env.md).
+
+## Эксплуатация
+
+В Docker модель эмбеддингов предварительно загружается при сборке; сервер проверяет БД и прогревает эмбеддер перед `SERVING`. Healthcheck не выполняет реальный запрос к Groq и не подтверждает качество базы знаний. Ingestion не запускается автоматически при старте сервера.
+
+- [Запуск стенда с AI](../../how-to/ai-local-stack.md)
+- [Поток обработки запроса](../../python-ai/request-flow.md)
+- [Загрузка и версии документов](../../python-ai/knowledge-ingestion.md)
+- [Ограничения](../../python-ai/current-limitations.md)
+- [Диагностика](../../how-to/ai-diagnostics.md)
+
+**Источники реализации:** [зависимости](https://github.com/orbit-polytech/ai-service/blob/main/pyproject.toml), [точка входа](https://github.com/orbit-polytech/ai-service/blob/main/src/orbit_ai/__main__.py), [Dockerfile](https://github.com/orbit-polytech/ai-service/blob/main/Dockerfile).
