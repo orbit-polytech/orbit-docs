@@ -119,3 +119,14 @@ docker logout ghcr.io
 - [GitHub: аутентификация в Container registry](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 - [GitHub: доступ к пакетам и наследование прав](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility)
 - [Docker: login и credential stores](https://docs.docker.com/reference/cli/docker/login/)
+
+
+## Дополнительно для AI
+
+Шесть пакетов выше относятся к базовому профилю `apps`. Для AI/full-стенда нужен также **Read** на `ghcr.io/orbit-polytech/ai-service` — всего семь Orbit-пакетов. Проверьте отдельно:
+
+```bash
+docker pull ghcr.io/orbit-polytech/ai-service:latest
+```
+
+Сервер и `ai-migrate` используют один образ, отдельного пакета `ai-migrate` нет. Переопределение — `AI_SERVICE_IMAGE`. Те же правила PAT, SSO, наследования и персонального доступа действуют для седьмого пакета. Продолжение — [запуск с AI](../how-to/ai-local-stack.md).
