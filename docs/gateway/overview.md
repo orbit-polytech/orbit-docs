@@ -1,6 +1,6 @@
 # HTTP Gateway: единый входной шлюз
 
-[`gateway-service`](https://github.com/orbit-polytech/gateway-service) принимает HTTP/JSON-запросы и вызывает внутренние gRPC-сервисы. Текущие интеграции в `main` — **Auth и Schedule**. Внешние приложения не подключаются к их PostgreSQL или gRPC напрямую.
+[`gateway-service`](https://github.com/orbit-polytech/gateway-service) принимает HTTP/JSON-запросы и вызывает внутренние gRPC-сервисы. Текущие интеграции в `main` — **Auth, Schedule и AI**. Внешние приложения не подключаются к их PostgreSQL или gRPC напрямую.
 
 ## Текущие обязанности
 
@@ -22,6 +22,7 @@ gateway-service/
 │   ├── config/                 # env, адреса RPC, таймауты
 │   ├── infrastructure/
 │   │   ├── authclient/         # адаптер вызовов Auth
+│   │   ├── aiclient/           # gRPC streaming AI
 │   │   └── scheduleclient/     # адаптер вызовов Schedule
 │   └── transport/http/
 │       ├── router.go          # net/http.ServeMux
@@ -30,6 +31,7 @@ gateway-service/
 │       ├── middleware/        # JWT, CORS, request ID, recovery, logging
 │       └── v1/
 │           ├── auth/          # handlers и DTO Auth
+│           ├── ai/            # SSE и отмена
 │           └── schedule/      # handlers и DTO Schedule
 ├── api/docs/                  # генерируемая Swagger-документация
 ├── Dockerfile
@@ -55,3 +57,10 @@ flowchart LR
 Учебный REST-слой Tasks, Telegram-вход, новые rate limits и маршруты будущих сервисов сохранены в [подробном гайде](../tutorial/backend/11-gateway-rest.md) и концептуальных разделах. Они не являются текущим списком endpoint.
 
 Далее: [обработчики](handlers-and-middleware.md), [gRPC-клиенты](grpc-clients.md), [API расписания](schedule-api.md), [паспорт Gateway](../reference/services/gateway.md).
+
+
+## AI-интеграция
+
+Защищённые JWT маршруты `POST /api/v1/ai/chat/stream` и `POST /api/v1/ai/chat/cancel` вызывают `ai-service:50057`. `AI_GRPC_ADDR` задаёт адрес, `AI_RPC_TIMEOUT` — общий deadline (в Compose `60s`). SSE использует отдельные ограниченные сроки записи событий; обычный короткий unary timeout нельзя переносить на весь поток. Проверенная идентичность передаётся в metadata `x-user-id`.
+
+Чтение первого чанка выполняется до открытия SSE, поэтому ранние ошибки сохраняют HTTP status. После начала потока ошибки передаются событиями. Полная спецификация — [AI API](ai-api.md). Проверка Gateway `/healthz` или `/readyz` не подтверждает готовность AI.

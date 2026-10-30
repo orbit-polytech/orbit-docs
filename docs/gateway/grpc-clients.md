@@ -1,6 +1,6 @@
 # Маршрутизация и gRPC-клиенты в Gateway
 
-В текущем `main` подключены Auth и Schedule: `internal/infrastructure/authclient` и `internal/infrastructure/scheduleclient`. Соединения долгоживущие; таймаут каждого RPC задаётся от HTTP-контекста. Schedule получает `SCHEDULE_GRPC_ADDR` (в Compose `schedule-service:50054`) и `SCHEDULE_RPC_TIMEOUT` (`5s`).
+В текущем `main` подключены Auth, Schedule и AI: `internal/infrastructure/authclient`, `internal/infrastructure/scheduleclient`, `internal/infrastructure/aiclient`. Соединения долгоживущие; таймаут каждого RPC задаётся от HTTP-контекста. Schedule получает `SCHEDULE_GRPC_ADDR` (в Compose `schedule-service:50054`) и `SCHEDULE_RPC_TIMEOUT` (`5s`).
 
 Пустые `date_from`/`date_to` передаются в Schedule без вычисления дат в Gateway; фактические границы ответа возвращаются клиенту. Общий маппер находится в `internal/transport/http/httputil/grpc_error.go`.
 
@@ -88,6 +88,11 @@ resp, err := h.tasksClient.GetTask(ctx, &tasksv1.GetTaskRequest{Id: taskID})
 
 ## Метаданные текущего API расписания
 
-Gateway использует `contracts v0.5.0` и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
+Gateway использует `contracts v0.5.2` (Schedule API совместим с `v0.5.0`) и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
 
 См. [публичное API расписания](schedule-api.md).
+
+
+## Потоковый AI RPC
+
+AI использует долгоживущее соединение, `AI_GRPC_ADDR` и `AI_RPC_TIMEOUT` (`60s` в Compose). Контекст связан с HTTP-запросом и отменяется при разрыве. Передача `x-user-id`, ранние HTTP-ошибки, SSE и таймаут записи описаны в [AI API](ai-api.md); пример unary-вызова на 3 секунды выше не является настройкой AI-потока.
