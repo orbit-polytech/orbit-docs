@@ -103,7 +103,7 @@ curl "http://localhost:8080/api/v1/schedule/groups/261-334"
 
 | Команда | Назначение |
 |---|---|
-| `task up` | Запустить полный стенд |
+| `task up` | Запустить базовый профиль `apps`, без AI |
 | `task up:deps` | Запустить только PostgreSQL и Redis |
 | `task db:init` | Повторно подготовить роль, базу Schedule и права, не удаляя volume |
 | `task status` | Показать все контейнеры, включая завершившиеся one-shot |
@@ -132,7 +132,7 @@ orbit/
 cp compose.override.yaml.example compose.override.yaml
 ```
 
-Раскомментируйте `build` только у разрабатываемого сервиса, затем выполните:
+В текущем шаблоне `build` уже включён у всех сервисов. Удалите/закомментируйте ненужные блоки и оставьте только разрабатываемый сервис, затем выполните:
 
 ```bash
 task build
@@ -174,3 +174,8 @@ docker compose --profile apps logs jwt-keygen
 | `503` на расписании | Health Schedule, `SCHEDULE_GRPC_ADDR`, доступность Redis/очереди, логи синхронизации и `SCHEDULE_SYNC_ENABLED` |
 | `postgres-init` / `schedule-migrate` завершился с ошибкой | Логи, существующая база Auth, admin credentials и права приложения; не удалять volume вслепую |
 | После `task clean` токены не принимаются | Это ожидаемо: была создана новая пара JWT-ключей |
+
+
+## 9. Подключить AI
+
+`task up` не запускает AI. Для Groq/FastEmbed/RAG и защищённого SSE API используйте [запуск с AI](../how-to/ai-local-stack.md): дополнительно Read-доступ к `ai-service`, `GROQ_API_KEY`, профиль `all`, Alembic и проверка потока с JWT. Профиль `ai` сам по себе не запускает Gateway/Auth. Для обновления с AI используйте `docker compose --profile all pull` и `up`, а не только команды `apps` выше.

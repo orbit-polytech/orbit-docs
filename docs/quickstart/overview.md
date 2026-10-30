@@ -21,7 +21,7 @@
 | [`navigation-service`](https://github.com/orbit-polytech/navigation-service) | Корпуса Политеха (БС, АВ, ПР), аудитории, построение маршрутов | Go 1.25, gRPC, PostgreSQL |
 | [`tasks-service`](https://github.com/orbit-polytech/tasks-service) | Учебные задачи, дедлайны лабораторных работ (эталонный сервис) | Go 1.25, gRPC, Clean Architecture, PostgreSQL |
 | [`notification-service`](https://github.com/orbit-polytech/notification-service) | Очередь отправки push-уведомлений и Telegram-сообщений | Go 1.25, gRPC, RabbitMQ Consumer |
-| [`ai-service`](https://github.com/orbit-polytech/ai-service) | RAG-поиск по базе знаний вуза, Gemini API, эмбеддинги `vector(768)` | Python 3.12, FastAPI, gRPC, pgvector, uv |
+| [`ai-service`](https://github.com/orbit-polytech/ai-service) | RAG, Groq, FastEmbed (384d), потоковый API через Gateway | Python 3.13+, grpc.aio, pgvector, uv |
 | [`bot-service`](https://github.com/orbit-polytech/bot-service) | Официальный Telegram-бот для студентов Политеха | Python 3.12, aiogram 3, long polling / webhook |
 | [`mobile`](https://github.com/orbit-polytech/mobile) | Кроссплатформенное мобильное приложение для iOS и Android | Flutter 3.x, Dart, MVVM / BLoC |
 | [`orbit-docs`](https://github.com/orbit-polytech/orbit-docs) | Центральная база знаний и инженерная документация команды | MkDocs Material, Markdown |
@@ -135,3 +135,8 @@ final version 2
 - [ ] Миграции БД обратимы (есть парные up и down скрипты)
 - [ ] В логах нет токенов, паролей, кодов подтверждения
 ```
+
+
+## Актуальный Python/AI
+
+AI уже реализован и подключён к Gateway: [запуск](../how-to/ai-local-stack.md), [API](../gateway/ai-api.md). Строка bot-service в таблице описывает целевую архитектуру; действующего Telegram-компонента пока нет.
