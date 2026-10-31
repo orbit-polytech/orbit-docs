@@ -53,7 +53,8 @@ final class ScheduleReady extends ScheduleState {
     required this.group,
     required this.data,
     required this.selectedDayIndex,
-    required this.lastCheckedAt,
+    required this.deviceUpdatedAt,
+    this.serverLastCheckedAt,
     this.isRefreshing = false,
     this.refreshFailure,
   });
@@ -61,7 +62,10 @@ final class ScheduleReady extends ScheduleState {
   final String group;
   final ScheduleData data;
   final int selectedDayIndex;
-  final DateTime lastCheckedAt;
+  /// Момент локального сохранения данных на устройстве (DateTime.now() при записи в Hive/кэш)
+  final DateTime deviceUpdatedAt;
+  /// Момент проверки данных бэкендом в источнике (из metadata.last_checked_at), может отсутствовать
+  final DateTime? serverLastCheckedAt;
   final bool isRefreshing;
   final Failure? refreshFailure;
 
@@ -69,7 +73,9 @@ final class ScheduleReady extends ScheduleState {
     String? group,
     ScheduleData? data,
     int? selectedDayIndex,
-    DateTime? lastCheckedAt,
+    DateTime? deviceUpdatedAt,
+    DateTime? serverLastCheckedAt,
+    bool clearServerLastCheckedAt = false,
     bool? isRefreshing,
     Failure? refreshFailure,
     bool clearRefreshFailure = false, // Явный флаг для сброса ошибки
@@ -78,7 +84,8 @@ final class ScheduleReady extends ScheduleState {
       group: group ?? this.group,
       data: data ?? this.data,
       selectedDayIndex: selectedDayIndex ?? this.selectedDayIndex,
-      lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
+      deviceUpdatedAt: deviceUpdatedAt ?? this.deviceUpdatedAt,
+      serverLastCheckedAt: clearServerLastCheckedAt ? null : (serverLastCheckedAt ?? this.serverLastCheckedAt),
       isRefreshing: isRefreshing ?? this.isRefreshing,
       refreshFailure: clearRefreshFailure ? null : (refreshFailure ?? this.refreshFailure),
     );
@@ -167,7 +174,8 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
         group: event.group,
         data: cachedResult.value,
         selectedDayIndex: 0,
-        lastCheckedAt: cachedResult.value.deviceCachedAt,
+        deviceUpdatedAt: cachedResult.value.deviceCachedAt,
+        serverLastCheckedAt: cachedResult.value.serverLastCheckedAt,
         isRefreshing: true,
       ));
     } else {
@@ -185,7 +193,8 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
       emit(switch (syncResult) {
         Ok(:final value) => current.copyWith(
             data: value,
-            lastCheckedAt: DateTime.now(),
+            deviceUpdatedAt: DateTime.now(),
+            serverLastCheckedAt: value.serverLastCheckedAt,
             isRefreshing: false,
             clearRefreshFailure: true,
           ),
@@ -199,7 +208,8 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
         group: event.group,
         data: syncResult.value,
         selectedDayIndex: 0,
-        lastCheckedAt: DateTime.now(),
+        deviceUpdatedAt: DateTime.now(),
+        serverLastCheckedAt: syncResult.value.serverLastCheckedAt,
         isRefreshing: false,
       ));
     } else if (syncResult is Error<ScheduleData>) {
@@ -245,7 +255,8 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
     emit(switch (syncResult) {
       Ok(:final value) => currentAfter.copyWith(
           data: value,
-          lastCheckedAt: DateTime.now(),
+          deviceUpdatedAt: DateTime.now(),
+          serverLastCheckedAt: value.serverLastCheckedAt,
           isRefreshing: false,
           clearRefreshFailure: true,
         ),

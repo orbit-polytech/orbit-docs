@@ -81,7 +81,8 @@ final class ScheduleReady extends ScheduleState {
     required this.group,
     required this.data,
     required this.selectedDayIndex,
-    required this.lastCheckedAt,
+    required this.deviceUpdatedAt,
+    this.serverLastCheckedAt,
     this.isRefreshing = false,
     this.refreshFailure,
   });
@@ -89,7 +90,10 @@ final class ScheduleReady extends ScheduleState {
   final String group;
   final ScheduleData data;
   final int selectedDayIndex;
-  final DateTime lastCheckedAt;
+  /// Момент локального сохранения данных на смартфоне (Hive кэш)
+  final DateTime deviceUpdatedAt;
+  /// Момент проверки сервером в источнике (metadata.last_checked_at)
+  final DateTime? serverLastCheckedAt;
   final bool isRefreshing;
   final Failure? refreshFailure;
 
@@ -97,7 +101,9 @@ final class ScheduleReady extends ScheduleState {
     String? group,
     ScheduleData? data,
     int? selectedDayIndex,
-    DateTime? lastCheckedAt,
+    DateTime? deviceUpdatedAt,
+    DateTime? serverLastCheckedAt,
+    bool clearServerLastCheckedAt = false,
     bool? isRefreshing,
     Failure? refreshFailure,
     bool clearRefreshFailure = false, // Явный сброс ошибки
@@ -106,7 +112,8 @@ final class ScheduleReady extends ScheduleState {
       group: group ?? this.group,
       data: data ?? this.data,
       selectedDayIndex: selectedDayIndex ?? this.selectedDayIndex,
-      lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
+      deviceUpdatedAt: deviceUpdatedAt ?? this.deviceUpdatedAt,
+      serverLastCheckedAt: clearServerLastCheckedAt ? null : (serverLastCheckedAt ?? this.serverLastCheckedAt),
       isRefreshing: isRefreshing ?? this.isRefreshing,
       refreshFailure: clearRefreshFailure ? null : (refreshFailure ?? this.refreshFailure),
     );
@@ -177,7 +184,8 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
         group: event.group,
         data: cachedResult.value,
         selectedDayIndex: 0,
-        lastCheckedAt: cachedResult.value.deviceCachedAt,
+        deviceUpdatedAt: cachedResult.value.deviceCachedAt,
+        serverLastCheckedAt: cachedResult.value.serverLastCheckedAt,
         isRefreshing: true,
       ));
     } else {
@@ -194,7 +202,8 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
       emit(switch (syncResult) {
         Ok(:final value) => current.copyWith(
             data: value,
-            lastCheckedAt: DateTime.now(),
+            deviceUpdatedAt: DateTime.now(),
+            serverLastCheckedAt: value.serverLastCheckedAt,
             isRefreshing: false,
             clearRefreshFailure: true,
           ),
@@ -208,7 +217,8 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
         group: event.group,
         data: syncResult.value,
         selectedDayIndex: 0,
-        lastCheckedAt: DateTime.now(),
+        deviceUpdatedAt: DateTime.now(),
+        serverLastCheckedAt: syncResult.value.serverLastCheckedAt,
         isRefreshing: false,
       ));
     } else if (syncResult is Error<ScheduleData>) {
@@ -252,7 +262,8 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
     emit(switch (syncResult) {
       Ok(:final value) => currentAfter.copyWith(
           data: value,
-          lastCheckedAt: DateTime.now(),
+          deviceUpdatedAt: DateTime.now(),
+          serverLastCheckedAt: value.serverLastCheckedAt,
           isRefreshing: false,
           clearRefreshFailure: true,
         ),
@@ -366,21 +377,23 @@ void main() {
     ],
   );
 
-  // Тест 2: Защита от гонки А -> Б -> А
+  // Тест 2: Защита от гонки А -> Б -> А (детерминированный контроль через Completer)
+  final completerA1 = Completer<Result<ScheduleData>>();
+  final completerB = Completer<Result<ScheduleData>>();
+  final completerA2 = Completer<Result<ScheduleData>>();
+  var callCountA = 0;
+
   blocTest<ScheduleBloc, ScheduleState>(
     'при быстрой последовательности А -> Б -> А старый сетевой ответ А отбрасывается',
     build: () {
       when(() => mockGetCached(any())).thenAnswer((_) async => const Error(CacheFailure(message: 'empty')));
-      
-      // Имитируем медленный первый запрос для группы A (500 мс)
-      when(() => mockSync('group-A', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async {
-        await Future.delayed(const Duration(milliseconds: 500));
-        return Ok(dataA_Stale);
+
+      // Детерминированный порядок завершения через Completer без случайных таймаутов
+      when(() => mockSync('group-A', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) {
+        callCountA++;
+        return callCountA == 1 ? completerA1.future : completerA2.future;
       });
-      // Быстрый ответ для группы B
-      when(() => mockSync('group-B', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async => Ok(dataB));
-      // Финальный быстрый ответ для повторного выбора группы A
-      when(() => mockSync('group-A', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async => Ok(dataA_Fresh));
+      when(() => mockSync('group-B', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) => completerB.future);
 
       return ScheduleBloc(
         getCachedSchedule: mockGetCached,
@@ -388,11 +401,16 @@ void main() {
       );
     },
     act: (bloc) async {
-      bloc.add(const ScheduleGroupChanged(group: 'group-A')); // поколение 1
-      await Future.delayed(const Duration(milliseconds: 50));
-      bloc.add(const ScheduleGroupChanged(group: 'group-B')); // поколение 2
-      await Future.delayed(const Duration(milliseconds: 50));
-      bloc.add(const ScheduleGroupChanged(group: 'group-A')); // поколение 3
+      bloc.add(const ScheduleGroupChanged(group: 'group-A')); // Поколение 1
+      bloc.add(const ScheduleGroupChanged(group: 'group-B')); // Поколение 2
+      bloc.add(const ScheduleGroupChanged(group: 'group-A')); // Поколение 3
+
+      // Завершаем запросы не по порядку: сначала актуальный (поколение 3)
+      completerA2.complete(Ok(dataA_Fresh));
+      // Затем завершается задержавшийся старый запрос поколения 1
+      completerA1.complete(Ok(dataA_Stale));
+      // И запрос поколения 2
+      completerB.complete(Ok(dataB));
     },
     verify: (bloc) {
       // Итоговое состояние должно быть строго от поколения 3 (dataA_Fresh), dataA_Stale отброшен

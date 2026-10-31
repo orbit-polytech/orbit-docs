@@ -111,9 +111,10 @@ Dio createDioClient({
 
 ## 3. `AuthInterceptor`: Защита от двойного Refresh и повтора запроса
 
-Интерцептор решает две ключевые проблемы многопоточности в мобильных приложениях:
+Интерцептор решает три ключевые проблемы сетевого слоя в мобильных приложениях:
 1. **Проверка актуальности токена:** если несколько параллельных запросов упали с 401, первый запрос запускает refresh. Второй запрос, ожидавший в очереди `QueuedInterceptor`, перед запуском повторного refresh проверяет: не обновился ли уже токен в хранилище? Если обновился — он сразу повторяет запрос с новым токеном.
 2. **Изоляция ошибок:** ошибка 403 (нет прав на ресурс) при повторе запроса передается в UI и **не сбрасывает** токены сессии.
+3. **Устранение взаимной блокировки (Deadlock):** повторный запрос выполняется через изолированный `_tokenDio.fetch(retryOptions)` без интерцепторов. Это исключает повторное попадание в заблокированную очередь `QueuedInterceptor` при ошибке повтора.
 
 ```dart
 // core/network/auth_interceptor.dart
@@ -195,13 +196,13 @@ class AuthInterceptor extends QueuedInterceptor {
       return handler.next(err);
     }
 
-    // 2. Повторяем исходный запрос с актуальным токеном
+    // 2. Повторяем исходный запрос через отдельный _tokenDio (предотвращает дедлок в QueuedInterceptor)
     try {
       final retryOptions = err.requestOptions;
       retryOptions.headers['Authorization'] = 'Bearer $tokenToUse';
       retryOptions.extra['isRetry'] = true;
 
-      final cloneResponse = await _dio.fetch(retryOptions);
+      final cloneResponse = await _tokenDio.fetch(retryOptions);
       return handler.resolve(cloneResponse);
     } on DioException catch (retryError) {
       // Ошибка повторного запроса (например 403) НЕ должна очищать сессию!
