@@ -157,12 +157,16 @@ nav:
   # 5. FLUTTER & МОБИЛКА
   # =========================================================================
   - Flutter & Мобилка:
-      - Обзор приложения mobile: mobile-flutter/overview.md
-      - Архитектура MVVM & Command (Explanation): mobile-flutter/mvvm-architecture.md
+      - Обзор и Clean Architecture: mobile-flutter/overview.md
+      - Архитектура BLoC и защита от гонок: mobile-flutter/bloc-architecture.md
+      - Кэш Hive, Cache-First и Сеть: mobile-flutter/offline-and-storage.md
+      - Дизайн-система и Floating Dock: mobile-flutter/design-tokens-and-ui.md
+      - Групповые задачи старосты (Запланировано): mobile-flutter/group-tasks.md
       - Вёрстка экранов и виджеты (Tutorial): mobile-flutter/widgets-tutorial.md
       - Сеть, DTO и хранилище (How-to): mobile-flutter/network-and-storage.md
+      - Архив - MVVM с ChangeNotifier: mobile-flutter/mvvm-architecture.md
       - Основы Flutter & Dart: tutorial/mobile/01-flutter-basics.md
-      - Управление состоянием BLoC: tutorial/mobile/02-bloc-state.md
+      - Практика BLoC: tutorial/mobile/02-bloc-state.md
       - Клиент REST API с JWT: tutorial/mobile/03-rest-client-jwt.md
 
   # =========================================================================
