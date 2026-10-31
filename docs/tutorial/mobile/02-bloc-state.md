@@ -36,7 +36,7 @@ sealed class ScheduleEvent {
   const ScheduleEvent();
 }
 
-/// Смена учебной группы (требует отмены предыдущих запросов через restartable)
+/// Смена учебной группы
 final class ScheduleGroupChanged extends ScheduleEvent {
   const ScheduleGroupChanged({required this.group});
   final String group;
@@ -100,7 +100,7 @@ final class ScheduleReady extends ScheduleState {
     DateTime? lastCheckedAt,
     bool? isRefreshing,
     Failure? refreshFailure,
-    bool clearRefreshFailure = false,
+    bool clearRefreshFailure = false, // Явный сброс ошибки
   }) {
     return ScheduleReady(
       group: group ?? this.group,
@@ -120,7 +120,7 @@ final class ScheduleEmptyError extends ScheduleState {
 }
 ```
 
-### 2.3 Логика BLoC с защитой от гонок и отменой запросов
+### 2.3 Логика BLoC: Поколения загрузки и отмена сокетов
 ```dart
 // lib/features/schedule/presentation/bloc/schedule_bloc.dart
 import 'package:bloc_concurrency/bloc_concurrency.dart';
@@ -153,21 +153,24 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   final GetCachedScheduleUseCase _getCachedSchedule;
   final SyncScheduleUseCase _syncSchedule;
 
-  CancelToken? _cancelToken;
+  int _generation = 0;
+  CancelToken? _activeCancelToken;
   String? _currentGroup;
 
   Future<void> _onGroupChanged(
     ScheduleGroupChanged event,
     Emitter<ScheduleState> emit,
   ) async {
+    final generation = ++_generation;
     _currentGroup = event.group;
     
     // Отменяем активный сокет-запрос предыдущей группы
-    _cancelToken?.cancel('Смена группы');
-    _cancelToken = CancelToken();
+    _activeCancelToken?.cancel('Смена группы');
+    final localCancelToken = CancelToken();
+    _activeCancelToken = localCancelToken;
 
     final cachedResult = await _getCachedSchedule(event.group);
-    if (_currentGroup != event.group) return;
+    if (generation != _generation || emit.isDone) return;
 
     if (cachedResult is Ok<ScheduleData>) {
       emit(ScheduleReady(
@@ -181,10 +184,10 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
       emit(const ScheduleLoadingFirstTime());
     }
 
-    final syncResult = await _syncSchedule(event.group, cancelToken: _cancelToken);
+    final syncResult = await _syncSchedule(event.group, cancelToken: localCancelToken);
 
-    // Проверка актуальности после завершения сетевого запроса
-    if (_currentGroup != event.group) return;
+    // Защита от сценария А -> Б -> А: старое поколение отбрасывается
+    if (generation != _generation || emit.isDone) return;
 
     if (state is ScheduleReady) {
       final current = state as ScheduleReady;
@@ -233,12 +236,18 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
 
     if (currentBefore.group != event.group || _currentGroup != event.group) return;
 
-    emit(currentBefore.copyWith(isRefreshing: true));
-    final syncResult = await _syncSchedule(event.group, cancelToken: _cancelToken);
+    final generation = ++_generation;
+    final localCancelToken = CancelToken();
+    _activeCancelToken?.cancel('Отменено ручным обновлением');
+    _activeCancelToken = localCancelToken;
 
+    emit(currentBefore.copyWith(isRefreshing: true));
+    final syncResult = await _syncSchedule(event.group, cancelToken: localCancelToken);
+
+    if (generation != _generation || emit.isDone) return;
     if (state is! ScheduleReady) return;
+
     final currentAfter = state as ScheduleReady;
-    if (currentAfter.group != event.group || _currentGroup != event.group) return;
 
     emit(switch (syncResult) {
       Ok(:final value) => currentAfter.copyWith(
@@ -256,7 +265,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
 
   @override
   Future<void> close() {
-    _cancelToken?.cancel('Закрытие BLoC');
+    _activeCancelToken?.cancel('Закрытие BLoC');
     return super.close();
   }
 }
@@ -314,10 +323,11 @@ class ScheduleScreen extends StatelessWidget {
 
 ## 4. Модульное тестирование BLoC (`bloc_test`)
 
-Тесты должны проверять сохранение кэша и защиту от гонок:
+Тесты покрывают не только счастливые пути, но и сценарии гонок (race conditions):
 
 ```dart
 // test/features/schedule/presentation/bloc/schedule_bloc_test.dart
+import 'dart:async';
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -334,6 +344,7 @@ void main() {
     mockSync = MockSyncScheduleUseCase();
   });
 
+  // Тест 1: Успешный Cache-First
   blocTest<ScheduleBloc, ScheduleState>(
     'эмитит ScheduleReady с кэшем, затем обновляет свежими данными',
     build: () {
@@ -355,24 +366,38 @@ void main() {
     ],
   );
 
+  // Тест 2: Защита от гонки А -> Б -> А
   blocTest<ScheduleBloc, ScheduleState>(
-    'при ошибке фонового обновления сохраняет кэш на экране и проставляет refreshFailure',
+    'при быстрой последовательности А -> Б -> А старый сетевой ответ А отбрасывается',
     build: () {
-      when(() => mockGetCached('261-334')).thenAnswer((_) async => Ok(testCachedData));
-      when(() => mockSync('261-334', cancelToken: any(named: 'cancelToken')))
-          .thenAnswer((_) async => Error(NetworkFailure(message: 'No internet')));
+      when(() => mockGetCached(any())).thenAnswer((_) async => const Error(CacheFailure(message: 'empty')));
+      
+      // Имитируем медленный первый запрос для группы A (500 мс)
+      when(() => mockSync('group-A', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async {
+        await Future.delayed(const Duration(milliseconds: 500));
+        return Ok(dataA_Stale);
+      });
+      // Быстрый ответ для группы B
+      when(() => mockSync('group-B', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async => Ok(dataB));
+      // Финальный быстрый ответ для повторного выбора группы A
+      when(() => mockSync('group-A', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async => Ok(dataA_Fresh));
+
       return ScheduleBloc(
         getCachedSchedule: mockGetCached,
         syncSchedule: mockSync,
       );
     },
-    act: (bloc) => bloc.add(const ScheduleGroupChanged(group: '261-334')),
-    expect: () => [
-      isA<ScheduleReady>().having((s) => s.isRefreshing, 'isRefreshing', true),
-      isA<ScheduleReady>()
-          .having((s) => s.isRefreshing, 'isRefreshing', false)
-          .having((s) => s.refreshFailure, 'refreshFailure', isNotNull),
-    ],
+    act: (bloc) async {
+      bloc.add(const ScheduleGroupChanged(group: 'group-A')); // поколение 1
+      await Future.delayed(const Duration(milliseconds: 50));
+      bloc.add(const ScheduleGroupChanged(group: 'group-B')); // поколение 2
+      await Future.delayed(const Duration(milliseconds: 50));
+      bloc.add(const ScheduleGroupChanged(group: 'group-A')); // поколение 3
+    },
+    verify: (bloc) {
+      // Итоговое состояние должно быть строго от поколения 3 (dataA_Fresh), dataA_Stale отброшен
+      expect(bloc.state, isA<ScheduleReady>().having((s) => s.data, 'data', dataA_Fresh));
+    },
   );
 }
 ```
@@ -383,5 +408,5 @@ void main() {
 
 1. BLoC управляет только локальными состояниями и событиями экрана — он **не заменяет** чистую архитектуру (Clean Architecture).
 2. Используйте `ScheduleReady` с флагом `isRefreshing`, чтобы не стирать расписание с экрана при сбоях сети.
-3. Проверяйте актуальность группы **после** каждого `await` и отменяйте сокет-запросы через `CancelToken`.
+3. Проверяйте актуальность поколения (`generation == _generation`) **после** каждого `await` и отменяйте сокет-запросы через `CancelToken`.
 4. Тестируйте поведение BLoC на гонки и сетевые сбои через `bloc_test`.

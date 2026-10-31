@@ -90,7 +90,11 @@ Dio createDioClient({
   );
 
   dio.interceptors.addAll([
-    AuthInterceptor(dio: dio, tokenStorage: tokenStorage),
+    AuthInterceptor(
+      dio: dio,
+      tokenStorage: tokenStorage,
+      tokenRefreshUrl: '$baseUrl/api/v1/auth/refresh',
+    ),
     LogInterceptor(
       requestHeader: false,
       responseHeader: false,
@@ -105,11 +109,11 @@ Dio createDioClient({
 
 ---
 
-## 3. `AuthInterceptor`: Single-Flight Refresh токена
+## 3. `AuthInterceptor`: Защита от двойного Refresh и повтора запроса
 
-Интерцептор выполняет ключевые функции:
-1. Автоматически добавляет заголовок `Authorization: Bearer <token>` во все защищенные запросы (запросы расписания выполняются без токена с `extra: {'requiresAuth': false}`).
-2. При получении ошибки `401 Unauthorized` запускает **ровно один** запрос на `/api/v1/auth/refresh` (Single-Flight мьютекс), не уходя в бесконечные циклы повторов (`isRetry`).
+Интерцептор решает две ключевые проблемы многопоточности в мобильных приложениях:
+1. **Проверка актуальности токена:** если несколько параллельных запросов упали с 401, первый запрос запускает refresh. Второй запрос, ожидавший в очереди `QueuedInterceptor`, перед запуском повторного refresh проверяет: не обновился ли уже токен в хранилище? Если обновился — он сразу повторяет запрос с новым токеном.
+2. **Изоляция ошибок:** ошибка 403 (нет прав на ресурс) при повторе запроса передается в UI и **не сбрасывает** токены сессии.
 
 ```dart
 // core/network/auth_interceptor.dart
@@ -119,13 +123,18 @@ import '../storage/token_storage.dart';
 class AuthInterceptor extends QueuedInterceptor {
   final Dio _dio;
   final TokenStorage _tokenStorage;
+  final String _tokenRefreshUrl;
   final Dio _tokenDio;
 
   Future<String?>? _refreshFuture;
 
-  AuthInterceptor({required Dio dio, required TokenStorage tokenStorage})
-      : _dio = dio,
+  AuthInterceptor({
+    required Dio dio,
+    required TokenStorage tokenStorage,
+    required String tokenRefreshUrl,
+  })  : _dio = dio,
         _tokenStorage = tokenStorage,
+        _tokenRefreshUrl = tokenRefreshUrl,
         _tokenDio = Dio(BaseOptions(
           baseUrl: dio.options.baseUrl,
           connectTimeout: const Duration(seconds: 5),
@@ -161,28 +170,42 @@ class AuthInterceptor extends QueuedInterceptor {
       return handler.next(err);
     }
 
-    try {
-      final newToken = await _performSingleFlightRefresh();
-      if (newToken == null) {
+    // 1. Проверяем: возможно, пока запрос ждал в очереди, токен уже обновился параллельным запросом
+    final requestHeader = err.requestOptions.headers['Authorization'] as String?;
+    final currentToken = await _tokenStorage.getAccessToken();
+
+    String? tokenToUse = currentToken;
+
+    if (currentToken == null || requestHeader == 'Bearer $currentToken') {
+      try {
+        tokenToUse = await _performSingleFlightRefresh();
+      } on DioException catch (refreshErr) {
+        final code = refreshErr.response?.statusCode;
+        if (code == 401 || code == 403) {
+          // Сбрасываем сессию только если сам Refresh токен недействителен
+          await _tokenStorage.clear();
+        }
+        return handler.next(err);
+      } catch (_) {
         return handler.next(err);
       }
+    }
 
-      // Повторяем исходный упавший запрос ровно 1 раз
+    if (tokenToUse == null) {
+      return handler.next(err);
+    }
+
+    // 2. Повторяем исходный запрос с актуальным токеном
+    try {
       final retryOptions = err.requestOptions;
-      retryOptions.headers['Authorization'] = 'Bearer $newToken';
+      retryOptions.headers['Authorization'] = 'Bearer $tokenToUse';
       retryOptions.extra['isRetry'] = true;
 
       final cloneResponse = await _dio.fetch(retryOptions);
       return handler.resolve(cloneResponse);
-    } on DioException catch (refreshErr) {
-      // Стираем токены ТОЛЬКО если сервер подтвердил недействительность сессии (401/403)
-      final code = refreshErr.response?.statusCode;
-      if (code == 401 || code == 403) {
-        await _tokenStorage.clear();
-      }
-      return handler.next(err);
-    } catch (_) {
-      return handler.next(err);
+    } on DioException catch (retryError) {
+      // Ошибка повторного запроса (например 403) НЕ должна очищать сессию!
+      return handler.next(retryError);
     }
   }
 
@@ -199,7 +222,7 @@ class AuthInterceptor extends QueuedInterceptor {
       }
 
       final response = await _tokenDio.post<Map<String, dynamic>>(
-        '/api/v1/auth/refresh',
+        _tokenRefreshUrl,
         data: {'refresh_token': refreshToken},
       );
 
@@ -236,11 +259,11 @@ class AuthInterceptor extends QueuedInterceptor {
 // ОШИБКА 1: Включение логирования тела ответов в продакшене
 LogInterceptor(requestBody: true, responseBody: true) // Утечка паролей и личных чатов!
 
-// ОШИБКА 2: Стирание токенов при любой сетевой ошибке (таймаут)
-catch (e) { await secureStorage.clear(); } // Студента выбивает из аккаунта в метро!
+// ОШИБКА 2: Повторный refresh без проверки, не обновился ли токен в очереди
+await _performSingleFlightRefresh(); // Избыточные запросы при серии 401!
 
-// ОШИБКА 3: Повтор запроса без флага защиты от зацикливания
-await dio.fetch(err.requestOptions); // Риск бесконечного цикла запросов к серверу!
+// ОШИБКА 3: Очистка токенов при любой ошибке (включая 403 на защищенном ресурсе)
+catch (e) { await secureStorage.clear(); } // Студента выбивает из аккаунта при отказе в доступе!
 ```
 
 ### ✅ Как правильно:
@@ -248,11 +271,11 @@ await dio.fetch(err.requestOptions); // Риск бесконечного цик
 // Токены надежно хранятся в KeyStore/Keychain с аппаратной поддержкой:
 await tokenStorage.saveTokens(accessToken: acc, refreshToken: ref);
 
-// Изолированный мьютекс объединяет параллельные запросы обновления:
-final newToken = await _performSingleFlightRefresh();
+// Проверка токена перед повторным refresh предотвращает дублирование запросов:
+if (currentToken == null || requestHeader == 'Bearer $currentToken') { ... }
 
-// Защита от бесконечного цикла через флаг isRetry:
-retryOptions.extra['isRetry'] = true;
+// Изолированная обработка ошибок повтора:
+catch (retryError) { return handler.next(retryError); }
 ```
 
 ---
@@ -261,5 +284,5 @@ retryOptions.extra['isRetry'] = true;
 
 1. Сетевое взаимодействие централизовано через клиент `Dio` и API Gateway.
 2. Чувствительные токены сессии сохраняются в `FlutterSecureStorage`.
-3. `AuthInterceptor` использует Single-Flight Mutex и флаг `isRetry` для защиты от гонок и бесконечных повторов.
-4. Логирование строго изолировано: тела запросов и авторизационные заголовки не пишутся в открытый вывод.
+3. `AuthInterceptor` проверяет актуальность токена перед вызовом refresh и защищает от гонок и ложных сбросов сессии.
+4. Логирование строго изолировано: тела запросов и авторизационные заголовки не выводятся в консоль.

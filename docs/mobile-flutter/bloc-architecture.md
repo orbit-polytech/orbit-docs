@@ -94,14 +94,18 @@ final class ScheduleEmptyError extends ScheduleState {
 
 ---
 
-## 3. Защита от гонок состояний (Race Conditions)
+## 3. Защита от гонок состояний: Счётчик поколений и отмена сокетов
 
-### Проблема двух обработчиков:
-Если студент инициировал ручное обновление группы А (`_onRefreshTriggered`), а затем быстро переключился на группу Б (`_onGroupChanged`), два обработчика работают параллельно. Без явного контроля ответ группы А может прийти позже и перетереть экран группы Б.
+### Проблема сценария «А ➔ Б ➔ А»:
+Если студент переключился с группы А на Б, а затем быстро вернулся обратно на А, простая проверка `_currentGroup == event.group` пропустит старый ответ первого запроса группы А.
 
-### Комплексное решение:
-1. **Сетевая отмена (`CancelToken`):** При смене группы активный HTTP-запрос отменяется на уровне сокета.
-2. **Проверка поколения и актуальности группы:** Перед каждым вызовом `emit` состояние проверяется **после** завершения `await`. Если активная группа изменилась за время сетевого ответа — старый результат отбрасывается.
+### Решение: Поколения загрузки (Generation Counter) и `CancelToken`:
+1. **Счётчик поколений (`_generation`):** Каждый новый запрос инкрементирует целочисленный счетчик. Локальная переменная `final generation = ++_generation;` захватывается перед асинхронными вызовами. После любого `await` выполняется проверка:
+   ```dart
+   if (generation != _generation || emit.isDone) return;
+   ```
+   Старый запрос группы А (поколение 1) будет отброшен, так как текущее поколение уже равно 3!
+2. **Локальный захват `CancelToken`:** Экземпляр `CancelToken` сохраняется в локальную переменную метода, исключая чтение перезаписанного токена из общего поля после `await`.
 3. **Сохранение выбранного дня:** При переключении дня недели флаг `refreshFailure` сохраняется и не сбрасывается втихую.
 
 ```dart
@@ -136,24 +140,27 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   final GetCachedScheduleUseCase _getCachedSchedule;
   final SyncScheduleUseCase _syncSchedule;
 
-  CancelToken? _cancelToken;
+  int _generation = 0;
+  CancelToken? _activeCancelToken;
   String? _currentGroup;
 
   Future<void> _onGroupChanged(
     ScheduleGroupChanged event,
     Emitter<ScheduleState> emit,
   ) async {
+    final generation = ++_generation;
     _currentGroup = event.group;
     
-    // 1. Отменяем предыдущий выполняющийся сетевой запрос
-    _cancelToken?.cancel('Группа изменена на ${event.group}');
-    _cancelToken = CancelToken();
+    // 1. Отменяем сокетный запрос предыдущего поколения
+    _activeCancelToken?.cancel('Отменено переходом на поколение $generation');
+    final localCancelToken = CancelToken();
+    _activeCancelToken = localCancelToken;
 
     // 2. Мгновенно берем локальный кэш новой группы из Hive
     final cachedResult = await _getCachedSchedule(event.group);
 
-    // Проверяем, не сменилась ли группа за время чтения Hive
-    if (_currentGroup != event.group) return;
+    // Проверяем актуальность поколения после чтения Hive
+    if (generation != _generation || emit.isDone) return;
 
     if (cachedResult is Ok<ScheduleData>) {
       emit(ScheduleReady(
@@ -167,11 +174,11 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
       emit(const ScheduleLoadingFirstTime());
     }
 
-    // 3. Запрашиваем свежие данные у Gateway
-    final syncResult = await _syncSchedule(event.group, cancelToken: _cancelToken);
+    // 3. Запрашиваем свежие данные у Gateway с локальным токеном отмены
+    final syncResult = await _syncSchedule(event.group, cancelToken: localCancelToken);
 
-    // КРИТИЧЕСКАЯ ПРОВЕРКА ПОСЛЕ AWAIT: отбрасываем ответ, если группа уже сменилась
-    if (_currentGroup != event.group) return;
+    // КРИТИЧЕСКАЯ ПРОВЕРКА ПОКОЛЕНИЯ ПОСЛЕ СЕТЕВОГО AWAIT
+    if (generation != _generation || emit.isDone) return;
 
     if (state is ScheduleReady) {
       final current = state as ScheduleReady;
@@ -220,14 +227,20 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
 
     if (currentBefore.group != event.group || _currentGroup != event.group) return;
 
+    final generation = ++_generation;
+    final localCancelToken = CancelToken();
+    _activeCancelToken?.cancel('Отменено ручным обновлением');
+    _activeCancelToken = localCancelToken;
+
     emit(currentBefore.copyWith(isRefreshing: true));
 
-    final syncResult = await _syncSchedule(event.group, cancelToken: _cancelToken);
+    final syncResult = await _syncSchedule(event.group, cancelToken: localCancelToken);
 
-    // Проверка актуальности после завершения сетевого запроса
+    // Проверка актуальности поколения после завершения сетевого запроса
+    if (generation != _generation || emit.isDone) return;
     if (state is! ScheduleReady) return;
+
     final currentAfter = state as ScheduleReady;
-    if (currentAfter.group != event.group || _currentGroup != event.group) return;
 
     emit(switch (syncResult) {
       Ok(:final value) => currentAfter.copyWith(
@@ -245,7 +258,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
 
   @override
   Future<void> close() {
-    _cancelToken?.cancel('BLoC закрыт');
+    _activeCancelToken?.cancel('BLoC закрыт');
     return super.close();
   }
 }
@@ -254,6 +267,9 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
 ---
 
 ## 4. Централизованный `AppBlocObserver` и безопасность логов
+
+> **Критическое правило безопасности логирования:**  
+> В метод `developer.log` категорически запрещено передавать объект ошибки в поле `error: error`. Если исключением является `DioException`, исходный объект может содержать заголовки авторизации, токены и конфиденциальное тело запроса.
 
 ```dart
 // lib/app/observer.dart
@@ -272,11 +288,11 @@ class AppBlocObserver extends BlocObserver {
 
   @override
   void onError(BlocBase bloc, Object error, StackTrace stackTrace) {
-    // В логи пишется только тип ошибки и стэк, без приватных полей и токенов
+    // Безопасное логирование: передается только имя типа ошибки, без приватных полей
     developer.log(
       'Error in ${bloc.runtimeType}: ${error.runtimeType}',
       name: 'BLoC',
-      error: error,
+      error: error.runtimeType.toString(), // Очищенная строковая диагностика
       stackTrace: stackTrace,
     );
     super.onError(bloc, error, stackTrace);
