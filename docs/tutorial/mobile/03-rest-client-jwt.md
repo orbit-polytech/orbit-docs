@@ -1,18 +1,18 @@
 # 03. Подключение к Gateway через REST API с JWT
 
-Мобильное приложение Orbit AI взаимодействует со всеми бэкенд-сервисами исключительно через **API Gateway** по протоколу HTTPS.
+Мобильное приложение Orbit Mobile взаимодействует со всеми бэкенд-сервисами исключительно через **API Gateway** по протоколу HTTPS.
 
 В этой главе мы реализуем сетевой слой на базе библиотеки **`Dio`**, защищённое хранение токенов через **`flutter_secure_storage`** и автоматическое обновление сессии (Refresh Token Flow) с помощью интерцепторов.
 
 ---
 
-## 1. Безопасное хранилище токенов (`FlutterSecureStorage`)
+## 1. Аппаратное хранилище токенов (`FlutterSecureStorage`)
 
-Критическая ошибка начинающих мобильных разработчиков — сохранение токенов авторизации в `SharedPreferences` (Android) или `NSUserDefaults` (iOS). В этих хранилищах данные лежат в открытом виде и легко извлекаются вредоносным ПО.
+Критическая ошибка начинающих мобильных разработчиков — сохранение токенов авторизации в `SharedPreferences` (Android) или `NSUserDefaults` (iOS). В этих хранилищах данные лежат в открытом виде в песочнице приложения и уязвимы при наличии физического доступа к файловой системе устройства.
 
-В Orbit AI используется **`flutter_secure_storage`**:
-- На **Android** данные шифруются ключом в аппаратном модуле **Android KeyStore**.
-- На **iOS** данные защищаются системным **Keychain Services**.
+В Orbit Mobile используется **`flutter_secure_storage`**:
+- На **Android** данные шифруются ключом в аппаратном модуле **Android KeyStore** (AES/GCM).
+- На **iOS** данные защищаются системным **Keychain Services** (с флагом `kSecAttrAccessibleAfterFirstUnlock`).
 
 ```dart
 // core/storage/token_storage.dart
@@ -62,7 +62,10 @@ class SecureTokenStorageImpl implements TokenStorage {
 
 ## 2. Настройка HTTP-клиента `Dio`
 
-Для работы с сетью используется библиотека `Dio`, предоставляющая поддержку интерцепторов, пула соединений и типизированных ошибок:
+Для работы с сетью используется библиотека `Dio`.
+
+> **Критическое правило безопасности логирования:**  
+> В `LogInterceptor` флаги `requestBody` и `responseBody` должны быть установлены в `false`. Вывод тела запросов в консоль или внешние сборщики крашей приводит к утечке JWT-токенов, паролей и персональных сообщений пользователей.
 
 ```dart
 // core/network/dio_client.dart
@@ -91,8 +94,8 @@ Dio createDioClient({
     LogInterceptor(
       requestHeader: false,
       responseHeader: false,
-      requestBody: true,
-      responseBody: true,
+      requestBody: false, // Запрещено: защита от утечки паролей и токенов
+      responseBody: false, // Запрещено: защита личных данных
     ),
   ]);
 
@@ -102,11 +105,11 @@ Dio createDioClient({
 
 ---
 
-## 3. `AuthInterceptor`: Автоматическая подстановка и Refresh токена
+## 3. `AuthInterceptor`: Single-Flight Refresh токена
 
-Интерцептор выполняет две ключевые функции:
-1. Автоматически добавляет заголовок `Authorization: Bearer <token>` во все запросы.
-2. При получении ошибки `401 Unauthorized` прозрачно запрашивает новый токен через `/api/v1/auth/refresh` и повторяет упавший запрос.
+Интерцептор выполняет ключевые функции:
+1. Автоматически добавляет заголовок `Authorization: Bearer <token>` во все защищенные запросы (запросы расписания выполняются без токена с `extra: {'requiresAuth': false}`).
+2. При получении ошибки `401 Unauthorized` запускает **ровно один** запрос на `/api/v1/auth/refresh` (Single-Flight мьютекс), не уходя в бесконечные циклы повторов (`isRetry`).
 
 ```dart
 // core/network/auth_interceptor.dart
@@ -116,69 +119,113 @@ import '../storage/token_storage.dart';
 class AuthInterceptor extends QueuedInterceptor {
   final Dio _dio;
   final TokenStorage _tokenStorage;
+  final Dio _tokenDio;
+
+  Future<String?>? _refreshFuture;
 
   AuthInterceptor({required Dio dio, required TokenStorage tokenStorage})
       : _dio = dio,
-        _tokenStorage = tokenStorage;
+        _tokenStorage = tokenStorage,
+        _tokenDio = Dio(BaseOptions(
+          baseUrl: dio.options.baseUrl,
+          connectTimeout: const Duration(seconds: 5),
+          receiveTimeout: const Duration(seconds: 5),
+        ));
 
   @override
   Future<void> onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // Не добавляем токен в открытые эндпоинты авторизации
-    if (!options.path.contains('/auth/login') && !options.path.contains('/auth/refresh')) {
-      final token = await _tokenStorage.getAccessToken();
-      if (token != null) {
-        options.headers['Authorization'] = 'Bearer $token';
-      }
+    // Не добавляем токен в открытые запросы и эндпоинты авторизации
+    if (options.extra['requiresAuth'] == false ||
+        options.path.contains('/auth/login') ||
+        options.path.contains('/auth/refresh')) {
+      return handler.next(options);
+    }
+
+    final token = await _tokenStorage.getAccessToken();
+    if (token != null) {
+      options.headers['Authorization'] = 'Bearer $token';
     }
     handler.next(options);
   }
 
   @override
   Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
-    // Если ошибка 401 произошла не на самом эндпоинте обновления токена:
-    if (err.response?.statusCode == 401 && !err.requestOptions.path.contains('/auth/refresh')) {
-      final refreshToken = await _tokenStorage.getRefreshToken();
+    final statusCode = err.response?.statusCode;
+    final isRetry = err.requestOptions.extra['isRetry'] == true;
 
-      if (refreshToken != null) {
-        try {
-          // Создаем отдельный изолированный инстанс Dio без интерцепторов для запроса refresh
-          final refreshDio = Dio(BaseOptions(baseUrl: _dio.options.baseUrl));
-          final response = await refreshDio.post(
-            '/api/v1/auth/refresh',
-            data: {'refresh_token': refreshToken},
-          );
-
-          final newAccessToken = response.data['access_token'] as String;
-          final newRefreshToken = response.data['refresh_token'] as String;
-
-          await _tokenStorage.saveTokens(
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
-          );
-
-          // Повторяем исходный упавший запрос с новым токеном:
-          final originalOptions = err.requestOptions;
-          originalOptions.headers['Authorization'] = 'Bearer $newAccessToken';
-
-          final cloneResponse = await _dio.fetch(originalOptions);
-          return handler.resolve(cloneResponse);
-        } catch (refreshErr) {
-          // Если Refresh токен тоже протух: очищаем хранилище и выходим из профиля
-          await _tokenStorage.clear();
-        }
-      }
+    // Не перехватываем, если это не 401, либо запрос уже повторялся, либо запрос был публичным
+    if (statusCode != 401 || isRetry || err.requestOptions.extra['requiresAuth'] == false) {
+      return handler.next(err);
     }
 
-    handler.next(err);
+    try {
+      final newToken = await _performSingleFlightRefresh();
+      if (newToken == null) {
+        return handler.next(err);
+      }
+
+      // Повторяем исходный упавший запрос ровно 1 раз
+      final retryOptions = err.requestOptions;
+      retryOptions.headers['Authorization'] = 'Bearer $newToken';
+      retryOptions.extra['isRetry'] = true;
+
+      final cloneResponse = await _dio.fetch(retryOptions);
+      return handler.resolve(cloneResponse);
+    } on DioException catch (refreshErr) {
+      // Стираем токены ТОЛЬКО если сервер подтвердил недействительность сессии (401/403)
+      final code = refreshErr.response?.statusCode;
+      if (code == 401 || code == 403) {
+        await _tokenStorage.clear();
+      }
+      return handler.next(err);
+    } catch (_) {
+      return handler.next(err);
+    }
+  }
+
+  Future<String?> _performSingleFlightRefresh() async {
+    if (_refreshFuture != null) {
+      return _refreshFuture;
+    }
+
+    _refreshFuture = () async {
+      final refreshToken = await _tokenStorage.getRefreshToken();
+      if (refreshToken == null) {
+        await _tokenStorage.clear();
+        return null;
+      }
+
+      final response = await _tokenDio.post<Map<String, dynamic>>(
+        '/api/v1/auth/refresh',
+        data: {'refresh_token': refreshToken},
+      );
+
+      final newAccessToken = response.data?['access_token'] as String?;
+      final newRefreshToken = response.data?['refresh_token'] as String?;
+
+      if (newAccessToken != null && newRefreshToken != null) {
+        await _tokenStorage.saveTokens(
+          accessToken: newAccessToken,
+          refreshToken: newRefreshToken,
+        );
+        return newAccessToken;
+      }
+
+      await _tokenStorage.clear();
+      return null;
+    }();
+
+    try {
+      return await _refreshFuture;
+    } finally {
+      _refreshFuture = null;
+    }
   }
 }
 ```
-
-> [!NOTE] QueuedInterceptor
-> Использование `QueuedInterceptor` гарантирует, что если 5 параллельных запросов одновременно получат 401, запрос на `/auth/refresh` выполнится **ровно один раз**. Остальные 4 запроса встанут в очередь и повторятся с полученным токеном.
 
 ---
 
@@ -186,29 +233,26 @@ class AuthInterceptor extends QueuedInterceptor {
 
 ### ❌ Как нельзя:
 ```dart
-// ОШИБКА 1: Ручное добавление заголовка в каждом запросе
-final response = await http.get(
-  Uri.parse('/tasks'),
-  headers: {'Authorization': 'Bearer $myToken'}, // Код дублируется во всех 50 репозиториях!
-);
+// ОШИБКА 1: Включение логирования тела ответов в продакшене
+LogInterceptor(requestBody: true, responseBody: true) // Утечка паролей и личных чатов!
 
-// ОШИБКА 2: Отсутствие очереди при обновлении токена
-// 10 одновременных запросов пошлют 10 вызовов refresh_token, заблокировав аккаунт
+// ОШИБКА 2: Стирание токенов при любой сетевой ошибке (таймаут)
+catch (e) { await secureStorage.clear(); } // Студента выбивает из аккаунта в метро!
 
-// ОШИБКА 3: Хранение пароля пользователя в открытом виде
-await prefs.setString('password', pass); // Грубейшее нарушение безопасности!
+// ОШИБКА 3: Повтор запроса без флага защиты от зацикливания
+await dio.fetch(err.requestOptions); // Риск бесконечного цикла запросов к серверу!
 ```
 
 ### ✅ Как правильно:
 ```dart
-// Централизованный AuthInterceptor прозрачно управляет токенами:
-dio.interceptors.add(AuthInterceptor(...));
+// Токены надежно хранятся в KeyStore/Keychain с аппаратной поддержкой:
+await tokenStorage.saveTokens(accessToken: acc, refreshToken: ref);
 
-// Токены надежно изолированы в KeyStore/Keychain:
-await secureStorage.write(key: 'access_token', value: token);
+// Изолированный мьютекс объединяет параллельные запросы обновления:
+final newToken = await _performSingleFlightRefresh();
 
-// Код репозитория чист и свободен от рутинной логики авторизации:
-final response = await _dio.get('/api/v1/tasks');
+// Защита от бесконечного цикла через флаг isRetry:
+retryOptions.extra['isRetry'] = true;
 ```
 
 ---
@@ -216,6 +260,6 @@ final response = await _dio.get('/api/v1/tasks');
 ## Резюме
 
 1. Сетевое взаимодействие централизовано через клиент `Dio` и API Gateway.
-2. Токены хранятся в зашифрованном виде через `flutter_secure_storage`.
-3. `AuthInterceptor` прозрачно обновляет протухшие токены без прерывания пользовательского сеанса.
-4. Архитектура надежно защищает данные студентов от перехвата и утечек.
+2. Чувствительные токены сессии сохраняются в `FlutterSecureStorage`.
+3. `AuthInterceptor` использует Single-Flight Mutex и флаг `isRetry` для защиты от гонок и бесконечных повторов.
+4. Логирование строго изолировано: тела запросов и авторизационные заголовки не пишутся в открытый вывод.

@@ -2,7 +2,7 @@
 
 В проекте **Orbit Mobile** управление состоянием клиентского приложения построено на библиотеке **`flutter_bloc`** и нативных возможностях **Dart 3.5+ (`sealed classes`, pattern matching)**.
 
-Паттерн BLoC (Business Logic Component) обеспечивает однонаправленный поток данных (**Unidirectional Data Flow**), полностью изолируя верстку виджетов от бизнес-логики и сетевых запросов.
+Паттерн BLoC (Business Logic Component) обеспечивает однонаправленный поток данных (**Unidirectional Data Flow**), полностью изолируя верстку виджетов от бизнес-логики и сетевых вызовов.
 
 ---
 
@@ -14,7 +14,7 @@ flowchart LR
     BLoC -->|2. вызов UseCase| UseCase["Domain / UseCases"]
     UseCase -->|3. данные из Hive / Dio| BLoC
     BLoC -->|4. emit(State)| Stream["Stream состояний"]
-    Stream -->|5. BlocBuilder (rebuild)| UI
+    Stream -->|5. BlocBuilder / Consumer| UI
 ```
 
 ---
@@ -23,7 +23,7 @@ flowchart LR
 
 В реальном приложении экран расписания не может быть просто «либо загрузка, либо ошибка, либо данные». У студента одновременно могут быть:
 1. Загруженное расписание из локальной базы Hive;
-2. Фоновый процесс проверки свежих данных с сервера;
+2. Фоновый процесс проверки свежих данных с сервера (`isRefreshing = true`);
 3. Ошибка последней попытки обновления (например, потеря связи в метро).
 
 ### 2.1 События (`schedule_event.dart`)
@@ -78,6 +78,7 @@ final class ScheduleLoadingFirstTime extends ScheduleState {
 /// Основное состояние: данные есть, и параллельно может идти фоновое обновление
 final class ScheduleReady extends ScheduleState {
   const ScheduleReady({
+    required this.group,
     required this.data,
     required this.selectedDayIndex,
     required this.lastCheckedAt,
@@ -85,6 +86,7 @@ final class ScheduleReady extends ScheduleState {
     this.refreshFailure,
   });
 
+  final String group;
   final ScheduleData data;
   final int selectedDayIndex;
   final DateTime lastCheckedAt;
@@ -92,18 +94,21 @@ final class ScheduleReady extends ScheduleState {
   final Failure? refreshFailure;
 
   ScheduleReady copyWith({
+    String? group,
     ScheduleData? data,
     int? selectedDayIndex,
     DateTime? lastCheckedAt,
     bool? isRefreshing,
     Failure? refreshFailure,
+    bool clearRefreshFailure = false,
   }) {
     return ScheduleReady(
+      group: group ?? this.group,
       data: data ?? this.data,
       selectedDayIndex: selectedDayIndex ?? this.selectedDayIndex,
       lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
       isRefreshing: isRefreshing ?? this.isRefreshing,
-      refreshFailure: refreshFailure,
+      refreshFailure: clearRefreshFailure ? null : (refreshFailure ?? this.refreshFailure),
     );
   }
 }
@@ -115,10 +120,11 @@ final class ScheduleEmptyError extends ScheduleState {
 }
 ```
 
-### 2.3 Логика BLoC и защита от гонок (`bloc_concurrency`)
+### 2.3 Логика BLoC с защитой от гонок и отменой запросов
 ```dart
 // lib/features/schedule/presentation/bloc/schedule_bloc.dart
 import 'package:bloc_concurrency/bloc_concurrency.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'schedule_event.dart';
 import 'schedule_state.dart';
@@ -131,13 +137,11 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
         _syncSchedule = syncSchedule,
         super(const ScheduleInitial()) {
 
-    // При быстрой смене группы отменяем старый сетевой запрос
     on<ScheduleGroupChanged>(
       _onGroupChanged,
       transformer: restartable(),
     );
 
-    // Pull-to-refresh: игнорируем спам повторных свайпов
     on<ScheduleRefreshTriggered>(
       _onRefreshTriggered,
       transformer: droppable(),
@@ -149,24 +153,38 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   final GetCachedScheduleUseCase _getCachedSchedule;
   final SyncScheduleUseCase _syncSchedule;
 
+  CancelToken? _cancelToken;
+  String? _currentGroup;
+
   Future<void> _onGroupChanged(
     ScheduleGroupChanged event,
     Emitter<ScheduleState> emit,
   ) async {
+    _currentGroup = event.group;
+    
+    // Отменяем активный сокет-запрос предыдущей группы
+    _cancelToken?.cancel('Смена группы');
+    _cancelToken = CancelToken();
+
     final cachedResult = await _getCachedSchedule(event.group);
+    if (_currentGroup != event.group) return;
 
     if (cachedResult is Ok<ScheduleData>) {
       emit(ScheduleReady(
+        group: event.group,
         data: cachedResult.value,
         selectedDayIndex: 0,
-        lastCheckedAt: cachedResult.value.cachedAt,
+        lastCheckedAt: cachedResult.value.deviceCachedAt,
         isRefreshing: true,
       ));
     } else {
       emit(const ScheduleLoadingFirstTime());
     }
 
-    final syncResult = await _syncSchedule(event.group);
+    final syncResult = await _syncSchedule(event.group, cancelToken: _cancelToken);
+
+    // Проверка актуальности после завершения сетевого запроса
+    if (_currentGroup != event.group) return;
 
     if (state is ScheduleReady) {
       final current = state as ScheduleReady;
@@ -175,7 +193,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
             data: value,
             lastCheckedAt: DateTime.now(),
             isRefreshing: false,
-            refreshFailure: null,
+            clearRefreshFailure: true,
           ),
         Error(:final error) => current.copyWith(
             isRefreshing: false,
@@ -184,6 +202,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
       });
     } else if (syncResult is Ok<ScheduleData>) {
       emit(ScheduleReady(
+        group: event.group,
         data: syncResult.value,
         selectedDayIndex: 0,
         lastCheckedAt: DateTime.now(),
@@ -200,6 +219,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   ) {
     if (state is ScheduleReady) {
       final current = state as ScheduleReady;
+      // Смена дня не сбрасывает ошибку фонового обновления
       emit(current.copyWith(selectedDayIndex: event.index));
     }
   }
@@ -209,23 +229,35 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
     Emitter<ScheduleState> emit,
   ) async {
     if (state is! ScheduleReady) return;
-    final current = state as ScheduleReady;
+    final currentBefore = state as ScheduleReady;
 
-    emit(current.copyWith(isRefreshing: true));
-    final syncResult = await _syncSchedule(event.group);
+    if (currentBefore.group != event.group || _currentGroup != event.group) return;
+
+    emit(currentBefore.copyWith(isRefreshing: true));
+    final syncResult = await _syncSchedule(event.group, cancelToken: _cancelToken);
+
+    if (state is! ScheduleReady) return;
+    final currentAfter = state as ScheduleReady;
+    if (currentAfter.group != event.group || _currentGroup != event.group) return;
 
     emit(switch (syncResult) {
-      Ok(:final value) => current.copyWith(
+      Ok(:final value) => currentAfter.copyWith(
           data: value,
           lastCheckedAt: DateTime.now(),
           isRefreshing: false,
-          refreshFailure: null,
+          clearRefreshFailure: true,
         ),
-      Error(:final error) => current.copyWith(
+      Error(:final error) => currentAfter.copyWith(
           isRefreshing: false,
           refreshFailure: error,
         ),
     });
+  }
+
+  @override
+  Future<void> close() {
+    _cancelToken?.cancel('Закрытие BLoC');
+    return super.close();
   }
 }
 ```
@@ -249,7 +281,7 @@ class ScheduleScreen extends StatelessWidget {
     return Scaffold(
       body: BlocConsumer<ScheduleBloc, ScheduleState>(
         listener: (context, state) {
-          // Показываем плашку только если фоновое обновление упало, а кэш уже на экране
+          // Баннер показывается только если обновление упало, а данные уже на экране
           if (state is ScheduleReady && state.refreshFailure != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -306,7 +338,7 @@ void main() {
     'эмитит ScheduleReady с кэшем, затем обновляет свежими данными',
     build: () {
       when(() => mockGetCached('261-334')).thenAnswer((_) async => Ok(testCachedData));
-      when(() => mockSync('261-334')).thenAnswer((_) async => Ok(testFreshData));
+      when(() => mockSync('261-334', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) async => Ok(testFreshData));
       return ScheduleBloc(
         getCachedSchedule: mockGetCached,
         syncSchedule: mockSync,
@@ -327,7 +359,8 @@ void main() {
     'при ошибке фонового обновления сохраняет кэш на экране и проставляет refreshFailure',
     build: () {
       when(() => mockGetCached('261-334')).thenAnswer((_) async => Ok(testCachedData));
-      when(() => mockSync('261-334')).thenAnswer((_) async => Error(NetworkFailure(message: 'No internet')));
+      when(() => mockSync('261-334', cancelToken: any(named: 'cancelToken')))
+          .thenAnswer((_) async => Error(NetworkFailure(message: 'No internet')));
       return ScheduleBloc(
         getCachedSchedule: mockGetCached,
         syncSchedule: mockSync,
@@ -350,5 +383,5 @@ void main() {
 
 1. BLoC управляет только локальными состояниями и событиями экрана — он **не заменяет** чистую архитектуру (Clean Architecture).
 2. Используйте `ScheduleReady` с флагом `isRefreshing`, чтобы не стирать расписание с экрана при сбоях сети.
-3. Всегда защищайте быстрые поисковые события с помощью `transformer: restartable()`.
+3. Проверяйте актуальность группы **после** каждого `await` и отменяйте сокет-запросы через `CancelToken`.
 4. Тестируйте поведение BLoC на гонки и сетевые сбои через `bloc_test`.
