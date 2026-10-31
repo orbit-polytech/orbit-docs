@@ -204,6 +204,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
             data: value,
             deviceUpdatedAt: DateTime.now(),
             serverLastCheckedAt: value.serverLastCheckedAt,
+            clearServerLastCheckedAt: value.serverLastCheckedAt == null,
             isRefreshing: false,
             clearRefreshFailure: true,
           ),
@@ -264,6 +265,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
           data: value,
           deviceUpdatedAt: DateTime.now(),
           serverLastCheckedAt: value.serverLastCheckedAt,
+          clearServerLastCheckedAt: value.serverLastCheckedAt == null,
           isRefreshing: false,
           clearRefreshFailure: true,
         ),
@@ -377,7 +379,11 @@ void main() {
     ],
   );
 
-  // Тест 2: Защита от гонки А -> Б -> А (детерминированный контроль через Completer)
+  // Тест 2: Защита от гонки А -> Б -> А (детерминированный контроль запуска и завершения)
+  final startedA1 = Completer<void>();
+  final startedB = Completer<void>();
+  final startedA2 = Completer<void>();
+
   final completerA1 = Completer<Result<ScheduleData>>();
   final completerB = Completer<Result<ScheduleData>>();
   final completerA2 = Completer<Result<ScheduleData>>();
@@ -388,12 +394,20 @@ void main() {
     build: () {
       when(() => mockGetCached(any())).thenAnswer((_) async => const Error(CacheFailure(message: 'empty')));
 
-      // Детерминированный порядок завершения через Completer без случайных таймаутов
       when(() => mockSync('group-A', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) {
         callCountA++;
-        return callCountA == 1 ? completerA1.future : completerA2.future;
+        if (callCountA == 1) {
+          startedA1.complete();
+          return completerA1.future;
+        } else {
+          startedA2.complete();
+          return completerA2.future;
+        }
       });
-      when(() => mockSync('group-B', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) => completerB.future);
+      when(() => mockSync('group-B', cancelToken: any(named: 'cancelToken'))).thenAnswer((_) {
+        startedB.complete();
+        return completerB.future;
+      });
 
       return ScheduleBloc(
         getCachedSchedule: mockGetCached,
@@ -401,19 +415,27 @@ void main() {
       );
     },
     act: (bloc) async {
-      bloc.add(const ScheduleGroupChanged(group: 'group-A')); // Поколение 1
-      bloc.add(const ScheduleGroupChanged(group: 'group-B')); // Поколение 2
-      bloc.add(const ScheduleGroupChanged(group: 'group-A')); // Поколение 3
+      // 1. Отправляем А и гарантируем, что сетевой запрос первого поколения стартовал
+      bloc.add(const ScheduleGroupChanged(group: 'group-A'));
+      await startedA1.future;
 
-      // Завершаем запросы не по порядку: сначала актуальный (поколение 3)
+      // 2. Отправляем Б и гарантируем, что сетевой запрос второго поколения стартовал
+      bloc.add(const ScheduleGroupChanged(group: 'group-B'));
+      await startedB.future;
+
+      // 3. Отправляем А повторно и гарантируем, что стартовал сетевой запрос третьего поколения
+      bloc.add(const ScheduleGroupChanged(group: 'group-A'));
+      await startedA2.future;
+
+      // 4. Завершаем сначала актуальный запрос поколения 3
       completerA2.complete(Ok(dataA_Fresh));
-      // Затем завершается задержавшийся старый запрос поколения 1
+
+      // 5. Затем завершаются задержавшиеся запросы предыдущих поколений (1 и 2)
       completerA1.complete(Ok(dataA_Stale));
-      // И запрос поколения 2
       completerB.complete(Ok(dataB));
     },
     verify: (bloc) {
-      // Итоговое состояние должно быть строго от поколения 3 (dataA_Fresh), dataA_Stale отброшен
+      // Итоговое состояние строго от поколения 3 (dataA_Fresh), устаревшие ответы отброшены
       expect(bloc.state, isA<ScheduleReady>().having((s) => s.data, 'data', dataA_Fresh));
     },
   );
