@@ -1,197 +1,277 @@
 # 02. Слой Presentation и управление состоянием BLoC
 
-В проекте Orbit AI управление состоянием мобильного приложения построено на библиотеке **`flutter_bloc`** — признанном индустриальном стандарте для масштабируемых Flutter-приложений.
+В проекте **Orbit Mobile** управление состоянием клиентского приложения построено на библиотеке **`flutter_bloc`** и нативных возможностях **Dart 3.5+ (`sealed classes`, pattern matching)**.
 
-Паттерн BLoC (Business Logic Component) обеспечивает однонаправленный поток данных (**Unidirectional Data Flow**), полностью изолируя верстку виджетов от бизнес-логики.
+Паттерн BLoC (Business Logic Component) обеспечивает однонаправленный поток данных (**Unidirectional Data Flow**), полностью изолируя верстку виджетов от бизнес-логики и сетевых запросов.
+
+---
 
 ## 1. Поток данных в BLoC
 
 ```mermaid
 flowchart LR
-    UI["UI (Flutter Widget)"] -->|1. add(Event)| BLoC["BLoC Component"]
-    BLoC -->|2. вызов метода| Repo["Domain / Repository"]
-    Repo -->|3. результат / ошибка| BLoC
+    UI["UI (Flutter Widget)"] -->|1. add(Event)| BLoC["ScheduleBloc"]
+    BLoC -->|2. вызов UseCase| UseCase["Domain / UseCases"]
+    UseCase -->|3. данные из Hive / Dio| BLoC
     BLoC -->|4. emit(State)| Stream["Stream состояний"]
     Stream -->|5. BlocBuilder (rebuild)| UI
 ```
 
-
 ---
 
-## 2. Реализация `TasksBloc`: События, Состояния и Логика
+## 2. Неисключающие состояния на примере `ScheduleBloc`
 
-### 2.1 События (`tasks_event.dart`)
-События описывают намерения пользователя или системы:
+В реальном приложении экран расписания не может быть просто «либо загрузка, либо ошибка, либо данные». У студента одновременно могут быть:
+1. Загруженное расписание из локальной базы Hive;
+2. Фоновый процесс проверки свежих данных с сервера;
+3. Ошибка последней попытки обновления (например, потеря связи в метро).
 
+### 2.1 События (`schedule_event.dart`)
 ```dart
-// features/tasks/presentation/bloc/tasks_event.dart
-sealed class TasksEvent {
-  const TasksEvent();
+// lib/features/schedule/presentation/bloc/schedule_event.dart
+import 'package:flutter/foundation.dart';
+
+@immutable
+sealed class ScheduleEvent {
+  const ScheduleEvent();
 }
 
-final class LoadTasksEvent extends TasksEvent {
-  const LoadTasksEvent();
+/// Смена учебной группы (требует отмены предыдущих запросов через restartable)
+final class ScheduleGroupChanged extends ScheduleEvent {
+  const ScheduleGroupChanged({required this.group});
+  final String group;
 }
 
-final class CompleteTaskEvent extends TasksEvent {
-  final String taskId;
-  const CompleteTaskEvent({required this.taskId});
+/// Ручной свайп-обновление (Pull-to-Refresh)
+final class ScheduleRefreshTriggered extends ScheduleEvent {
+  const ScheduleRefreshTriggered({required this.group});
+  final String group;
 }
 
-final class CreateTaskEvent extends TasksEvent {
-  final String title;
-  final String description;
-  final DateTime deadline;
-  final String priority;
+/// Переключение дня недели в таймлайне (Пн, Вт, Ср...)
+final class ScheduleDaySelected extends ScheduleEvent {
+  const ScheduleDaySelected({required this.index});
+  final int index;
+}
+```
 
-  const CreateTaskEvent({
-    required this.title,
-    required this.description,
-    required this.deadline,
-    required this.priority,
+### 2.2 Состояния (`schedule_state.dart`)
+```dart
+// lib/features/schedule/presentation/bloc/schedule_state.dart
+import 'package:flutter/foundation.dart';
+import '../../../../core/error/failures.dart';
+import '../../domain/entities/schedule_data.dart';
+
+@immutable
+sealed class ScheduleState {
+  const ScheduleState();
+}
+
+final class ScheduleInitial extends ScheduleState {
+  const ScheduleInitial();
+}
+
+final class ScheduleLoadingFirstTime extends ScheduleState {
+  const ScheduleLoadingFirstTime();
+}
+
+/// Основное состояние: данные есть, и параллельно может идти фоновое обновление
+final class ScheduleReady extends ScheduleState {
+  const ScheduleReady({
+    required this.data,
+    required this.selectedDayIndex,
+    required this.lastCheckedAt,
+    this.isRefreshing = false,
+    this.refreshFailure,
   });
+
+  final ScheduleData data;
+  final int selectedDayIndex;
+  final DateTime lastCheckedAt;
+  final bool isRefreshing;
+  final Failure? refreshFailure;
+
+  ScheduleReady copyWith({
+    ScheduleData? data,
+    int? selectedDayIndex,
+    DateTime? lastCheckedAt,
+    bool? isRefreshing,
+    Failure? refreshFailure,
+  }) {
+    return ScheduleReady(
+      data: data ?? this.data,
+      selectedDayIndex: selectedDayIndex ?? this.selectedDayIndex,
+      lastCheckedAt: lastCheckedAt ?? this.lastCheckedAt,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+      refreshFailure: refreshFailure,
+    );
+  }
+}
+
+/// Полная ошибка (показывается только если локального кэша нет)
+final class ScheduleEmptyError extends ScheduleState {
+  const ScheduleEmptyError({required this.failure});
+  final Failure failure;
 }
 ```
 
-### 2.2 Состояния (`tasks_state.dart`)
-Состояния отражают текущий снимок пользовательского интерфейса:
-
+### 2.3 Логика BLoC и защита от гонок (`bloc_concurrency`)
 ```dart
-// features/tasks/presentation/bloc/tasks_state.dart
-import '../../domain/entities/task_entity.dart';
-
-sealed class TasksState {
-  const TasksState();
-}
-
-final class TasksInitial extends TasksState {
-  const TasksInitial();
-}
-
-final class TasksLoading extends TasksState {
-  const TasksLoading();
-}
-
-final class TasksLoaded extends TasksState {
-  final List<TaskEntity> tasks;
-  const TasksLoaded({required this.tasks});
-}
-
-final class TasksError extends TasksState {
-  final String message;
-  const TasksError({required this.message});
-}
-```
-
-### 2.3 Логика BLoC (`tasks_bloc.dart`)
-
-```dart
-// features/tasks/presentation/bloc/tasks_bloc.dart
+// lib/features/schedule/presentation/bloc/schedule_bloc.dart
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/repositories/tasks_repository.dart';
-import 'tasks_event.dart';
-import 'tasks_state.dart';
+import 'schedule_event.dart';
+import 'schedule_state.dart';
 
-class TasksBloc extends Bloc<TasksEvent, TasksState> {
-  final TasksRepository _repository;
+class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
+  ScheduleBloc({
+    required GetCachedScheduleUseCase getCachedSchedule,
+    required SyncScheduleUseCase syncSchedule,
+  })  : _getCachedSchedule = getCachedSchedule,
+        _syncSchedule = syncSchedule,
+        super(const ScheduleInitial()) {
 
-  TasksBloc({required TasksRepository repository})
-      : _repository = repository,
-        super(const TasksInitial()) {
-    on<LoadTasksEvent>(_onLoadTasks);
-    on<CompleteTaskEvent>(_onCompleteTask);
+    // При быстрой смене группы отменяем старый сетевой запрос
+    on<ScheduleGroupChanged>(
+      _onGroupChanged,
+      transformer: restartable(),
+    );
+
+    // Pull-to-refresh: игнорируем спам повторных свайпов
+    on<ScheduleRefreshTriggered>(
+      _onRefreshTriggered,
+      transformer: droppable(),
+    );
+
+    on<ScheduleDaySelected>(_onDaySelected);
   }
 
-  Future<void> _onLoadTasks(
-    LoadTasksEvent event,
-    Emitter<TasksState> emit,
+  final GetCachedScheduleUseCase _getCachedSchedule;
+  final SyncScheduleUseCase _syncSchedule;
+
+  Future<void> _onGroupChanged(
+    ScheduleGroupChanged event,
+    Emitter<ScheduleState> emit,
   ) async {
-    emit(const TasksLoading());
-    try {
-      final tasks = await _repository.getTasks();
-      emit(TasksLoaded(tasks: tasks));
-    } catch (e) {
-      emit(TasksError(message: 'Не удалось загрузить задачи: ${e.toString()}'));
+    final cachedResult = await _getCachedSchedule(event.group);
+
+    if (cachedResult is Ok<ScheduleData>) {
+      emit(ScheduleReady(
+        data: cachedResult.value,
+        selectedDayIndex: 0,
+        lastCheckedAt: cachedResult.value.cachedAt,
+        isRefreshing: true,
+      ));
+    } else {
+      emit(const ScheduleLoadingFirstTime());
+    }
+
+    final syncResult = await _syncSchedule(event.group);
+
+    if (state is ScheduleReady) {
+      final current = state as ScheduleReady;
+      emit(switch (syncResult) {
+        Ok(:final value) => current.copyWith(
+            data: value,
+            lastCheckedAt: DateTime.now(),
+            isRefreshing: false,
+            refreshFailure: null,
+          ),
+        Error(:final error) => current.copyWith(
+            isRefreshing: false,
+            refreshFailure: error,
+          ),
+      });
+    } else if (syncResult is Ok<ScheduleData>) {
+      emit(ScheduleReady(
+        data: syncResult.value,
+        selectedDayIndex: 0,
+        lastCheckedAt: DateTime.now(),
+        isRefreshing: false,
+      ));
+    } else if (syncResult is Error<ScheduleData>) {
+      emit(ScheduleEmptyError(failure: syncResult.error));
     }
   }
 
-  Future<void> _onCompleteTask(
-    CompleteTaskEvent event,
-    Emitter<TasksState> emit,
-  ) async {
-    try {
-      await _repository.completeTask(event.taskId);
-      // После успешного обновления перезапрашиваем актуальный список
-      add(const LoadTasksEvent());
-    } catch (e) {
-      emit(TasksError(message: 'Не удалось завершить задачу'));
+  void _onDaySelected(
+    ScheduleDaySelected event,
+    Emitter<ScheduleState> emit,
+  ) {
+    if (state is ScheduleReady) {
+      final current = state as ScheduleReady;
+      emit(current.copyWith(selectedDayIndex: event.index));
     }
+  }
+
+  Future<void> _onRefreshTriggered(
+    ScheduleRefreshTriggered event,
+    Emitter<ScheduleState> emit,
+  ) async {
+    if (state is! ScheduleReady) return;
+    final current = state as ScheduleReady;
+
+    emit(current.copyWith(isRefreshing: true));
+    final syncResult = await _syncSchedule(event.group);
+
+    emit(switch (syncResult) {
+      Ok(:final value) => current.copyWith(
+          data: value,
+          lastCheckedAt: DateTime.now(),
+          isRefreshing: false,
+          refreshFailure: null,
+        ),
+      Error(:final error) => current.copyWith(
+          isRefreshing: false,
+          refreshFailure: error,
+        ),
+    });
   }
 }
 ```
 
 ---
 
-## 3. Интеграция с UI: `BlocBuilder` vs `BlocListener`
-
-В Flutter виджеты не должны содержать логику реакции на однократные события (Side Effects), такие как показ всплывающих уведомлений (`SnackBar`) или переход на другой экран (`Navigator`).
-
-Для этого используется разделение:
-- **`BlocBuilder`**: отвечает строго за отрисовку и возвращает дерево виджетов.
-- **`BlocListener`**: вызывается один раз на каждое изменение состояния для выполнения побочных эффектов.
-- **`BlocConsumer`**: объединяет оба механизма.
+## 3. Интеграция с UI: `BlocConsumer` и Pattern Matching
 
 ```dart
-// features/tasks/presentation/screens/tasks_screen.dart
+// lib/features/schedule/presentation/screens/schedule_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/tasks_bloc.dart';
-import '../bloc/tasks_event.dart';
-import '../bloc/tasks_state.dart';
+import '../bloc/schedule_bloc.dart';
+import '../bloc/schedule_state.dart';
 
-class TasksScreen extends StatelessWidget {
-  const TasksScreen({super.key});
+class ScheduleScreen extends StatelessWidget {
+  const ScheduleScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Мои задачи')),
-      body: BlocConsumer<TasksBloc, TasksState>(
+      body: BlocConsumer<ScheduleBloc, ScheduleState>(
         listener: (context, state) {
-          // Однократная реакция на ошибку:
-          if (state is TasksError) {
+          // Показываем плашку только если фоновое обновление упало, а кэш уже на экране
+          if (state is ScheduleReady && state.refreshFailure != null) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              const SnackBar(
+                content: Text('Не удалось обновить расписание. Показаны сохраненные данные.'),
+                backgroundColor: Color(0xFF1E2128),
+              ),
             );
           }
         },
         builder: (context, state) {
           return switch (state) {
-            TasksInitial() => const Center(child: Text('Нажмите обновить')),
-            TasksLoading() => const Center(child: CircularProgressIndicator()),
-            TasksLoaded(:final tasks) => ListView.builder(
-                itemCount: tasks.length,
-                itemBuilder: (context, index) {
-                  final task = tasks[index];
-                  return ListTile(
-                    title: Text(task.title),
-                    subtitle: Text('Дедлайн: ${task.deadline}'),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.check_circle_outline),
-                      onPressed: () {
-                        context.read<TasksBloc>().add(CompleteTaskEvent(taskId: task.id));
-                      },
-                    ),
-                  );
-                },
+            ScheduleInitial() || ScheduleLoadingFirstTime() =>
+              const Center(child: CircularProgressIndicator()),
+            ScheduleReady(:final data, :final isRefreshing) =>
+              ScheduleContentView(
+                data: data,
+                isRefreshing: isRefreshing,
               ),
-            TasksError() => const Center(child: Text('Ошибка загрузки')),
+            ScheduleEmptyError(:final failure) =>
+              ErrorEmptyView(message: failure.message),
           };
         },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.read<TasksBloc>().add(const LoadTasksEvent()),
-        child: const Icon(Icons.refresh),
       ),
     );
   }
@@ -202,33 +282,63 @@ class TasksScreen extends StatelessWidget {
 
 ## 4. Модульное тестирование BLoC (`bloc_test`)
 
-BLoC легко тестируется детерминированными тестами с помощью библиотеки `bloc_test`:
+Тесты должны проверять сохранение кэша и защиту от гонок:
 
 ```dart
-// test/features/tasks/tasks_bloc_test.dart
+// test/features/schedule/presentation/bloc/schedule_bloc_test.dart
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-class MockTasksRepository extends Mock implements TasksRepository {}
+class MockGetCachedScheduleUseCase extends Mock implements GetCachedScheduleUseCase {}
+class MockSyncScheduleUseCase extends Mock implements SyncScheduleUseCase {}
 
 void main() {
-  late MockTasksRepository mockRepo;
+  late MockGetCachedScheduleUseCase mockGetCached;
+  late MockSyncScheduleUseCase mockSync;
 
   setUp(() {
-    mockRepo = MockTasksRepository();
+    mockGetCached = MockGetCachedScheduleUseCase();
+    mockSync = MockSyncScheduleUseCase();
   });
 
-  blocTest<TasksBloc, TasksState>(
-    'эмитит [TasksLoading, TasksLoaded] при успешной загрузке задач',
+  blocTest<ScheduleBloc, ScheduleState>(
+    'эмитит ScheduleReady с кэшем, затем обновляет свежими данными',
     build: () {
-      when(() => mockRepo.getTasks()).thenAnswer((_) async => [testTask]);
-      return TasksBloc(repository: mockRepo);
+      when(() => mockGetCached('261-334')).thenAnswer((_) async => Ok(testCachedData));
+      when(() => mockSync('261-334')).thenAnswer((_) async => Ok(testFreshData));
+      return ScheduleBloc(
+        getCachedSchedule: mockGetCached,
+        syncSchedule: mockSync,
+      );
     },
-    act: (bloc) => bloc.add(const LoadTasksEvent()),
+    act: (bloc) => bloc.add(const ScheduleGroupChanged(group: '261-334')),
     expect: () => [
-      const TasksLoading(),
-      TasksLoaded(tasks: [testTask]),
+      isA<ScheduleReady>()
+          .having((s) => s.isRefreshing, 'isRefreshing', true)
+          .having((s) => s.data, 'data', testCachedData),
+      isA<ScheduleReady>()
+          .having((s) => s.isRefreshing, 'isRefreshing', false)
+          .having((s) => s.data, 'data', testFreshData),
+    ],
+  );
+
+  blocTest<ScheduleBloc, ScheduleState>(
+    'при ошибке фонового обновления сохраняет кэш на экране и проставляет refreshFailure',
+    build: () {
+      when(() => mockGetCached('261-334')).thenAnswer((_) async => Ok(testCachedData));
+      when(() => mockSync('261-334')).thenAnswer((_) async => Error(NetworkFailure(message: 'No internet')));
+      return ScheduleBloc(
+        getCachedSchedule: mockGetCached,
+        syncSchedule: mockSync,
+      );
+    },
+    act: (bloc) => bloc.add(const ScheduleGroupChanged(group: '261-334')),
+    expect: () => [
+      isA<ScheduleReady>().having((s) => s.isRefreshing, 'isRefreshing', true),
+      isA<ScheduleReady>()
+          .having((s) => s.isRefreshing, 'isRefreshing', false)
+          .having((s) => s.refreshFailure, 'refreshFailure', isNotNull),
     ],
   );
 }
@@ -236,46 +346,9 @@ void main() {
 
 ---
 
-## 5. Антипаттерны: как нельзя и как правильно
+## Резюме для разработчика
 
-### ❌ Как нельзя:
-```dart
-// ОШИБКА 1: Вызов навигации или SnackBar внутри BlocBuilder
-BlocBuilder<TasksBloc, TasksState>(
-  builder: (context, state) {
-    if (state is TasksError) {
-      // КАТАСТРОФА: SnackBar будет вызываться сотни раз при каждой перерисовке экрана!
-      ScaffoldMessenger.of(context).showSnackBar(...);
-    }
-    return Container();
-  },
-)
-
-// ОШИБКА 2: Мутация внутреннего списка вместо создания нового состояния
-state.tasks.add(newTask); // Flutter не увидит изменение ссылки и не перерисует экран!
-emit(state);
-```
-
-### ✅ Как правильно:
-```dart
-// Побочные эффекты (SnackBar, Navigation) живут только в BlocListener:
-BlocListener<TasksBloc, TasksState>(
-  listener: (context, state) {
-    if (state is TasksError) {
-      ScaffoldMessenger.of(context).showSnackBar(...);
-    }
-  },
-)
-
-// Выпуск нового неизменяемого состояния:
-emit(TasksLoaded(tasks: List.unmodifiable([...state.tasks, newTask])));
-```
-
----
-
-## Резюме
-
-1. Паттерн BLoC гарантирует строгий однонаправленный поток данных.
-2. Состояния и события типизируются через нативные `sealed classes`.
-3. Отрисовка UI (`BlocBuilder`) строго отделена от побочных эффектов (`BlocListener`).
-4. BLoC покрывается надежными тестами через `bloc_test`.
+1. BLoC управляет только локальными состояниями и событиями экрана — он **не заменяет** чистую архитектуру (Clean Architecture).
+2. Используйте `ScheduleReady` с флагом `isRefreshing`, чтобы не стирать расписание с экрана при сбоях сети.
+3. Всегда защищайте быстрые поисковые события с помощью `transformer: restartable()`.
+4. Тестируйте поведение BLoC на гонки и сетевые сбои через `bloc_test`.
