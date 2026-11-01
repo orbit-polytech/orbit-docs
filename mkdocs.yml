@@ -1,4 +1,4 @@
-site_name: Orbit AI — Инженерная база знаний
+﻿site_name: Orbit AI — Инженерная база знаний
 site_description: Официальное инженерное руководство и технические стандарты проекта Orbit AI (Московский Политех).
 site_author: Команда разработки Orbit AI
 site_url: https://orbit-polytech.github.io/orbit-docs/
@@ -157,6 +157,7 @@ nav:
   # 5. FLUTTER & МОБИЛКА
   # =========================================================================
   - Flutter & Мобилка:
+      - Онбординг разработчика и задачи (Хасан): mobile-flutter/developer-setup-and-task.md
       - Обзор и Clean Architecture: mobile-flutter/overview.md
       - Архитектура BLoC и защита от гонок: mobile-flutter/bloc-architecture.md
       - Кэш Hive, Cache-First и Сеть: mobile-flutter/offline-and-storage.md
