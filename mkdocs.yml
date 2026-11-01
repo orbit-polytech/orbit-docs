@@ -162,7 +162,8 @@ nav:
       - Обзор и Clean Architecture: mobile-flutter/overview.md
       - Архитектура BLoC и защита от гонок: mobile-flutter/bloc-architecture.md
       - Кэш Hive, Cache-First и Сеть: mobile-flutter/offline-and-storage.md
-      - Дизайн-система и Floating Dock: mobile-flutter/design-tokens-and-ui.md
+      - Дизайн-система — светлая тема и навигация: mobile-flutter/design-tokens-and-ui.md
+      - Дизайн — направления и референсы: mobile-flutter/design-directions-and-references.md
       - Групповые задачи старосты (Запланировано): mobile-flutter/group-tasks.md
       - Вёрстка экранов и виджеты (Tutorial): mobile-flutter/widgets-tutorial.md
       - Сеть, DTO и хранилище (How-to): mobile-flutter/network-and-storage.md
