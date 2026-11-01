@@ -15,7 +15,8 @@
 
 ### 📌 Статусы функциональных блоков:
 * `[Реализовано]` — Шлюз API расписания (`GET /api/v1/schedule/groups/{group}`), базовый сервис авторизации (`Email OTP`, `Google OAuth`).
-* `[Принятое решение]` — Архитектурный фундамент Clean Architecture + BLoC, хранилище Hive, адаптивный Floating Dock, палитра Cron Dark.
+* `[Принятое решение]` — Архитектурный фундамент Clean Architecture + BLoC, хранилище Hive, пять разделов и светлая тема по умолчанию.
+* `[Выбирается]` — Палитра, мягкий градиент, типографика и вид нижней панели: обычная навигация или Floating Dock. Варианты — на странице [направлений и референсов](design-directions-and-references.md).
 * `[Проектируется]` — Мобильный OAuth callback (`orbit://auth/callback` с PKCE), интеграция с ЛК Политеха для автоподтверждения старост.
 * `[Запланировано]` — Серверные групповые задачи старосты (`tasks-service`), интеграция распознавания речи для аудиоконспектов.
 
@@ -91,14 +92,14 @@ Orbit Mobile решает студенческую проблему 1–2 сен
 mobile/
 ├── lib/
 │   ├── app/                         # Инициализация приложения и роутинг
-│   │   ├── app.dart                 # MaterialApp.router с темой Cron Dark
+│   │   ├── app.dart                 # MaterialApp.router со светлой темой по умолчанию
 │   │   ├── observer.dart            # AppBlocObserver для логирования
 │   │   └── routes/                  # Конфигурация GoRouter (StatefulShellRoute)
 │   ├── core/                        # Общие системные модули
 │   │   ├── error/                   # Иерархия ошибок Failure и Exception
 │   │   ├── network/                 # Dio клиент, AuthInterceptor (мьютекс 401)
 │   │   ├── storage/                 # Инициализация Hive и SecureStorage
-│   │   └── theme/                   # Дизайн-токены Cron Dark, типографика
+│   │   └── theme/                   # Семантические токены темы, типографика
 │   ├── features/                    # Фичи приложения (Feature-First)
 │   │   ├── schedule/                # Модуль «Расписание» (Cache-First)
 │   │   │   ├── data/                # DataSources (Hive, Dio), Models, RepositoryImpl
@@ -112,7 +113,7 @@ mobile/
 │   │   ├── notes/                   # Модуль «Заметки и аудиоконспекты»
 │   │   └── profile/                 # Модуль «Профиль студента и группа»
 │   └── ui/
-│       └── shell/                   # Главный контейнер с адаптивным Floating Dock
+│       └── shell/                   # Главный контейнер и адаптивная нижняя навигация
 │           ├── adaptive_dock.dart   # Парящий Dock (5 вкладок, учет клавиатуры)
 │           └── shell_screen.dart    # Обертка StatefulNavigationShell
 ```
@@ -123,6 +124,7 @@ mobile/
 
 * [**Архитектура BLoC и защита от гонок**](bloc-architecture.md) — детальное описание потока событий, состояний `ScheduleReady`, отмены сокетов через `CancelToken` и трансформеров `restartable()`.
 * [**Хранилище Hive, Cache-First и Сеть**](offline-and-storage.md) — стратегия локального кэширования, правила `AuthInterceptor` и Single-Flight Refresh.
-* [**Дизайн-система и Адаптивный Floating Dock**](design-tokens-and-ui.md) — токены темы Cron Dark, типографика и геометрия плавающей панели.
+* [**Дизайн-система: светлая тема и навигация**](design-tokens-and-ui.md) — цветовые роли, доступность и требования к нижней панели.
+* [**Дизайн: направления и референсы**](design-directions-and-references.md) — скриншоты, варианты оформления и порядок выбора макета.
 * [**Серверные групповые задачи и роль старосты**](group-tasks.md) — продуктовая спецификация бродкаста домашних заданий группе.
 * [**Архив: MVVM с ChangeNotifier**](mvvm-architecture.md) — ранний вариант реализации для справки.
