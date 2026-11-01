@@ -1,4 +1,4 @@
-site_name: Orbit AI — Инженерная база знаний
+﻿site_name: Orbit AI — Инженерная база знаний
 site_description: Официальное инженерное руководство и технические стандарты проекта Orbit AI (Московский Политех).
 site_author: Команда разработки Orbit AI
 site_url: https://orbit-polytech.github.io/orbit-docs/
@@ -78,6 +78,7 @@ nav:
       - Текущее состояние: project/current-state.md
       - Задачи:
           - Разработка users-service: project/tasks/users-service.md
+          - "Мобильное приложение: каркас и расписание": project/tasks/mobile-foundation-and-schedule.md
 
   # =========================================================================
   # 1. БЫСТРЫЙ СТАРТ
@@ -157,6 +158,7 @@ nav:
   # 5. FLUTTER & МОБИЛКА
   # =========================================================================
   - Flutter & Мобилка:
+      - Подготовка окружения разработчика: mobile-flutter/developer-setup-and-task.md
       - Обзор и Clean Architecture: mobile-flutter/overview.md
       - Архитектура BLoC и защита от гонок: mobile-flutter/bloc-architecture.md
       - Кэш Hive, Cache-First и Сеть: mobile-flutter/offline-and-storage.md
