@@ -46,7 +46,7 @@
 | POST | `/ai/chat/stream` | Поток SSE: start, delta, citations, done/error |
 | POST | `/ai/chat/cancel` | Отмена активной генерации |
 
-Тело использует `message_id`, `query` и необязательный `conversation_id`, не `prompt`. `POST /api/v1/ai/query` не реализован. Примеры, ошибки до/после открытия потока и replay — [AI API](../../gateway/ai-api.md).
+Тело использует `message_id`, `query`, необязательные `conversation_id` и `model`, не `prompt`. Явная модель проверяется по списку `AI_ALLOWED_MODELS`; при отсутствии используется `AI_MODEL`. `POST /api/v1/ai/query` не реализован. Примеры, ошибки до/после открытия потока и replay — [AI API](../../gateway/ai-api.md).
 
 ## Будущие API: проектные примеры
 
@@ -101,6 +101,6 @@
 
 ## Метаданные текущего API расписания
 
-Gateway использует `contracts v0.5.2` (Schedule API совместим с `v0.5.0`) и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
+Gateway использует `contracts v0.5.3` (Schedule API совместим с `v0.5.0`) и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
 
 См. [публичное API расписания](../../gateway/schedule-api.md).

@@ -104,11 +104,15 @@ AUTH_GOOGLE_REDIRECT_URI=http://localhost:8080/api/v1/auth/oauth/google/callback
 | `DATABASE_URL` | AI DSN `postgresql+asyncpg://...@postgres:5432/orbit_ai` |
 | `APP_ENV` | В Compose по умолчанию `production`; без Groq key AI не стартует |
 | `GROQ_API_KEY` | Секрет провайдера, только локально |
-| `AI_MODEL` | ID модели, доступной в Groq; сверить с провайдером |
+| `AI_MODEL` | ID модели по умолчанию; сверить с провайдером |
+| `AI_API_BASE_URL` | URL OpenAI-совместимого API; по умолчанию `https://api.groq.com/openai/v1` |
+| `AI_ALLOWED_MODELS` | Список разрешённых ID для явно выбранной модели; формат проверьте в настройках AI |
+| `CHAT_HISTORY_LIMIT` | Число последних сообщений, по умолчанию `10` |
+| `GROQ_VERIFY_SSL` / `GROQ_CA_BUNDLE` | Проверка TLS включена по умолчанию; при необходимости укажите доверенный CA bundle. В production отключать проверку нельзя |
 | `RAG_ENABLED` | По умолчанию `true` |
 | `AI_MAX_OUTPUT_TOKENS` | По умолчанию `2048` |
 | `AI_MAX_CONCURRENT_GENERATIONS` | По умолчанию `50`; не пользовательская квота |
 
-Процесс AI дополнительно поддерживает `EMBEDDING_MODEL_NAME`, `RAG_MIN_SIMILARITY` (`0.65`), `RAG_TOP_K` (`4`), `AI_TTFT_TIMEOUT_SEC` (`15`), `AI_STREAM_TOTAL_TIMEOUT_SEC` (`60`), `AI_CHUNK_IDLE_TIMEOUT_SEC` (`10`), `DB_POOL_SIZE`, `DB_MAX_SIZE`, `DB_POOL_TIMEOUT`. В текущем Compose эти параметры не все прокинуты через `environment`: для изменения добавьте явный локальный override, не только строку `.env`. `DB_MAX_SIZE` в Settings задаёт **max_overflow** поверх pool size, а не общий максимум.
+Процесс AI дополнительно поддерживает `EMBEDDING_MODEL_NAME`, `RAG_MIN_SIMILARITY`, `RAG_TOP_K`, `AI_TTFT_TIMEOUT_SEC` (`15`), `AI_STREAM_TOTAL_TIMEOUT_SEC` (`60`), `AI_CHUNK_IDLE_TIMEOUT_SEC` (`10`), `DB_POOL_SIZE`, `DB_MAX_SIZE`, `DB_POOL_TIMEOUT`. Дефолты в коде — `RAG_MIN_SIMILARITY=0.30`, `RAG_TOP_K=6`; в шаблоне `.env.example` AI указаны `0.65` и `4`. В текущем Compose эти и некоторые другие параметры не прокинуты через `environment`, поэтому в контейнере применяются дефолты приложения, если не задан override. Не полагайтесь на строку в `infra/.env` без передачи через Compose. Остальные настройки также нужно проверять: для изменения добавьте явный локальный override, не только строку `.env`. `DB_MAX_SIZE` в Settings задаёт **max_overflow** поверх pool size, а не общий максимум.
 
 `POSTGRES_TEST_DSN` используется тестами с хоста, по умолчанию пример указывает `localhost:5434/orbit_ai_test`; не передавайте рабочую БД. Шаблон приложения: [AI .env.example](https://github.com/orbit-polytech/ai-service/blob/main/.env.example). В отличие от Go-приложений, AI Settings настроен читать локальный `.env`; это не меняет правил передачи env в контейнеры.
