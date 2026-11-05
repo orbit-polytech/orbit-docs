@@ -33,7 +33,7 @@
 * **MUST**: Сессия `httpx.AsyncClient` в `bot-service` создается один раз при старте приложения, а не на каждое сообщение.
 
 ### Flutter и мобилка:
-* **MUST**: Использовать архитектуру MVVM + Command + Result. Логика живет во ViewModel, виджет только отображает состояние.
+* **MUST**: Использовать принятую Clean Architecture + BLoC и Feature-First. Виджет отображает состояние и передаёт события; бизнес-логика находится вне виджета.
 * **MUST**: Токены хранятся строго через `flutter_secure_storage`.
 
 ---
@@ -90,8 +90,8 @@ mkdocs build --strict
 
 ## Текущий AI: обязательные проверки
 
-- Python 3.13+, `application/domain/infrastructure/presentation`; `orbit-contracts` из Git `v0.5.2`, не editable `../contracts` в Docker.
+- Python 3.13+, `application/domain/infrastructure/presentation`; `orbit-contracts` из Git `v0.5.3`, не editable `../contracts` в Docker.
 - Пользовательский AI API только через JWT Gateway, владение диалогом/replay/отменой проверяется в AI; Users-профиль не является обязательной зависимостью.
-- Не считать `conversation_id` памятью диалога, пустой RAG — жёстким отказом, demo — официальной базой, health — проверкой Groq.
+- История диалога ограничена и может быть недоступна; не считать её полной памятью. Не считать пустой RAG жёстким отказом, score вероятностью правильности, а health — проверкой провайдера. Материалы краулера требуют проверки.
 - `task up` запускает `apps` без AI; полный запуск — `--profile all`. Проверки live-тестов используют только `POSTGRES_TEST_DSN` тестовой базы.
 - При изменении API обновлять [SSE-спецификацию](../gateway/ai-api.md), env и [ограничения](../python-ai/current-limitations.md). Не объявлять тесты/CI пройденными без фактического прогона.

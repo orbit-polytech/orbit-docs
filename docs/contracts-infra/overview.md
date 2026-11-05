@@ -10,7 +10,7 @@
 
 Вместо того чтобы копировать `.proto` файлы вручную между репозиториями сервисов, все схемы Protobuf v3 централизованно хранятся в `contracts`.
 
-С помощью **Buf CLI** схемы проверяются и генерируются в Go и Python. Текущий AI подключает `contracts@v0.5.2`; Python-пакет содержит gRPC-код, `.pyi` и `py.typed`. Go импортирует пакеты из `github.com/orbit-polytech/contracts/gen/go/orbit/...`, но версионируется корневой модуль. См. [дерево и команды](contracts.md).
+С помощью **Buf CLI** схемы проверяются и генерируются в Go и Python. Текущий AI подключает `contracts@v0.5.3`; Python-пакет содержит gRPC-код, `.pyi` и `py.typed`. Go импортирует пакеты из `github.com/orbit-polytech/contracts/gen/go/orbit/...`, но версионируется корневой модуль. См. [дерево и команды](contracts.md).
 
 ---
 

@@ -27,12 +27,12 @@ contracts/
 └── README.md
 ```
 
-Срез `v0.5.0`: пакет `orbit.schedule.v1` содержит `SearchGroups` и `GetGroupSchedule`. Ответ чтения содержит `date_from = 6` и `date_to = 7`; номера старых полей не меняются. В `ScheduleMetadata` добавлены `status = 4` (`UNSPECIFIED`, `READY`, `PENDING_SYNC`), `published_from = 5` и `published_to = 6`. Старые номера полей сохранены. Schedule сохраняет эту версию модуля; Gateway с AI использует `v0.5.2`. Users, Tasks, общие pagination-схемы и события добавляются после согласования; учебные proto Tasks находятся отдельно в `orbit-docs/examples/tasks-service`.
+Срез `v0.5.0`: пакет `orbit.schedule.v1` содержит `SearchGroups` и `GetGroupSchedule`. Ответ чтения содержит `date_from = 6` и `date_to = 7`; номера старых полей не меняются. В `ScheduleMetadata` добавлены `status = 4` (`UNSPECIFIED`, `READY`, `PENDING_SYNC`), `published_from = 5` и `published_to = 6`. Старые номера полей сохранены. Schedule сохраняет эту версию модуля; Gateway с AI использует `v0.5.3`. Поле `model` в AI-запросе необязательно; сервер проверяет явно переданный ID по списку разрешённых моделей. Users, Tasks, общие pagination-схемы и события добавляются после согласования; учебные proto Tasks находятся отдельно в `orbit-docs/examples/tasks-service`.
 
 Подключение Go-модуля из корня репозитория сервиса:
 
 ```bash
-go get github.com/orbit-polytech/contracts@v0.5.2
+go get github.com/orbit-polytech/contracts@v0.5.3
 go mod tidy
 ```
 
@@ -118,10 +118,10 @@ buf generate             # Кодогенерация в gen/go
 
 ```toml
 [tool.uv.sources]
-orbit-contracts = { git = "https://github.com/orbit-polytech/contracts.git", tag = "v0.5.2" }
+orbit-contracts = { git = "https://github.com/orbit-polytech/contracts.git", tag = "v0.5.3" }
 ```
 
-Для существующего checkout AI используйте `uv sync --locked`. Для изолированной проверки установки контракта: `python -m pip install "orbit-contracts @ git+https://github.com/orbit-polytech/contracts.git@v0.5.2"`. Editable-соседство `../contracts` не является требованием Docker-сборки. Версия Python distribution в `pyproject.toml` и Git release-tag — разные значения; нельзя автоматически считать `version=0.1.0` тегом контракта.
+Для существующего checkout AI используйте `uv sync --locked`. Для изолированной проверки установки контракта: `python -m pip install "orbit-contracts @ git+https://github.com/orbit-polytech/contracts.git@v0.5.3"`. Editable-соседство `../contracts` не является требованием Docker-сборки. Версия Python distribution в `pyproject.toml` и Git release-tag — разные значения; нельзя автоматически считать `version=0.1.0` тегом контракта.
 
 Пакет включает `gen/python/orbit`, `.pyi` и `py.typed`. Генерируемые файлы вручную не исправляются. После изменения proto запускаются `task generate` и `task check`, проверяется diff; совместимость Go и Python проверяется потребителями. Для breaking-check выбирайте согласованную базовую версию, не копируйте устаревший тег из примера вслепую.
 
