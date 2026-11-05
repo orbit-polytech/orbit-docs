@@ -72,4 +72,4 @@ Host-порты могут быть изменены в `.env`. Межконте
 
 ## Текущий AI-контур
 
-Groq + FastEmbed, Python 3.13+, PostgreSQL/pgvector `orbit_ai`; тесты — `orbit_ai_test`. Контракт AI — `v0.5.2`. Порты контейнеров не совпадают с host mapping: PostgreSQL внутри `5432`, на хосте `5434`, не отдельный `5435`. `task up` = `apps` без AI; совместный стенд — профиль `all`. Полный [справочник env](ports-and-env.md), [AI API](../gateway/ai-api.md).
+Groq + FastEmbed, Python 3.13+, PostgreSQL/pgvector `orbit_ai`; тесты — `orbit_ai_test`. Контракт AI — `v0.5.3`. Порты контейнеров не совпадают с host mapping: PostgreSQL внутри `5432`, на хосте `5434`, не отдельный `5435`. `task up` = `apps` без AI; совместный стенд — профиль `all`. Полный [справочник env](ports-and-env.md), [AI API](../gateway/ai-api.md).
