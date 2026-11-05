@@ -12,18 +12,18 @@
 
 | Репозиторий | Что внутри | Основной стек |
 |---|---|---|
-| [`contracts`](https://github.com/orbit-polytech/contracts) | Proto-файлы Auth/Schedule и сгенерированный Go-код; остальные контракты добавляются по мере реализации | Buf CLI, Protobuf v3 |
-| [`infra`](https://github.com/orbit-polytech/infra) | Текущий Compose: PostgreSQL, Redis, Auth, Schedule, Gateway и one-shot сервисы | Docker Compose, PostgreSQL 16, Redis 7 |
+| [`contracts`](https://github.com/orbit-polytech/contracts) | Proto-файлы Auth/Schedule/AI и сгенерированный Go/Python-код; остальные контракты добавляются по мере реализации | Buf CLI, Protobuf v3 |
+| [`infra`](https://github.com/orbit-polytech/infra) | Текущий Compose: PostgreSQL, Redis, Auth, Schedule, Gateway, AI и one-shot сервисы | Docker Compose, PostgreSQL 16, Redis 7 |
 | [`gateway-service`](https://github.com/orbit-polytech/gateway-service) | Единый публичный HTTP API шлюз для мобилки и внешних клиентов | Go 1.25, HTTP/REST, gRPC-клиенты, JWT verifier |
 | [`auth-service`](https://github.com/orbit-polytech/auth-service) | Email OTP, Google OAuth, identities, сессии и Ed25519 JWT | Go 1.25, gRPC, PostgreSQL, Redis |
-| [`users-service`](https://github.com/orbit-polytech/users-service) | Профили студентов, учебные группы, права и роли | Go 1.25, gRPC, PostgreSQL |
+| [`users-service`](https://github.com/orbit-polytech/users-service) | Профили студентов, учебные группы, права и роли | Go 1.26.10 (каркас), gRPC, PostgreSQL |
 | [`schedule-service`](https://github.com/orbit-polytech/schedule-service) | Публичное регулярное расписание, Redis-кэш и распределённая синхронизация | Go, gRPC `:50054`, PostgreSQL, Redis Streams |
 | [`navigation-service`](https://github.com/orbit-polytech/navigation-service) | Корпуса Политеха (БС, АВ, ПР), аудитории, построение маршрутов | Go 1.25, gRPC, PostgreSQL |
 | [`tasks-service`](https://github.com/orbit-polytech/tasks-service) | Учебные задачи, дедлайны лабораторных работ (эталонный сервис) | Go 1.25, gRPC, Clean Architecture, PostgreSQL |
 | [`notification-service`](https://github.com/orbit-polytech/notification-service) | Очередь отправки push-уведомлений и Telegram-сообщений | Go 1.25, gRPC, RabbitMQ Consumer |
 | [`ai-service`](https://github.com/orbit-polytech/ai-service) | RAG, Groq, FastEmbed (384d), потоковый API через Gateway | Python 3.13+, grpc.aio, pgvector, uv |
 | [`bot-service`](https://github.com/orbit-polytech/bot-service) | Официальный Telegram-бот для студентов Политеха | Python 3.12, aiogram 3, long polling / webhook |
-| [`mobile`](https://github.com/orbit-polytech/mobile) | Кроссплатформенное мобильное приложение для iOS и Android | Flutter 3.x, Dart, MVVM / BLoC |
+| [`mobile`](https://github.com/orbit-polytech/mobile) | Кроссплатформенное мобильное приложение для iOS и Android | Flutter 3.x, Dart, Clean Architecture / BLoC |
 | [`orbit-docs`](https://github.com/orbit-polytech/orbit-docs) | Центральная база знаний и инженерная документация команды | MkDocs Material, Markdown |
 
 > [!NOTE]

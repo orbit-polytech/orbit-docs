@@ -13,7 +13,7 @@ ai-service/
 │   ├── application/         # chat stream и отмена
 │   ├── infrastructure/      # Groq, FastEmbed, RAG, PostgreSQL
 │   ├── presentation/grpc/   # servicer и health
-│   └── scripts/             # ingestion demo
+│   └── scripts/             # краулер и ingestion Markdown
 ├── migrations/              # Alembic
 ├── tests/                   # unit, transport, integration
 ├── pyproject.toml
