@@ -41,8 +41,8 @@
 ## AI implementation
 - [AI API](https://orbit-polytech.github.io/orbit-docs/gateway/ai-api/): JWT, POST SSE, UUIDv4, replay, cancel, ошибки.
 - [AI Local Stack](https://orbit-polytech.github.io/orbit-docs/how-to/ai-local-stack/): profiles apps/ai/all, pgvector, Alembic, existing volumes.
-- [Knowledge Ingestion](https://orbit-polytech.github.io/orbit-docs/python-ai/knowledge-ingestion/): versioning, demo fixtures are not verified regulations.
-- [AI Limitations](https://orbit-polytech.github.io/orbit-docs/python-ai/current-limitations/): no multi-turn prompt history, no Schedule tool, no distributed cancellation.
+- [Knowledge Ingestion](https://orbit-polytech.github.io/orbit-docs/python-ai/knowledge-ingestion/): crawler, Markdown ingestion and document versioning; verify the source content.
+- [AI Limitations](https://orbit-polytech.github.io/orbit-docs/python-ai/current-limitations/): limited conversation history, no Schedule tool, no distributed cancellation; RAG and room rules are not guarantees.
 
 ## Target architecture and learning tracks
 - [Polyrepo Map](https://orbit-polytech.github.io/orbit-docs/reference/polyrepo-map/): текущие и запланированные репозитории.

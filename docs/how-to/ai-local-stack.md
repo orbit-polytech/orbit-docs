@@ -4,7 +4,7 @@
 
 Пройдите [основной Quickstart](../quickstart/local-setup.md): Docker Compose v2, Task, клон `infra`, локальный `.env`, доступ к GHCR. Для AI дополнительно нужен Read-доступ к `ghcr.io/orbit-polytech/ai-service`. Образ используется и сервером, и `ai-migrate`; отдельного `ai-migrate` пакета нет.
 
-В `infra/.env` заполните `GROQ_API_KEY` и выберите `AI_MODEL`, доступную вашему аккаунту Groq. Шаблон содержит модель по умолчанию, но её доступность и квоты нужно проверять у провайдера. В Compose `APP_ENV` по умолчанию `production`: пустой ключ не является offline-режимом и останавливает AI.
+В `infra/.env` заполните `GROQ_API_KEY` и выберите `AI_MODEL`, доступную вашему аккаунту Groq. Другой OpenAI-совместимый провайдер можно настроить через `AI_API_BASE_URL` и совместимый ключ, но параметры должны быть явно переданы в контейнер через Compose override; работоспособность конкретного провайдера проверяется отдельно. Шаблон содержит модель по умолчанию, но её доступность и квоты нужно проверять у провайдера. В Compose `APP_ENV` по умолчанию `production`: пустой ключ не является offline-режимом и останавливает AI.
 
 Не помещайте ключи в Git и не отправляйте `.env`/полный вывод `docker compose config` в переписку.
 
@@ -50,7 +50,7 @@ docker compose --profile all logs --tail 100 postgres-init ai-migrate ai-service
 docker compose --profile all exec ai-service python -m orbit_ai.presentation.grpc.health_probe
 ```
 
-После запуска получите JWT через Auth и выполните [пример AI API](../gateway/ai-api.md). Пустая база знаний допустима для старта, но не подтверждает готовность RAG. Для локальной проверки можно отдельно загрузить [demo-документы](../python-ai/knowledge-ingestion.md).
+После запуска получите JWT через Auth и выполните [пример AI API](../gateway/ai-api.md). Пустая база знаний допустима для старта, но не подтверждает готовность RAG. Для наполнения базы отдельно соберите и загрузите [проверенные документы](../python-ai/knowledge-ingestion.md). Каталог `data/knowledge` в готовый образ не включён; ingestion не запускается автоматически.
 
 БД внутри сети: `postgres:5432/orbit_ai`; с хоста: `127.0.0.1:5434`. gRPC AI: внутри `ai-service:50057`, на хосте только `127.0.0.1:50057`. Пользовательский API — Gateway `:8080`.
 
