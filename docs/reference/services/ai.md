@@ -12,11 +12,11 @@
 |---|---|
 | Runtime | Python 3.13+, uv, `uv.lock` |
 | Транспорт | `grpc.aio`, порт `50057`, health protocol |
-| Генерация | Groq через OpenAI-совместимый SDK; модель задаётся `AI_MODEL` |
+| Генерация | OpenAI-совместимый API (по умолчанию Groq); URL задаётся `AI_API_BASE_URL`, модель — `AI_MODEL` |
 | Эмбеддинги | FastEmbed, `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, 384 измерения |
 | Хранилище | SQLAlchemy asyncio + asyncpg; PostgreSQL 16 + pgvector |
 | Миграции | Alembic, отдельный `ai-migrate` |
-| Контракты | Python-пакет `orbit-contracts` из Git по тегу `v0.5.2` |
+| Контракты | Python-пакет `orbit-contracts` из Git по тегу `v0.5.3` |
 
 База приложения — `orbit_ai`; изолированная база интеграционных тестов — `orbit_ai_test`. Между контейнерами используется `postgres:5432`, с хоста по умолчанию `localhost:5434`. Не переносите сюда старые `ai_knowledge_db`, `vector(768)` или Gemini env из учебного примера.
 
@@ -28,9 +28,15 @@ RPC: `ChatStream` и `CancelGeneration`. HTTP-клиент использует 
 
 ## Конфигурация
 
-Актуальный шаблон — [`.env.example`](https://github.com/orbit-polytech/ai-service/blob/main/.env.example). Основные параметры: `DATABASE_URL`, `GROQ_API_KEY`, `AI_MODEL`, `RAG_ENABLED`, `EMBEDDING_MODEL_NAME`, `RAG_MIN_SIMILARITY`, `RAG_TOP_K`, лимиты и таймауты `AI_*`. В `APP_ENV=production` отсутствие ключа или DSN останавливает запуск. В development без ключа используется FakeLLMClient — это не реальная генерация.
+Актуальный шаблон — [`.env.example`](https://github.com/orbit-polytech/ai-service/blob/main/.env.example). Основные параметры: `DATABASE_URL`, `GROQ_API_KEY`, `AI_API_BASE_URL`, `AI_MODEL`, `AI_ALLOWED_MODELS`, `CHAT_HISTORY_LIMIT`, `RAG_ENABLED`, `EMBEDDING_MODEL_NAME`, `RAG_MIN_SIMILARITY`, `RAG_TOP_K`, лимиты и таймауты `AI_*`. В `APP_ENV=production` отсутствие ключа или DSN останавливает запуск. В development без ключа используется FakeLLMClient — это не реальная генерация.
+
+`GROQ_API_KEY` используется клиентом и при другом совместимом провайдере; проверьте его требования, модель и совместимость. По умолчанию включена проверка TLS; при корпоративной инспекции можно настроить доверенный `GROQ_CA_BUNDLE`. Отключение проверки TLS запрещено в production.
 
 Настройки процесса и переменные, передаваемые Compose, различаются: произвольная строка в `infra/.env` не добавляет параметр контейнеру. См. [справочник env](../ports-and-env.md).
+
+## Разбор аудиторий
+
+В `ai-service` есть детерминированный парсер номеров: например, по заложенному правилу `АВ-2315` разбирается как кампус Автозаводская, корпус 2, этаж 3, аудитория 315; для `АВ-315` требуется уточнение корпуса. Текущий и предыдущий вопрос могут использоваться как контекст. Это результат работы правил, а не проверка реального существования аудитории. Соответствие правил и этажей официальным источникам требует отдельной проверки; предупреждение модели не гарантирует, что итоговый ответ будет верным. Отдельный `navigation-service` остаётся запланированным.
 
 ## Эксплуатация
 
