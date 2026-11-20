@@ -1,21 +1,21 @@
 # Запуск актуального стенда
 
-Цель руководства — поднять текущий backend-стенд Orbit AI и проверить Gateway. Для обычного запуска не нужны Go, Python, Flutter, Buf или Goose: сервисы работают в Docker-контейнерах.
+Эта инструкция поможет локально поднять рабочий backend-стенд Orbit и проверить Gateway. Для обычного запуска Go, Python, Flutter, Buf или Goose ставить не нужно — сервисы работают в Docker.
 
-!!! info "Статус"
-    Образы Orbit опубликованы в GHCR. Для приватных пакетов нужны персональная авторизация Docker и Read-доступ ко всем шести пакетам. Публикация образов не заменяет проверку запуска из чистого клона. Сводка компонентов — на странице [«Текущее состояние»](../project/current-state.md).
+!!! info "Доступ к образам"
+    Образы Orbit лежат в приватном GitHub Container Registry (`ghcr.io`). Перед первым запуском нужно настроить вход и получить право **Read** на нужные пакеты — см. [инструкцию GHCR](ghcr-access.md). Актуальный статус всех сервисов — на странице [«Текущее состояние»](../project/current-state.md).
 
-## 1. Требования
+## 1. Что понадобится
 
 | Инструмент | Требование |
 |---|---|
 | Git | 2.40+ |
-| Docker | Docker Engine/Desktop с Compose v2 |
+| Docker | Docker Engine / Desktop с Compose v2 |
 | Task | Taskfile 3.x |
 
-Рекомендуется не менее 4 ГБ свободной RAM и 5 ГБ свободного места для образов и volumes.
+Для комфортной работы со всем стеком (особенно вместе с AI и мониторингом) желательно иметь от 4–6 ГБ свободной RAM и 5–8 ГБ на диске.
 
-## 2. Клонирование и конфигурация
+## 2. Клонирование и `.env`
 
 ```bash
 git clone https://github.com/orbit-polytech/infra.git
@@ -23,7 +23,7 @@ cd infra
 cp .env.example .env
 ```
 
-На Windows PowerShell:
+В Windows PowerShell:
 
 ```powershell
 git clone https://github.com/orbit-polytech/infra.git
@@ -31,26 +31,22 @@ Set-Location infra
 Copy-Item .env.example .env
 ```
 
-Откройте `.env` и замените значения `change_this_*` и `your_secret_*` случайными локальными значениями.
+Откройте `.env` и замените плейсхолдеры (`change_this_*`, `your_secret_*`) своими локальными паролями и секретами:
 
-Для запуска и healthcheck достаточно непустых значений Resend. Для **реальной отправки OTP** нужны действующий `RESEND_API_KEY` и разрешённый `RESEND_FROM_EMAIL`. Для Google OAuth дополнительно заполните Google credentials и установите `GOOGLE_OAUTH_ENABLED=true`.
+- для healthcheck Auth достаточно непустых значений `RESEND_API_KEY` и `RESEND_FROM_EMAIL`, но для **реальной отправки писем** с OTP нужен живой ключ Resend и подтверждённый отправитель;
+- для Google OAuth заполните `AUTH_GOOGLE_CLIENT_ID`, `AUTH_GOOGLE_CLIENT_SECRET` и включите `GOOGLE_OAUTH_ENABLED=true`;
+- если планируете запускать `all` или `monitoring`/`ops`, заполните также `GRAFANA_ADMIN_PASSWORD`, `METRICS_DB_PASSWORD`, `OPS_BOT_DB_PASSWORD`, `OPS_BOT_WEBHOOK_TOKEN` и ключи выбранного LLM-провайдера.
 
-Никогда не добавляйте локальный `.env` в Git.
+Файл `.env` в Git добавлять нельзя.
 
-## Доступ к приватным образам GHCR
-
-Перед первым `task up` выполните [инструкцию авторизации в GHCR](ghcr-access.md): получите Read-доступ, создайте PAT classic с `read:packages`, войдите через `docker login ghcr.io -u YOUR_GITHUB_USERNAME` и проверьте скачивание всех шести образов. Для публичных пакетов этот шаг не нужен.
-
-**PAT не записывается в `.env` и не передаётся контейнерам.** Авторизация в реестре не является авторизацией в API Orbit.
-
-## 3. Запуск
+## 3. Запуск базового стенда (`apps`)
 
 ```bash
 task up
 task status
 ```
 
-Ожидаемый результат:
+Что должно получиться:
 
 | Контейнер | Ожидаемый статус |
 |---|---|
@@ -64,86 +60,70 @@ task status
 | `schedule-service` | `Up (healthy)` |
 | `gateway-service` | `Up (healthy)` |
 
-`jwt-keygen`, `postgres-init`, `auth-migrate` и `schedule-migrate` — one-shot контейнеры. Их состояние `Exited (0)` означает успешное завершение, а не ошибку.
+`Exited (0)` для one-shot контейнеров (`jwt-keygen`, `postgres-init`, миграторы) — это норма, значит инициализация прошла успешно.
 
-## 4. Проверка
+## 4. Проверка Gateway, Auth и расписания
 
 ```bash
 curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-Откройте Swagger UI:
+Swagger UI: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html).
 
-- [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
-
-Доступные сейчас маршруты Auth имеют префикс `/api/v1/auth`:
-
+Основные маршруты Auth (префикс `/api/v1/auth`):
 - `POST /api/v1/auth/send-code`
 - `POST /api/v1/auth/verify-code`
 - `POST /api/v1/auth/refresh`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
-- OAuth и identities endpoints
+- `PATCH /api/v1/auth/preferences`
+- `GET /api/v1/auth/oauth/{provider}/login`, `callback`, `POST /api/v1/auth/oauth/exchange`
+- `POST /api/v1/auth/identities/link/begin`, `finish`, `GET /identities`, `DELETE /identities/{provider}`
 
-В текущем API нет `/v1/auth/dev-login` и `/v1/tasks`: эти сценарии относятся к целевой архитектуре и учебному примеру.
-
-### Проверка публичного расписания
-
-После первого запуска worker загружает группы в фоне. `healthy` не означает, что расписание каждой группы уже загружено. Без JWT и без профиля выполните:
+Публичное расписание (работает без JWT):
 
 ```bash
 curl "http://localhost:8080/api/v1/schedule/groups?query=261&limit=20"
 curl "http://localhost:8080/api/v1/schedule/groups/261-334"
 ```
 
-Второй запрос выбирает текущую неделю по Москве. В ответе проверяйте `date_from`, `date_to`, `time_zone`, `metadata` и `days`. Если расписание ещё не загружено, подтверждённое задание даёт `200 PENDING_SYNC`; после загрузки — `200 READY`. Без данных и доступной очереди возможен `503`. Пустой `READY` и `404` неизвестной группы — отдельные состояния. Проверяйте также `metadata.status`, `published_from` и `published_to`. Полные правила и диагностика — в [API расписания](../gateway/schedule-api.md).
+В PowerShell вместо алиаса `curl` вызывайте `curl.exe`. Первый запуск может вернуть `PENDING_SYNC` — это значит, что задача на выгрузку группы уже ушла фоновым воркерам `schedule-service`. Подробнее: [API расписания](../gateway/schedule-api.md).
 
-## 5. Команды управления
+## 5. Основные команды `Taskfile`
 
 | Команда | Назначение |
 |---|---|
-| `task up` | Запустить базовый профиль `apps`, без AI |
-| `task up:deps` | Запустить только PostgreSQL и Redis |
-| `task db:init` | Повторно подготовить роль, базу Schedule и права, не удаляя volume |
-| `task status` | Показать все контейнеры, включая завершившиеся one-shot |
-| `task logs` | Следить за логами |
-| `task down` | Остановить стенд, сохранив данные и JWT-ключи |
-| `task clean` | Удалить контейнеры, данные и JWT-ключи |
+| `task up` | Базовый профиль `apps` (без AI, мониторинга и `ops-bot`) |
+| `task up:deps` | Только `postgres` и `redis` |
+| `task db:init` | Перезапуск `postgres-init` без удаления данных |
+| `task build` | Сборка локально переопределённых сервисов из `compose.override.yaml` |
+| `task status` | Список контейнеров профиля `apps` |
+| `task logs` | Логи профиля `apps` |
+| `task down` | Остановка с сохранением томов и ключей |
+| `task clean` | Полный сброс контейнеров и томов |
+| `task tunnel:up` / `task tunnel:down` | Внешний HTTPS-туннель Ngrok для `gateway-service` |
 
-!!! danger "Полный сброс"
-    `task clean` удаляет PostgreSQL, Redis и JWT-ключи. После генерации новой пары ранее выданные JWT перестанут проходить проверку.
+!!! danger "Осторожно с `task clean`"
+    `task clean` удаляет базы PostgreSQL, Redis, оба JWT-ключа (старые токены перестанут проверяться) и тома мониторинга.
 
-## 6. Локальная разработка сервисов
+## 6. Локальная разработка своего сервиса
 
-Backend-разработчик может собрать изменяемый сервис из соседнего репозитория:
-
-```text
-orbit/
-├── infra/
-├── auth-service/
-├── gateway-service/
-└── schedule-service/   # нужен только при его локальной разработке
-```
-
-В `infra`:
+Если вы правите код одного из сервисов и хотите проверить его в Compose вместо готового образа из GHCR:
 
 ```bash
+cd infra
 cp compose.override.yaml.example compose.override.yaml
-```
-
-В текущем шаблоне `build` уже включён у всех сервисов. Удалите/закомментируйте ненужные блоки и оставьте только разрабатываемый сервис, затем выполните:
-
-```bash
+# Уберите или закомментируйте build-блоки сервисов, которые не меняете
 task build
 docker compose --profile apps up -d --pull never --wait --wait-timeout 120
 ```
 
-Файл `compose.override.yaml` локальный и не должен попадать в Git. Если меняете миграции Schedule, подключите сборку `schedule-migrate` из того же исходного кода.
+Не коммитьте `compose.override.yaml`. Если меняли миграции, оставьте в override также соответствующий `*-migrate` сервис.
 
 ## 7. Обновление уже запущенного стенда
 
-После публикации новых образов и обновления `infra` скачайте их явно: одного `task up` недостаточно, чтобы гарантированно обновить локальный `latest`.
+Тег `latest` обновляется, поэтому после `git pull` нужно явно подтянуть свежие образы:
 
 ```bash
 git pull --ff-only
@@ -152,30 +132,29 @@ task up
 task status
 ```
 
-База Schedule на старом PostgreSQL volume подготавливается one-shot сервисом `postgres-init` до миграций. Не выполняйте `task clean` или `down -v` ради добавления Schedule. При ручной диагностике: `task up:deps`, затем `task db:init`, затем `task up`. Подробности о паролях и существующих базах — в [infra](../contracts-infra/infra.md).
+Если в `infra` добавили новые базы или роли (например, для AI, мониторинга или `ops-bot`), перед запуском профилей просто прогоните `task up:deps` и `task db:init` — удалять volume не нужно. Подробности: [infra](../contracts-infra/infra.md).
 
-## 8. Диагностика
+## 8. Подключить AI, мониторинг, `ops-bot` и туннель
+
+- **Стенд с AI (Groq / OpenRouter / Gemini + pgvector):** см. [запуск с AI](../how-to/ai-local-stack.md).
+- **Мониторинг и логи (Prometheus, Alertmanager, Loki, Alloy, Grafana):** см. [Observability](../contracts-infra/observability.md).
+- **Операционный Telegram-бот (`ops-bot`):** см. [паспорт ops-bot](../reference/services/ops-bot.md).
+- **Всё вместе одной командой:**
 
 ```bash
-task status
-docker compose --profile apps logs auth-service
-docker compose --profile apps logs gateway-service
-docker compose --profile apps logs auth-migrate
-docker compose --profile apps logs postgres-init schedule-migrate schedule-service
-docker compose --profile apps logs jwt-keygen
+docker compose --profile all pull
+docker compose --profile all up -d --wait --wait-timeout 180
+docker compose --profile all ps -a
 ```
+
+- **Наружный туннель Ngrok для тестов на телефоне:** заполните `NGROK_AUTHTOKEN` (и при наличии `NGROK_URL`) в `.env` и выполните `task tunnel:up`.
+
+## 9. Если что-то пошло не так
 
 | Симптом | Что проверить |
 |---|---|
-| Ошибка скачивания `ghcr.io/orbit-polytech/*` | Проверьте имя/тег и [авторизацию и Read-доступ к пакетам](ghcr-access.md) |
-| Auth не стартует | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `OTP_HMAC_SECRET`, DSN и Redis password |
-| `auth-migrate` завершился не с нулём | Логи мигратора и доступность PostgreSQL |
-| Gateway возвращает `503` на Auth | Health Auth и `AUTH_GRPC_ADDR` |
-| `503` на расписании | Health Schedule, `SCHEDULE_GRPC_ADDR`, доступность Redis/очереди, логи синхронизации и `SCHEDULE_SYNC_ENABLED` |
-| `postgres-init` / `schedule-migrate` завершился с ошибкой | Логи, существующая база Auth, admin credentials и права приложения; не удалять volume вслепую |
-| После `task clean` токены не принимаются | Это ожидаемо: была создана новая пара JWT-ключей |
-
-
-## 9. Подключить AI
-
-`task up` не запускает AI. Для Groq/FastEmbed/RAG и защищённого SSE API используйте [запуск с AI](../how-to/ai-local-stack.md): дополнительно Read-доступ к `ai-service`, `GROQ_API_KEY`, профиль `all`, Alembic и проверка потока с JWT. Профиль `ai` сам по себе не запускает Gateway/Auth. Для обновления с AI используйте `docker compose --profile all pull` и `up`, а не только команды `apps` выше.
+| Ошибка скачивания `ghcr.io/orbit-polytech/*` | Логин в `ghcr.io` и права **Read** на нужный пакет — см. [инструкцию GHCR](ghcr-access.md) |
+| `auth-service` не стартует | `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, `OTP_HMAC_SECRET`, `REDIS_PASSWORD`, `POSTGRES_DSN` |
+| Gateway отвечает `503` на Auth или Schedule | Логи целевого сервиса и его healthcheck (`docker compose logs`) |
+| Мониторинг ругается на БД/пароли после обновления `infra` | Запустите `task db:init`, чтобы `postgres-init` досоздал роли `orbit_metrics` и `orbit_ops_bot` |
+| После `task clean` старые JWT не принимаются | Нормально: при чистом старте `jwt-keygen` сгенерировал новую пару ключей |

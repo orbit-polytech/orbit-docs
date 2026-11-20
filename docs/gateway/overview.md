@@ -1,66 +1,75 @@
 # HTTP Gateway: единый входной шлюз
 
-[`gateway-service`](https://github.com/orbit-polytech/gateway-service) принимает HTTP/JSON-запросы и вызывает внутренние gRPC-сервисы. Текущие интеграции в `main` — **Auth, Schedule и AI**. Внешние приложения не подключаются к их PostgreSQL или gRPC напрямую.
+[`gateway-service`](https://github.com/orbit-polytech/gateway-service) принимает внешние HTTP/JSON-запросы и проксирует их во внутренние gRPC-сервисы (**Auth, Schedule и AI**). Внешние клиенты (включая мобильное приложение) общаются только со шлюзом и не подключаются напрямую к БД или gRPC.
 
-## Текущие обязанности
+## За что отвечает Gateway
 
-- Маршрутизация через стандартный `net/http.ServeMux`.
-- Публичные Auth-сценарии (OTP, OAuth и управление сессией согласно соответствующему endpoint).
-- Проверка Ed25519 JWT на защищённых маршрутах: `/auth/me`, начало linking, список и отвязка identities.
-- **Публичный поиск групп и чтение расписания без JWT**.
-- JSON DTO, CORS, request ID, logging, recovery и преобразование gRPC status в HTTP.
-- Health endpoints `/healthz`, `/readyz`, Swagger UI.
+- Маршрутизация на базе стандартного `net/http.ServeMux` (префикс `/api/v1`).
+- Публичные Auth-сценарии: Email OTP, refresh, logout, Google OAuth (включая мобильный PKCE `POST /api/v1/auth/oauth/exchange`), а также редирект мобильного callback привязки Google на `ru.mospolytech.orbit://auth/callback`.
+- Проверка Ed25519 access JWT (`middleware.Auth`) на защищённых маршрутах:
+  - `/api/v1/auth/me`, `PATCH /api/v1/auth/preferences` (обновление `primary_group` и `favorite_groups`);
+  - привязка, список и отвязка внешних identities (`/api/v1/auth/identities/...`);
+  - весь блок AI (`/api/v1/ai/...`) с пробросом проверенного `x-user-id` в gRPC metadata.
+- **Публичный поиск групп и расписание без JWT**.
+- Middleware: `RequestID`, `Logger` (структурированный JSON `log/slog` с полем `service="gateway-service"`), `Metrics` (HTTP RED-метрики Prometheus), `Recovery`, `CORS`.
+- Health endpoints `/healthz` и `/readyz`, Swagger UI (`/swagger/index.html`) и изолированный внутренний HTTP-сервер метрик `:9094` (`/metrics`, `/livez`).
 
-Gateway не выпускает токены, не хранит профиль и не подключается к базе сервисов. Вычисление недели, проверка интервала до 93 дней и расчёт сетки звонков выполняются в Schedule. Запрос может инициировать постановку фонового задания в Schedule, но не ждёт скачивания с `rasp.dmami.ru`. Gateway передаёт `READY` / `PENDING_SYNC`, актуальность и известный период публикации; бизнес-логику кэша он не дублирует.
+Gateway не выпускает JWT, не хранит профиль и не лезет в PostgreSQL сервисов. Бизнес-логика расчёта недели, кэша расписания, генерации ответов и хранения сессий живёт в соответствующих сервисах.
 
-## Текущая структура
+## Структура `gateway-service`
 
 ```text
 gateway-service/
-├── cmd/gateway/                # запуск и сборка приложения
+├── cmd/gateway/                    # точка входа
 ├── internal/
-│   ├── config/                 # env, адреса RPC, таймауты
+│   ├── app/                        # сборка, HTTP-сервер и отдельный сервер метрик :9094
+│   ├── config/                     # env, адреса RPC, таймауты, METRICS_ADDR, MOBILE_AUTH_REDIRECT_URI
 │   ├── infrastructure/
-│   │   ├── authclient/         # адаптер вызовов Auth
-│   │   ├── aiclient/           # gRPC streaming AI
-│   │   └── scheduleclient/     # адаптер вызовов Schedule
+│   │   ├── authclient/             # gRPC-клиент Auth
+│   │   ├── aiclient/               # gRPC-клиент AI (unary и streaming)
+│   │   └── scheduleclient/         # gRPC-клиент Schedule
 │   └── transport/http/
-│       ├── router.go          # net/http.ServeMux
-│       ├── health/            # liveness/readiness
-│       ├── httputil/          # JSON и gRPC → HTTP ошибки
-│       ├── middleware/        # JWT, CORS, request ID, recovery, logging
+│       ├── router.go               # net/http.ServeMux
+│       ├── swagger.go              # Swagger UI
+│       ├── health/                 # /healthz и /readyz
+│       ├── httputil/               # JSON и маппинг gRPC -> HTTP ошибок
+│       ├── middleware/             # Auth, CORS, RequestID, Recovery, Logger, Metrics
+│       ├── sse/                    # запись и heartbeat SSE-потока
 │       └── v1/
-│           ├── auth/          # handlers и DTO Auth
-│           ├── ai/            # SSE и отмена
-│           └── schedule/      # handlers и DTO Schedule
-├── api/docs/                  # генерируемая Swagger-документация
-├── Dockerfile
-└── go.mod
+│           ├── auth/               # session, account (/me, /preferences), oauth (web + mobile), identity
+│           ├── ai/                 # stream, cancel, conversations, history, delete, feedback
+│           └── schedule/           # search groups и get group schedule
+├── api/docs/                       # сгенерированный Swagger 2.0
+└── go.mod                          # github.com/orbit-polytech/contracts v0.5.9
 ```
 
 ## Публичный и защищённый пути
 
 ```mermaid
 flowchart LR
-    Guest["Гость"] -->|GET /api/v1/schedule/...| GW["Gateway"]
-    GW -->|без идентификатора пользователя| Schedule["Schedule :50054"]
-    User["Клиент с JWT"] -->|защищённый endpoint| JWT["JWT middleware"]
-    JWT --> Auth["Auth :50051"]
+    Guest["Гость"] -->|GET /api/v1/schedule/...| GW["Gateway :8080"]
+    GW -->|без user_id| Schedule["Schedule :50054"]
+    User["Клиент с JWT"] -->|защищённый запрос| JWT["JWT middleware"]
+    JWT -->|проверенный x-user-id| Auth["Auth :50051"]
+    JWT -->|проверенный x-user-id| AI["AI :50057"]
 ```
 
-Регистрация нужна для персональных действий, а не для просмотра открытого расписания. Нельзя автоматически навешивать JWT middleware на весь `/api/v1`. Передача проверенного actor в будущие Tasks/Users должна проектироваться отдельно: параметры и заголовки клиента не становятся доверенной идентичностью сами по себе.
+На расписании JWT не требуется, чтобы студент сразу видел пары в гостевом режиме. Для персональных действий (настройки групп, привязка аккаунта, история и запросы к ИИ) Gateway проверяет подпись JWT и передаёт во внутренние сервисы доверенный `x-user-id`.
 
-## Текущая сеть и будущие компоненты
+## Внутренние порты и метрики
 
-В локальном Compose gRPC опубликован только на loopback для диагностики: Auth `127.0.0.1:50051`, Schedule `127.0.0.1:50054`. Это не публичные production-порты. Gateway не получает Redis credentials; Redis rate limiter/blacklist на шлюзе не следует считать реализованным на основании учебных примеров.
-
-Учебный REST-слой Tasks, Telegram-вход, новые rate limits и маршруты будущих сервисов сохранены в [подробном гайде](../tutorial/backend/11-gateway-rest.md) и концептуальных разделах. Они не являются текущим списком endpoint.
-
-Далее: [обработчики](handlers-and-middleware.md), [gRPC-клиенты](grpc-clients.md), [API расписания](schedule-api.md), [паспорт Gateway](../reference/services/gateway.md).
-
+Порт `:8080` обслуживает клиентский трафик (и пробрасывается в Ngrok при включённом профиле `tunnel`). Сервер метрик слушает отдельно на `METRICS_ADDR` (по умолчанию `:9094`) и открыт только внутри сети Compose для Prometheus — на `:8080` маршрут `/metrics` не зарегистрирован и отдаёт `404`.
 
 ## AI-интеграция
 
-Защищённые JWT маршруты `POST /api/v1/ai/chat/stream` и `POST /api/v1/ai/chat/cancel` вызывают `ai-service:50057`. `AI_GRPC_ADDR` задаёт адрес, `AI_RPC_TIMEOUT` — общий deadline (в Compose `60s`). SSE использует отдельные ограниченные сроки записи событий; обычный короткий unary timeout нельзя переносить на весь поток. Проверенная идентичность передаётся в metadata `x-user-id`.
+Маршруты AI требуют Bearer JWT и закрыты `middleware.Auth`:
+- `POST /api/v1/ai/chat/stream` (SSE-поток)
+- `POST /api/v1/ai/chat/cancel`
+- `GET /api/v1/ai/conversations`
+- `GET /api/v1/ai/conversations/{id}`
+- `DELETE /api/v1/ai/conversations/{id}`
+- `PUT /api/v1/ai/conversations/{id}/messages/{message_id}/feedback`
 
-Чтение первого чанка выполняется до открытия SSE, поэтому ранние ошибки сохраняют HTTP status. После начала потока ошибки передаются событиями. Полная спецификация — [AI API](ai-api.md). Проверка Gateway `/healthz` или `/readyz` не подтверждает готовность AI.
+Дефолтный таймаут AI в Compose — `AI_RPC_TIMEOUT=120s` (у SSE-писателя отдельный таймаут записи `defaultWriteWait = 15s` и heartbeat). Перед открытием потока SSE Gateway читает первый чанк ответа от `ai-service`, чтобы ранние ошибки (`400`, `403`, `409`, `503`) вернулись нормальным HTTP-статусом.
+
+Дальше: [обработчики и middleware](handlers-and-middleware.md), [gRPC-клиенты](grpc-clients.md), [API расписания](schedule-api.md), [AI API](ai-api.md), [паспорт Gateway](../reference/services/gateway.md).

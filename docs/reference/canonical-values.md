@@ -1,75 +1,82 @@
 # Канонические значения Orbit AI
 
-!!! info "Как пользоваться справочником"
-    Значения разделены на **текущую реализацию** и **целевую архитектуру**. Версия конкретного сервиса определяется его `go.mod`, Dockerfile и release-тегом, а не общей цифрой для всей организации.
+!!! info "Как читать справочник"
+    Значения разделены на **текущий стенд** и **запланированные компоненты**. Точную версию зависимостей каждого сервиса смотрите в его `go.mod` / `pyproject.toml` / `pubspec.yaml`.
 
-## Текущий стенд
+## Текущий стенд (`infra v0.4.0`)
 
-| Компонент | Внутренний адрес | Адрес на хосте | Статус |
+| Компонент | Внутренний адрес | Адрес на хосте | Профиль / статус |
 |---|---|---|---|
-| Gateway HTTP | `gateway-service:8080` | `127.0.0.1:8080` | Реализовано |
-| Auth gRPC | `auth-service:50051` | `127.0.0.1:50051` | Реализовано |
-| Schedule gRPC | `schedule-service:50054` | `127.0.0.1:50054` | Реализовано |
-| AI gRPC | `ai-service:50057` | `127.0.0.1:50057` | Реализовано, профиль `ai`/`all` |
-| PostgreSQL | `postgres:5432` | `127.0.0.1:5434` | Реализовано |
-| Redis | `redis:6379` | `127.0.0.1:6380` | Реализовано |
+| Gateway HTTP | `gateway-service:8080` | `127.0.0.1:8080` | `apps`, `all` |
+| Gateway Metrics | `gateway-service:9094` | Не публикуется | Только внутри сети Compose |
+| Auth gRPC | `auth-service:50051` | `127.0.0.1:50051` | `apps`, `all` |
+| Auth Metrics | `auth-service:9091` | Не публикуется | Только внутри сети Compose |
+| Schedule gRPC | `schedule-service:50054` | `127.0.0.1:50054` | `apps`, `all` |
+| Schedule Metrics | `schedule-service:9092` | Не публикуется | Только внутри сети Compose |
+| AI gRPC | `ai-service:50057` | `127.0.0.1:50057` | `ai`, `all` |
+| AI Metrics | `ai-service:9093` | Не публикуется | Только внутри сети Compose |
+| PostgreSQL 16 (pgvector) | `postgres:5432` | `127.0.0.1:5434` | Базовый сервис |
+| Redis 7 | `redis:6379` | `127.0.0.1:6380` | Базовый сервис |
+| Ngrok инспектор | `ngrok:4040` | `127.0.0.1:4040` | `tunnel`, `all` |
+| Prometheus | `prometheus:9090` | `127.0.0.1:9090` | `monitoring`, `all` |
+| Alertmanager | `alertmanager:9093` | `127.0.0.1:9093` | `monitoring`, `all` |
+| Grafana | `grafana:3000` | `127.0.0.1:3000` | `monitoring`, `all` |
+| Loki | `loki:3100` | Не публикуется | `monitoring`, `all` |
+| Grafana Alloy | `alloy:12345` | Не публикуется | `monitoring`, `all` |
+| Postgres / Redis Exporters | `postgres-exporter:9187`, `redis-exporter:9121` | Не публикуется | `monitoring`, `all` |
+| Ops Bot | `ops-bot:8081` | Не публикуется | `ops`, `all` |
 
-Host-порты могут быть изменены в `.env`. Межконтейнерные адреса менять обычно не требуется.
+Host-порты можно переопределить в `infra/.env`. Внутри контейнеров всегда используйте внутренние имена сервисов и внутренние порты (`postgres:5432`, `redis:6379`).
 
-## Основные переменные текущего стенда
+## Ключевые переменные стенда
 
 | Переменная | Потребитель | Назначение |
 |---|---|---|
-| `POSTGRES_DSN` | Auth / Schedule | Отдельное значение DSN для базы каждого сервиса |
-| `SCHEDULE_POSTGRES_DB` | Compose / postgres-init | Имя базы Schedule, по умолчанию `orbit_schedule` |
-| `SCHEDULE_GRPC_ADDR` | Gateway | Адрес Schedule: `schedule-service:50054` |
-| `SCHEDULE_RPC_TIMEOUT` | Gateway | Таймаут Schedule RPC, в Compose `5s` |
-| `SCHEDULE_SYNC_ENABLED` | Schedule через Compose | Фоновая синхронизация; в Compose по умолчанию `true` |
-| `REDIS_ADDR` | Auth, Schedule | Адрес Redis внутри Compose |
-| `REDIS_PASSWORD` | Redis, Auth, Schedule | Пароль локального Redis |
-| `OTP_HMAC_SECRET` | Auth | HMAC-секрет для OTP, минимум 16 символов |
-| `RESEND_API_KEY` | Auth | Ключ Resend для реальной отправки OTP |
-| `RESEND_FROM_EMAIL` | Auth | Разрешённый отправитель Resend |
-| `JWT_PRIVATE_KEY_PATH` | Auth | Путь к приватному Ed25519-ключу |
-| `JWT_PUBLIC_KEY_PATH` | Gateway | Путь к публичному Ed25519-ключу |
-| `AUTH_GRPC_ADDR` | Gateway | Адрес Auth: `auth-service:50051` |
-| `GOOGLE_OAUTH_ENABLED` | Auth | Включение Google OAuth |
-| `AUTH_GOOGLE_CLIENT_ID` | Auth | Google OAuth Client ID |
-| `AUTH_GOOGLE_CLIENT_SECRET` | Auth | Google OAuth Client Secret |
-| `AUTH_GOOGLE_REDIRECT_URI` | Auth | Callback через Gateway |
+| `POSTGRES_DSN` | Auth / Schedule | Строка подключения к `orbit_auth` или `orbit_schedule` |
+| `DATABASE_URL` | AI | AsyncPG DSN для `orbit_ai` (`postgresql+asyncpg://...`) |
+| `SCHEDULE_POSTGRES_DB`, `AI_POSTGRES_DB`, `AI_TEST_POSTGRES_DB` | Compose / `postgres-init` | Имена баз (`orbit_schedule`, `orbit_ai`, `orbit_ai_test`) |
+| `METRICS_DB_USER`, `OPS_BOT_DB_USER` | `postgres-init` / Exporters / `ops-bot` | Отдельные роли `orbit_metrics` (`pg_monitor`) и `orbit_ops_bot` |
+| `AUTH_GRPC_ADDR`, `SCHEDULE_GRPC_ADDR`, `AI_GRPC_ADDR` | Gateway | Внутренние адреса gRPC (`...:50051`, `...:50054`, `...:50057`) |
+| `SCHEDULE_SYNC_ENABLED` | Schedule (через Compose) | Фоновая синхронизация с `rasp.dmami.ru`; в Compose включена |
+| `REDIS_ADDR`, `REDIS_PASSWORD` | Auth, Schedule, `redis-exporter` | Адрес и пароль Redis |
+| `OTP_HMAC_SECRET`, `RESEND_API_KEY`, `RESEND_FROM_EMAIL` | Auth | Email OTP |
+| `JWT_PRIVATE_KEY_PATH` / `JWT_PUBLIC_KEY_PATH` | Auth / Gateway | Ed25519-ключи в раздельных томах `jwt_private` и `jwt_public` |
+| `GOOGLE_OAUTH_ENABLED`, `AUTH_GOOGLE_*` | Auth | Google OAuth/OIDC и привязка аккаунта |
+| `AI_PROVIDER`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `AI_MODEL` | AI | Выбор основного провайдера и ключи моделей |
+| `GRAFANA_ADMIN_*`, `OPS_BOT_*`, `NGROK_*` | Мониторинг, `ops-bot`, Ngrok | Настройка дашбордов, Telegram-топиков, вебхука и туннеля |
 
-Секреты задаются только в локальном `.env` или секрет-хранилище. Реальные значения не добавляются в `.env.example` и Git.
+Секреты заполняются только в локальном `.env` и не попадают в Git.
 
-## Текущие URL
+## Текущие URL стенда
 
 | Назначение | URL |
 |---|---|
-| Liveness | `http://localhost:8080/healthz` |
-| Readiness | `http://localhost:8080/readyz` |
+| Liveness / Readiness Gateway | `http://localhost:8080/healthz`, `http://localhost:8080/readyz` |
 | Swagger UI | `http://localhost:8080/swagger/index.html` |
-| Auth API | `http://localhost:8080/api/v1/auth/...` |
+| Auth API и настройки | `http://localhost:8080/api/v1/auth/...` (`/me`, `/preferences`, `/oauth/...`, `/identities/...`) |
 | Поиск групп (без JWT) | `http://localhost:8080/api/v1/schedule/groups?query=261` |
 | Расписание текущей недели (без JWT) | `http://localhost:8080/api/v1/schedule/groups/261-334` |
-| Google callback | `http://localhost:8080/api/v1/auth/oauth/google/callback` |
+| AI API (с JWT) | `http://localhost:8080/api/v1/ai/chat/stream`, `/conversations`, `.../feedback` |
+| Grafana / Prometheus / Alertmanager | `http://localhost:3000`, `http://localhost:9090`, `http://localhost:9093` |
+| Ngrok Inspector (при `--profile tunnel`) | `http://localhost:4040` |
 
-## Целевая архитектура
+## Запланированная архитектура
 
-Следующие компоненты зарезервированы архитектурой, но ещё не входят в текущий стенд:
+Следующие компоненты зарезервированы на будущее и ещё не входят в рабочий стенд:
 
 | Компонент | Планируемый порт | Статус |
 |---|---:|---|
-| Users gRPC | 50052 | Запланировано |
-| Navigation gRPC | Требует согласования | Запланировано; прежний `50054` занят Schedule |
-| Tasks gRPC | 50055 | Учебный пример / запланировано |
-| Notification gRPC | 50056 | Запланировано |
-| RabbitMQ | 5672 / 15672 | Запланировано |
-| Jaeger UI | 16686 | Запланировано |
+| Users gRPC | `50052` | В разработке (каркас без интеграции) |
+| Navigation gRPC | Требует выбора (старый `50054` занят Schedule) | Запланировано |
+| Tasks gRPC | `50055` | Учебный пример / запланировано |
+| Notification gRPC | `50056` | Запланировано |
+| RabbitMQ | `5672` / `15672` | Запланировано |
+| Jaeger UI | `16686` | Запланировано |
 
-Актуальный статус компонентов находится на странице [«Текущее состояние»](../project/current-state.md).
+Для Schedule каноническими остаются порт `50054`, база `orbit_schedule`, контракт `v0.5.0`, лимит `93` дня и зона `Europe/Moscow`.
 
-Для текущего Schedule закреплены `50054`, база `orbit_schedule`, контракт `v0.5.0`, максимум 93 календарных дня и зона `Europe/Moscow`. Старые схемы с `50053` не являются источником конфигурации. Назначать новый порт Navigation нужно отдельно, не копируя занятую цифру.
+## Текущие контракты и AI-контур
 
-
-## Текущий AI-контур
-
-Groq + FastEmbed, Python 3.13+, PostgreSQL/pgvector `orbit_ai`; тесты — `orbit_ai_test`. Контракт AI — `v0.5.3`. Порты контейнеров не совпадают с host mapping: PostgreSQL внутри `5432`, на хосте `5434`, не отдельный `5435`. `task up` = `apps` без AI; совместный стенд — профиль `all`. Полный [справочник env](ports-and-env.md), [AI API](../gateway/ai-api.md).
+- `contracts`: последний тег **`v0.5.9`** (используется `gateway-service` и `ai-service`; `auth-service` использует `v0.5.5`, `schedule-service` — `v0.5.0`).
+- `ai-service`: Python 3.13+, мультипровайдерный `RouterLLMClient` (Groq / OpenRouter / Gemini), FastEmbed (`384` измерения), гибридный поиск (pgvector + FTS), база знаний из `knowledge-pipeline` (`--manifest`), метрики на `:9093`.
+- Полный список env — в [Портах и env](ports-and-env.md), про мониторинг — в [Observability](../contracts-infra/observability.md).

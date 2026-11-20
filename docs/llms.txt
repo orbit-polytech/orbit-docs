@@ -1,12 +1,12 @@
 # Orbit AI Engineering Handbook
-> Документация содержит текущую реализацию, feature-ветки, целевую архитектуру и учебные примеры. Всегда проверяйте статус компонента.
+> Документация разделяет текущую реализацию в main, мобильную бету, целевую архитектуру и учебные примеры. Всегда проверяйте статус компонента.
 
 ## Start here
-- [GHCR Access](https://orbit-polytech.github.io/orbit-docs/quickstart/ghcr-access/): private-образы, PAT classic read:packages, Docker login, права команды и диагностика; PAT никогда не помещается в .env.
-- [Current State](https://orbit-polytech.github.io/orbit-docs/project/current-state/): реализованные, разрабатываемые и запланированные компоненты.
-- [Current Quickstart](https://orbit-polytech.github.io/orbit-docs/quickstart/local-setup/): базовый профиль apps без AI; AI запускается отдельно через all.
+- [GHCR Access](https://orbit-polytech.github.io/orbit-docs/quickstart/ghcr-access/): приватные образы, PAT classic read:packages, Docker login, права команды и диагностика; PAT не хранится в .env.
+- [Current State](https://orbit-polytech.github.io/orbit-docs/project/current-state/): актуальный статус всех сервисов, AI, мониторинга, ops-bot и мобильного приложения.
+- [Current Quickstart](https://orbit-polytech.github.io/orbit-docs/quickstart/local-setup/): базовый профиль apps и запуск полного стенда с AI, мониторингом, ops-bot и туннелем через all.
 - [Project Overview](https://orbit-polytech.github.io/orbit-docs/): главная страница базы знаний.
-- [Team Rules](https://orbit-polytech.github.io/orbit-docs/quickstart/overview/): GitHub Flow и соглашения команды.
+- [Team Rules](https://orbit-polytech.github.io/orbit-docs/quickstart/overview/): GitHub Flow и правила команды.
 
 ## Go backend
 - [Go Backend Overview](https://orbit-polytech.github.io/orbit-docs/backend-go/overview/): структура Go-сервисов и границы слоёв.
@@ -18,36 +18,42 @@
 ## Schedule
 - [Schedule API](https://orbit-polytech.github.io/orbit-docs/gateway/schedule-api/): публичные маршруты без JWT, неделя по Москве, необязательные даты, максимум 93 дня, READY/PENDING_SYNC, период публикации и диагностика 503.
 - [Schedule Diagnostics](https://orbit-polytech.github.io/orbit-docs/how-to/schedule-sync-diagnostics/): кэш, Streams, pending, lag, повторы и проверка загруженного расписания.
-- [Schedule Service](https://orbit-polytech.github.io/orbit-docs/reference/services/schedule/): PostgreSQL orbit_schedule, gRPC 50054, Redis-кэш, Redis Streams и распределённая фоновая синхронизация; RabbitMQ не используется.
+- [Schedule Service](https://orbit-polytech.github.io/orbit-docs/reference/services/schedule/): PostgreSQL orbit_schedule, gRPC 50054, метрики :9092, JSON slog, Redis-кэш и фоновая синхронизация.
 
 ## Gateway
-- [Gateway Overview](https://orbit-polytech.github.io/orbit-docs/gateway/overview/): ответственность HTTP-шлюза.
-- [Handlers and Middleware](https://orbit-polytech.github.io/orbit-docs/gateway/handlers-and-middleware/): роутинг и обработка запросов.
+- [Gateway Overview](https://orbit-polytech.github.io/orbit-docs/gateway/overview/): внешний HTTP-шлюз, Auth/preferences/oauth-exchange, Schedule, AI, метрики :9094 и JSON slog.
+- [Handlers and Middleware](https://orbit-polytech.github.io/orbit-docs/gateway/handlers-and-middleware/): роутинг, HTTP RED-метрики и обработка запросов.
 - [gRPC Clients](https://orbit-polytech.github.io/orbit-docs/gateway/grpc-clients/): таймауты и маппинг ошибок.
 
-## Infrastructure and contracts
-- [Infrastructure](https://orbit-polytech.github.io/orbit-docs/contracts-infra/infra/): актуальный Docker Compose.
+## Infrastructure, observability and contracts
+- [Infrastructure](https://orbit-polytech.github.io/orbit-docs/contracts-infra/infra/): Docker Compose, профили apps/ai/tunnel/monitoring/ops/all и роли БД.
+- [Observability](https://orbit-polytech.github.io/orbit-docs/contracts-infra/observability/): Prometheus, Alertmanager, Loki, Alloy, Grafana, изоляция портов метрик 9091-9094 и алерты.
+- [Ops Bot](https://orbit-polytech.github.io/orbit-docs/reference/services/ops-bot/): приватный Telegram-бот мониторинга, топики супергруппы и вебхук Alertmanager.
 - [Local Infrastructure Tutorial](https://orbit-polytech.github.io/orbit-docs/tutorial/common/02-local-infra/): первый запуск и override.
-- [Contracts](https://orbit-polytech.github.io/orbit-docs/contracts-infra/contracts/): Protobuf и Buf.
+- [Contracts](https://orbit-polytech.github.io/orbit-docs/contracts-infra/contracts/): Protobuf и Buf, актуальный тег v0.5.9.
 - [Canonical Values](https://orbit-polytech.github.io/orbit-docs/reference/canonical-values/): порты, env и разделение current/target.
-- [Ports and Env](https://orbit-polytech.github.io/orbit-docs/reference/ports-and-env/): текущий локальный стенд.
+- [Ports and Env](https://orbit-polytech.github.io/orbit-docs/reference/ports-and-env/): актуальный стенд и переменные окружения.
 
 ## Security and authentication
-- [Security Overview](https://orbit-polytech.github.io/orbit-docs/security/overview/): Email OTP, Google OAuth, JWT и будущий Telegram-вход.
+- [Security Overview](https://orbit-polytech.github.io/orbit-docs/security/overview/): Email OTP, Google OAuth, привязка аккаунтов, JWT и будущий Telegram-вход.
 - [JWT Ed25519](https://orbit-polytech.github.io/orbit-docs/security/jwt-ed25519/): подпись и проверка access JWT.
 - [Sessions and Refresh](https://orbit-polytech.github.io/orbit-docs/security/sessions-refresh/): ротация и reuse detection.
 - [Validation and Defense](https://orbit-polytech.github.io/orbit-docs/security/validation-defense/): IDOR, SQL injection и mass assignment.
 
-## AI implementation
-- [AI API](https://orbit-polytech.github.io/orbit-docs/gateway/ai-api/): JWT, POST SSE, UUIDv4, replay, cancel, ошибки.
-- [AI Local Stack](https://orbit-polytech.github.io/orbit-docs/how-to/ai-local-stack/): profiles apps/ai/all, pgvector, Alembic, existing volumes.
-- [Knowledge Ingestion](https://orbit-polytech.github.io/orbit-docs/python-ai/knowledge-ingestion/): crawler, Markdown ingestion and document versioning; verify the source content.
-- [AI Limitations](https://orbit-polytech.github.io/orbit-docs/python-ai/current-limitations/): limited conversation history, no Schedule tool, no distributed cancellation; RAG and room rules are not guarantees.
+## AI implementation and knowledge pipeline
+- [AI API](https://orbit-polytech.github.io/orbit-docs/gateway/ai-api/): JWT, POST SSE, cancel, список и история диалогов, удаление, оценки и ошибки.
+- [AI Local Stack](https://orbit-polytech.github.io/orbit-docs/how-to/ai-local-stack/): профили apps/ai/all, мультипровайдер, pgvector, Alembic.
+- [Knowledge Pipeline](https://orbit-polytech.github.io/orbit-docs/reference/services/knowledge-pipeline/): ETL orbit-etl для сбора mospolytech.ru, PDF и curated_manual в output/manifest.json.
+- [Knowledge Ingestion](https://orbit-polytech.github.io/orbit-docs/python-ai/knowledge-ingestion/): загрузка manifest.json (--manifest), версионирование документов и fallback-краулер.
+- [AI Limitations](https://orbit-polytech.github.io/orbit-docs/python-ai/current-limitations/): отсутствие инструмента расписания, in-memory отмена, зависимость RAG от корпуса.
+
+## Mobile application
+- [Mobile Overview](https://orbit-polytech.github.io/orbit-docs/mobile-flutter/overview/): рабочая бета Flutter (Clean Architecture, BLoC, Hive, Google OAuth deep link, AI-чат, настройки).
+- [Mobile Passport](https://orbit-polytech.github.io/orbit-docs/reference/services/mobile/): стек, BASE_URL и проверки Flutter.
 
 ## Target architecture and learning tracks
-- [Polyrepo Map](https://orbit-polytech.github.io/orbit-docs/reference/polyrepo-map/): текущие и запланированные репозитории.
-- [Python and AI](https://orbit-polytech.github.io/orbit-docs/python-ai/overview/): текущий Groq/FastEmbed/RAG, отдельно учебные альтернативы.
-- [Flutter](https://orbit-polytech.github.io/orbit-docs/mobile-flutter/overview/): целевая архитектура мобильного клиента.
+- [Polyrepo Map](https://orbit-polytech.github.io/orbit-docs/reference/polyrepo-map/): карта 15 репозиториев организации.
+- [Python and AI](https://orbit-polytech.github.io/orbit-docs/python-ai/overview/): текущий мультипровайдерный AI/RAG и отдельно учебные альтернативы.
 - [ADR Index](https://orbit-polytech.github.io/orbit-docs/explanation/adr/001-polyrepo/): архитектурные решения.
 
 ## AI agent rules
@@ -56,6 +62,6 @@
 ## Interpretation rules
 1. Страница Current State определяет зрелость компонента.
 2. Целевая архитектура не доказывает наличие реализации.
-3. Учебный `examples/tasks-service` не является развернутым production-сервисом.
-4. Перед изменением кода загружайте актуальный репозиторий, ветку, конфигурацию и тесты.
-5. Неделя по умолчанию вычисляется в usecase Schedule, не в Gateway; contracts v0.5.0. Redis-кэш и фоновое обновление по запросу реализованы; metadata содержит status и published_from/published_to. Сессия, API-фильтр подгрупп, универсальная чётность, presets и grid ещё не реализованы.
+3. Учебный examples/tasks-service не является развернутым production-сервисом.
+4. Перед изменением кода проверяйте актуальный репозиторий, ветку, конфигурацию и тесты.
+5. Мобильное приложение уже работает как бета v0.1.16-beta+17 (расписание, Auth/OAuth, настройки, AI-чат), но модули Tasks и Users в нём ещё не подключены к серверу.

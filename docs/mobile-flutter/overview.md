@@ -1,66 +1,55 @@
 # Flutter: Мобильное приложение Orbit Mobile
 
-Репозиторий [**`mobile`**](https://github.com/orbit-polytech/mobile) содержит исходный код кроссплатформенного клиентского приложения для студентов Московского Политеха, работающего на **Android** и **iOS**.
+Репозиторий [**`mobile`**](https://github.com/orbit-polytech/mobile) — клиентское приложение Orbit на Android и iOS (сейчас в статусе рабочей беты `0.1.16-beta+17`).
 
 ---
 
-## 1. Архитектурный манифест и границы ответственности
+## 1. Архитектура и текущий статус фич
 
-Архитектура клиентского приложения строится на строгом разделении зон ответственности:
+Приложение построено по **Clean Architecture** и **Feature-First** (`Presentation -> Domain <- Data`), состояние экранов ведут `Bloc`/`Cubit` на `flutter_bloc 9.x` и `sealed classes`.
 
-* **Clean Architecture** определяет границы модулей и направление зависимостей (`Presentation -> Domain <- Data`). Бизнес-логика полностью изолирована от деталей UI и внешних библиотек.
-* **BLoC (`flutter_bloc`)** управляет потоком событий и состояниями пользовательского интерфейса через строгие конечные автоматы (`sealed classes`).
-* **Репозитории и локальное хранилище Hive** реализуют стратегию **Offline-First (Cache-First)** для быстрого доступа к расписанию без ожидания сетевого ответа.
-* **Трансформеры событий и отмена сокет-запросов (`CancelToken`)** обеспечивают защиту от гонок состояний (race conditions) при быстром переключении учебных групп.
+### Статусы функциональных блоков
 
-### 📌 Статусы функциональных блоков:
-* `[Реализовано]` — Шлюз API расписания (`GET /api/v1/schedule/groups/{group}`), базовый сервис авторизации (`Email OTP`, `Google OAuth`).
-* `[Принятое решение]` — Архитектурный фундамент Clean Architecture + BLoC, хранилище Hive, пять разделов и светлая тема по умолчанию.
-* `[Выбирается]` — Палитра, мягкий градиент, типографика и вид нижней панели: обычная навигация или Floating Dock. Варианты — на странице [направлений и референсов](design-directions-and-references.md).
-* `[Проектируется]` — Мобильный OAuth callback (`orbit://auth/callback` с PKCE), интеграция с ЛК Политеха для автоподтверждения старост.
-* `[Запланировано]` — Серверные групповые задачи старосты (`tasks-service`), интеграция распознавания речи для аудиоконспектов.
+* `[Реализовано]` — светлая дизайн-система (`AppTheme` и компоненты `design_system/`) и нижняя навигационная панель `FloatingBottomNavBar` с тремя активными разделами (`Ассистент`, `Расписание`, `Профиль`).
+* `[Реализовано]` — расписание с **Offline-First** кэшем в `hive_ce`, поиском и переключением групп, избранными группами, календарём/неделями, обработкой `READY` / `PENDING_SYNC` / `is_stale` и шторкой деталей пары.
+* `[Реализовано]` — гостевой режим и авторизация: **Email OTP** и **Google OAuth** с PKCE и возвратом в приложение по deep link `ru.mospolytech.orbit://auth/callback`.
+* `[Реализовано]` — синхронизация выбранных групп с сервером (`PreferencesSyncCoordinator`, `PATCH /api/v1/auth/preferences`) и разрешение конфликта при входе (`GroupConflictDialog`), а также экран настроек с привязкой и отвязкой Google.
+* `[Реализовано]` — **ИИ-ассистент**: потоковые ответы SSE, стадия поиска, отмена, список и история диалогов, удаление чатов, цитаты источников, оценки 👍/👎 с отправкой на бэкенд и повтор ответа.
+* `[Запланировано]` — раздел задач и дедлайнов (`tasks-service`), заметки и автоподтверждение группы/роли старосты через ЛК Политеха (`users-service`).
 
 ---
 
-## 2. Схема взаимодействия слоёв
+## 2. Взаимодействие слоёв
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                     PRESENTATION LAYER                      │
-│   [ Views / Widgets ]  ◄─── (ScheduleReady State) ───┐     │
-│           │                                          │      │
-│           ▼ (Events)                                 │      │
-│   [ BLoC (ScheduleBloc) ] ───────────────────────────┘      │
+│   [ Screens / Views / Widgets ]  ◄── (State) ───┐           │
+│               │                                 │           │
+│               ▼ (Events / Calls)                │           │
+│       [ BLoC / Cubit ] ─────────────────────────┘           │
 └──────────────────────────┬──────────────────────────────────┘
-                           │ вызывает UseCases
+                           │ UseCases / Repositories
 ┌──────────────────────────▼──────────────────────────────────┐
 │                        DOMAIN LAYER                         │
-│   [ UseCases (GetCachedSchedule, SyncSchedule) ]            │
-│   [ Pure Entities (Lesson, ScheduleData, Room) ]            │
-│   [ IScheduleRepository (Контракт) ]                        │
+│   [ UseCases / Entities / Failure / Repository Interfaces ] │
 └──────────────────────────▲──────────────────────────────────┘
-                           │ реализует контракт
+                           │ реализации контрактов
 ┌──────────────────────────┴──────────────────────────────────┐
 │                         DATA LAYER                          │
-│   [ ScheduleRepositoryImpl ]                                │
-│       ├── LocalDataSource  ───► [ Hive NoSQL (Диск) ]       │
-│       └── RemoteDataSource ───► [ Dio HTTP ] ──► Gateway    │
+│   [ RepositoryImpl ]                                        │
+│       ├── LocalDataSource  ───► [ Hive CE / SecureStorage ] │
+│       └── RemoteDataSource ───► [ Dio HTTP / SSE ] ─► GW    │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-1. **Presentation Layer:**
-   * **Виджеты (Views):** Отвечают за отрисовку интерфейса. Не содержат логики запросов в сеть или прямого обращения к хранилищу.
-   * **BLoC:** Принимает события (`ScheduleEvent`), вызывает UseCases и транслирует в UI неисключающие состояния (`ScheduleReady`).
-2. **Domain Layer:**
-   * Чистое ядро приложения без зависимостей от Flutter. Содержит модели сущностей, правила предметной области и контракты репозиториев.
-3. **Data Layer:**
-   * Реализует контракты репозиториев. Оркестрирует локальный источник данных (`Hive`) и сетевой клиент (`Dio`).
+- **Presentation** отвечает только за UI и не ходит в сеть или базу напрямую.
+- **Domain** не зависит от Flutter и внешних SDK.
+- **Data** работает с локальным хранилищем (`HiveStorageService`, `SecureTokenStore`) и сетевым `DioClient` через Gateway.
 
 ---
 
-## 3. Модель доступа: Гостевой онбординг vs Авторизация
-
-Orbit Mobile решает студенческую проблему 1–2 сентября: падение внешних серверов вуза под пиковой нагрузкой не должно блокировать доступ к расписанию.
+## 3. Гостевой старт и вход в аккаунт
 
 ```text
                ┌──────────────────────────────────────┐
@@ -69,62 +58,61 @@ Orbit Mobile решает студенческую проблему 1–2 сен
                                   │
                                   ▼
                ┌──────────────────────────────────────┐
-               │    Быстрый выбор учебной группы      │
-               │        (Поиск из кэша Gateway)       │
+               │    Онбординг: выбор группы или вход  │
                └──────────────────┬───────────────────┘
                                   │
               ┌───────────────────┴───────────────────┐
               ▼                                       ▼
-  [ Гостевой доступ (Без пароля) ]       [ Вход в аккаунт (Email/Google) ]
-  ├── 📅 Просмотр расписания группы      ├── 🤖 Доступ к ИИ-ассистенту
-  ├── ⚡ Локальный кэш в Hive             ├── 👑 Серверные задачи старосты
-  └── 👤 Личные локальные задачи         └── 🔄 Облачная синхронизация
+  [ Гостевой режим (Zero-Auth) ]         [ Вход по Email OTP / Google ]
+  ├── Расписание группы и кэш Hive       ├── Всё из гостевого режима
+  └── Избранные группы локально          ├── AI-ассистент, история и оценки
+                                         ├── Синхронизация групп с аккаунтом
+                                         └── Привязка Google в настройках
 ```
 
-* **Гостевой доступ (Zero-Auth):** Студент указывает номер группы (например, `261-334`) и сразу переходит к расписанию. Вход в аккаунт на старте не требуется.
-* **Защитный экран (AuthWall):** При попытке открыть защищенный раздел (ИИ-ассистент, облачные функции старосты) приложение показывает модальный экран с предложением войти через Email OTP или Google.
+Без аккаунта студент сразу открывает расписание выбранной группы (в том числе без интернета, если неделя уже закэширована). Авторизация нужна только для персональных функций вроде AI-ассистента и облачной синхронизации настроек.
 
 ---
 
-## 4. Структура каталогов (`mobile/lib/`)
+## 4. Фактическая структура `mobile/lib/`
 
 ```text
-mobile/
-├── lib/
-│   ├── app/                         # Инициализация приложения и роутинг
-│   │   ├── app.dart                 # MaterialApp.router со светлой темой по умолчанию
-│   │   ├── observer.dart            # AppBlocObserver для логирования
-│   │   └── routes/                  # Конфигурация GoRouter (StatefulShellRoute)
-│   ├── core/                        # Общие системные модули
-│   │   ├── error/                   # Иерархия ошибок Failure и Exception
-│   │   ├── network/                 # Dio клиент, AuthInterceptor (мьютекс 401)
-│   │   ├── storage/                 # Инициализация Hive и SecureStorage
-│   │   └── theme/                   # Семантические токены темы, типографика
-│   ├── features/                    # Фичи приложения (Feature-First)
-│   │   ├── schedule/                # Модуль «Расписание» (Cache-First)
-│   │   │   ├── data/                # DataSources (Hive, Dio), Models, RepositoryImpl
-│   │   │   ├── domain/              # Entities (Lesson, ScheduleData), UseCases
-│   │   │   └── presentation/        # ScheduleBloc, HeroCard, TimelinePicker
-│   │   ├── tasks/                   # Модуль «Задачи и дедлайны»
-│   │   │   ├── data/                # Локальное хранилище задач в Hive
-│   │   │   └── presentation/        # TasksBloc, TaskItemTile
-│   │   ├── ai_assistant/            # Модуль «ИИ-помощник» (Protected)
-│   │   │   └── presentation/        # AiChatBloc, AuthWallModal
-│   │   ├── notes/                   # Модуль «Заметки и аудиоконспекты»
-│   │   └── profile/                 # Модуль «Профиль студента и группа»
-│   └── ui/
-│       └── shell/                   # Главный контейнер и адаптивная нижняя навигация
-│           ├── adaptive_dock.dart   # Парящий Dock (5 вкладок, учет клавиатуры)
-│           └── shell_screen.dart    # Обертка StatefulNavigationShell
+mobile/lib/
+├── main.dart
+├── app/
+│   ├── app.dart                     # OrbitApp, SessionBloc, PreferencesSyncCoordinator
+│   ├── app_providers.dart
+│   ├── bootstrap.dart
+│   ├── splash_screen.dart
+│   └── fallbacks/                   # резервные заглушки репозиториев
+├── core/
+│   ├── cancellation/                # отмена операций
+│   ├── config/app_config.dart       # BASE_URL через --dart-define, версия из package_info_plus
+│   ├── constants/                   # endpoints API, ключи хранилища
+│   ├── extensions/
+│   ├── network/                     # DioClient, AuthInterceptor, ErrorHandler
+│   ├── services/                    # ExternalBrowserLauncher и др.
+│   ├── storage/hive_storage_service.dart
+│   ├── time/
+│   └── utils/
+├── design_system/
+│   ├── components/                  # AppButton, AppTextField, AssistantAvatar, ErrorView, SkeletonPlaceholder
+│   ├── layout/                      # метрики отступов под FloatingBottomNavBar
+│   ├── theme/app_theme.dart         # светлая тема AppTheme.lightTheme
+│   └── typography/                  # AppTypography
+└── features/
+    ├── assistant/                   # ИИ-чат (SSE, история, удаление, фидбэк)
+    ├── auth/                        # Email OTP, Google OAuth + PKCE, session, preferences sync, identity
+    ├── profile/                     # профиль, выбор групп, SettingsScreen и привязка Google
+    ├── schedule/                    # расписание, выбор недели, шторка деталей пары, Hive-кэш
+    └── shell/                       # MainShellScreen (3 активные вкладки) и FloatingBottomNavBar
 ```
 
 ---
 
-## 5. Дальнейшие разделы документации
+## 5. Дальше в этом разделе
 
-* [**Архитектура BLoC и защита от гонок**](bloc-architecture.md) — детальное описание потока событий, состояний `ScheduleReady`, отмены сокетов через `CancelToken` и трансформеров `restartable()`.
-* [**Хранилище Hive, Cache-First и Сеть**](offline-and-storage.md) — стратегия локального кэширования, правила `AuthInterceptor` и Single-Flight Refresh.
-* [**Дизайн-система: светлая тема и навигация**](design-tokens-and-ui.md) — цветовые роли, доступность и требования к нижней панели.
-* [**Дизайн: направления и референсы**](design-directions-and-references.md) — скриншоты, варианты оформления и порядок выбора макета.
-* [**Серверные групповые задачи и роль старосты**](group-tasks.md) — продуктовая спецификация бродкаста домашних заданий группе.
-* [**Архив: MVVM с ChangeNotifier**](mvvm-architecture.md) — ранний вариант реализации для справки.
+* [**Архитектура BLoC и защита от гонок**](bloc-architecture.md) — состояния `ScheduleReady`, отмена запросов `CancelToken` и защита от гонки переключения групп.
+* [**Хранилище Hive, Cache-First и Сеть**](offline-and-storage.md) — локальный кэш, `AuthInterceptor` с Single-Flight Refresh и deep link OAuth.
+* [**Дизайн-система: светлая тема и навигация**](design-tokens-and-ui.md) — цветовые роли, доступность и навигация.
+* [**Групповые задачи старосты (Запланировано)**](group-tasks.md) — проектный набросок под будущие `tasks-service` и `users-service`.

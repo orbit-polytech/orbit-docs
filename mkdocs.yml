@@ -179,6 +179,7 @@ nav:
       - Обзор экосистемы API-First: contracts-infra/overview.md
       - contracts (proto и Buf): contracts-infra/contracts.md
       - infra (Docker Compose и БД): contracts-infra/infra.md
+      - Мониторинг и логи (Observability): contracts-infra/observability.md
       - Справочник сервисов и контейнеров: contracts-infra/reference.md
       - Подробный гайд по Buf: tutorial/common/03-contracts-buf.md
       - Подробный гайд по infra: tutorial/common/02-local-infra.md
@@ -199,7 +200,7 @@ nav:
   # =========================================================================
   - Справочник:
       - Канонические значения (Порты, Env, Версии): reference/canonical-values.md
-      - Карта 13 репозиториев организации: reference/polyrepo-map.md
+      - Карта репозиториев организации: reference/polyrepo-map.md
       - Соглашения об именовании: reference/naming-conventions.md
       - О проекте Orbit AI: reference/about.md
       - Паспорта сервисов:
@@ -210,6 +211,8 @@ nav:
           - navigation-service: reference/services/navigation.md
           - notification-service: reference/services/notification.md
           - ai-service: reference/services/ai.md
+          - knowledge-pipeline: reference/services/knowledge-pipeline.md
+          - ops-bot: reference/services/ops-bot.md
           - bot-service: reference/services/bot.md
           - mobile: reference/services/mobile.md
       - Стандарты и API:

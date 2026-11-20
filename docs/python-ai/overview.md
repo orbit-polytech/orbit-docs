@@ -1,103 +1,87 @@
 # Python & AI: текущая реализация и учебные примеры
 
-Рабочий `ai-service` использует Python 3.13+, uv, grpc.aio, Groq, FastEmbed и PostgreSQL/pgvector. Telegram `bot-service` остаётся целевой интеграцией, не запущенным компонентом стенда.
+Рабочий `ai-service` работает на Python 3.13+, `uv`, `grpc.aio`, мультипровайдерном LLM-роутере (`groq`, `openrouter`, `gemini`), FastEmbed и PostgreSQL/`pgvector`. В отдельный репозиторий вынесен [`knowledge-pipeline`](../reference/services/knowledge-pipeline.md) (`orbit-etl`), а для команды разработки работает приватный админский [`ops-bot`](../reference/services/ops-bot.md). Пользовательский Telegram-бот `bot-service` пока остаётся в планах.
 
-## Текущая структура ai-service
+## Текущая структура `ai-service`
 
 ```text
 ai-service/
 ├── src/orbit_ai/
-│   ├── __main__.py           # сборка зависимостей, warmup и lifecycle
-│   ├── config/              # pydantic-settings
-│   ├── domain/              # сущности, состояния, порты
-│   ├── application/         # chat stream и отмена
-│   ├── infrastructure/      # Groq, FastEmbed, RAG, PostgreSQL
-│   ├── presentation/grpc/   # servicer и health
-│   └── scripts/             # краулер и ingestion Markdown
-├── migrations/              # Alembic
-├── tests/                   # unit, transport, integration
+│   ├── __main__.py              # точка входа
+│   ├── bootstrap/               # container, lifecycle, llm_factory (Groq/OpenRouter/Gemini), OpenRouter poller
+│   ├── config/                  # pydantic-settings, llm_defaults, model_policy, model_routing.json
+│   ├── domain/                  # сущности, enum стадий/ошибок, порты
+│   ├── application/
+│   │   ├── chat_stream/         # pipeline, query_classifier, context_collector, context_budget, prompt_builder, citations, error_mapper
+│   │   ├── feedback/            # submit_feedback
+│   │   ├── cancel_generation_use_case.py
+│   │   └── manage_conversations_use_case.py
+│   ├── infrastructure/
+│   │   ├── llm/                 # RouterLLMClient, HybridQueryRouter, rate_limit_hook, groq/, fake_client
+│   │   ├── rag/                 # embeddings/ (FastEmbed), ingestion/ (manifest + md), retrieval/ (hybrid FTS+vector + reranker)
+│   │   ├── storage/             # postgres/ (SQLAlchemy + Alembic), in_memory/, summary_builder
+│   │   ├── telemetry/           # contextvars расхода LLM и Prometheus-метрики :9093
+│   │   └── crawler/             # встроенный краулер (legacy/вспомогательный)
+│   ├── presentation/grpc/       # servicer, auth metadata, mappers, server, health_probe
+│   └── scripts/                 # ingest_documents (--manifest / --dir), eval_harness, run_eval, chat, polytech_crawler
+├── migrations/versions/         # Alembic 001..006
+├── tests/                       # unit, transport, integration
 ├── pyproject.toml
 ├── uv.lock
 └── Dockerfile
 ```
 
-Domain не зависит от транспорта/провайдера. Application управляет сценарием через порты, Infrastructure реализует внешние зависимости, Presentation преобразует gRPC. Точка входа собирает эти слои. Структура не требует размещать бизнес-правила в gRPC servicer.
+Слой `domain` не зависит от транспорта и провайдеров, `application` оркестрирует сценарии, `infrastructure` отвечает за LLM/RAG/БД/метрики, `presentation` держит gRPC.
 
-- [Паспорт сервиса](../reference/services/ai.md)
-- [Поток запроса](request-flow.md)
+- [Паспорт ai-service](../reference/services/ai.md)
+- [Паспорт knowledge-pipeline](../reference/services/knowledge-pipeline.md)
+- [Поток AI-запроса](request-flow.md)
 - [База знаний и ingestion](knowledge-ingestion.md)
 - [Ограничения](current-limitations.md)
 - [AI HTTP/SSE API](../gateway/ai-api.md)
-- [Запуск в Docker](../how-to/ai-local-stack.md)
+- [Запуск стенда с AI](../how-to/ai-local-stack.md)
 
-**Исходное дерево:** [src/orbit_ai](https://github.com/orbit-polytech/ai-service/tree/main/src/orbit_ai).
+**Исходники:** [src/orbit_ai](https://github.com/orbit-polytech/ai-service/tree/main/src/orbit_ai).
 
 ---
 
-!!! warning "Сохранённый учебный пример — не текущее устройство сервиса"
-    Ниже сохранены исходная структура и примеры Gemini/Python 3.12 для обучения и сравнения архитектур. Пути `app/adapters/transport`, зависимости, требования к логам и env этого примера не описывают текущий `main`. Актуальный код использует `application/infrastructure/presentation`, Python 3.13 и Groq/FastEmbed. Не копируйте старый pyproject поверх рабочего.
+!!! warning "Ниже сохранён исторический учебный пример"
+    Разделы ниже (Python 3.12, структура `app/adapters/transport`, `google-genai`, `psycopg`) оставлены как учебный пример для сравнения архитектур. Реальный код в `main` устроен по схеме выше.
 
 # Исторический учебный вариант Python/AI
 
-В исходном учебном варианте стек Python 3.12 рассматривался для двух специализированных задач:
-1. [**`ai-service`**](https://github.com/orbit-polytech/ai-service) — микросервис искусственного интеллекта, реализующий Retrieval-Augmented Generation (RAG), генерацию эмбеддингов через Google Gemini API и векторный поиск ближайших соседей в PostgreSQL (`pgvector`).
-2. [**`bot-service`**](https://github.com/orbit-polytech/bot-service) — официальный Telegram-бот для студентов Политеха на базе асинхронного фреймворка `aiogram 3.x`.
-
-Остальные микросервисы (расписание, задачи, авторизация, навигация) пишутся строго на Go.
-
----
+В исходном учебном варианте стек Python 3.12 рассматривался для двух задач:
+1. `ai-service` — RAG с Google Gemini и `psycopg 3`.
+2. `bot-service` — Telegram-бот на `aiogram 3.x`.
 
 ## 1. Общие стандарты разработки на Python
 
-* **Версия**: строго Python 3.12+.
-* **Пакетный менеджер**: [**uv**](https://github.com/astral-sh/uv). Все зависимости фиксируются в `pyproject.toml` и детерминированном файле блокировки `uv.lock`. Традиционные файлы `requirements.txt` не используются.
-* **Стиль и форматирование**: стандарт PEP 8, проверка и автоформатирование выполняются через ультрабыстрый линтер **Ruff** (`ruff check`, `ruff format`).
-* **Статическая типизация**: строгие аннотации типов для всех функций и методов с обязательной проверкой `mypy --strict`.
-* **Конфигурация**: строго через `pydantic-settings` с загрузкой из переменных окружения.
-* **Логирование**: только структурированный JSON через `structlog` или `python-json-logger`. Вызовы `print()` в коде сервисов категорически запрещены.
-* **Тестирование**: фреймворк `pytest`, для асинхронных тестов — `pytest-asyncio`.
+* **Пакетный менеджер:** [**uv**](https://github.com/astral-sh/uv), детерминированный `uv.lock` без `requirements.txt`.
+* **Линтинг и стиль:** **Ruff** (`uv run ruff check .`, `uv run ruff format --check .`).
+* **Статическая типизация:** аннотации типов и `uv run mypy src` (`strict = true`).
+* **Конфигурация:** `pydantic-settings`.
+* **Логирование:** структурированный JSON в production (без `print()`).
+* **Тестирование:** `pytest` и `pytest-asyncio`.
 
----
-
-## 2. Структура `ai-service` (Src-Layout)
-
-Сервис организован по стандартной `src`-раскладке из официального руководства Python Packaging User Guide:
+## 2. Учебная структура (`src`-layout)
 
 ```text
 ai-service/
 ├── src/
 │   └── orbit_ai/
 │       ├── __init__.py
-│       ├── __main__.py          # Запуск gRPC-сервера (порт :50057)
-│       ├── config.py            # Настройки Settings(BaseSettings)
+│       ├── __main__.py
+│       ├── config.py
 │       ├── domain/
-│       │   ├── __init__.py
-│       │   └── models.py        # dataclass'ы: Document, Chunk, Answer
 │       ├── app/
-│       │   ├── __init__.py
-│       │   ├── ports.py         # typing.Protocol: LLMClient, Embedder, VectorStore
-│       │   └── ask.py           # Сценарий «Ответить на вопрос по базе знаний Политеха»
 │       ├── adapters/
-│       │   ├── __init__.py
-│       │   ├── gemini.py        # Интеграция с Google Gemini API
-│       │   └── pgvector.py      # Реализация векторного поиска через psycopg 3
 │       └── transport/
-│           ├── __init__.py
-│           └── grpc_server.py   # gRPC Servicer (proto <-> domain)
 ├── tests/
-│   ├── conftest.py
-│   ├── test_ask.py
-│   └── test_pgvector.py
 ├── pyproject.toml
-├── uv.lock
-├── .env.example
-├── Dockerfile
-└── Makefile
+└── uv.lock
 ```
 
----
-
-## 3. Зависимости в `pyproject.toml`
+## 3. Пример `pyproject.toml` (учебный)
 
 ```toml
 [project]
@@ -111,19 +95,4 @@ dependencies = [
     "pgvector>=0.3",
     "pydantic-settings>=2.4",
 ]
-
-[dependency-groups]
-dev = [
-    "pytest>=8.0",
-    "pytest-asyncio>=0.23",
-    "ruff>=0.6",
-    "mypy>=1.11",
-]
-
-[tool.ruff]
-line-length = 100
-target-version = "py312"
-
-[tool.mypy]
-strict = true
 ```
