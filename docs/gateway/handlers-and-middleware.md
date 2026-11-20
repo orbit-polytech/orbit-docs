@@ -4,9 +4,15 @@
 
 ---
 
-## 1. Текущая маршрутизация
+## 1. Текущая маршрутизация и middleware
 
-В `main` используется **`net/http.ServeMux`**, файл `internal/transport/http/router.go`. Поиск групп и чтение расписания зарегистрированы через `HandleFunc` без JWT middleware. Защищённые AI и Auth-маршруты оборачиваются в `middleware.Auth` явно. Внешний префикс — `/api/v1`, а не `/v1`.
+В `main` используется **`net/http.ServeMux`** ([`internal/transport/http/router.go`](https://github.com/orbit-polytech/gateway-service/blob/main/internal/transport/http/router.go)). Все бизнес-маршруты начинаются с префикса `/api/v1`:
+
+- поиск групп и расписание регистрируются без JWT middleware;
+- публичные точки Auth (`send-code`, `verify-code`, `refresh`, `logout`, `oauth/*/login`, `oauth/*/callback`, `oauth/exchange`, `identities/link/finish`) работают без Access JWT, проверяя свои токены/state/cookies внутри обработчиков;
+- защищённые маршруты Auth (`/auth/me`, `PATCH /auth/preferences`, `/auth/identities/link/begin`, `GET /identities`, `DELETE /identities/{provider}`) и все 6 маршрутов AI (`/api/v1/ai/...`) явно оборачиваются в `middleware.Auth(validator)`.
+
+Цепочка общих middleware на основном роутере: `RequestID` → `Logger` (JSON `log/slog` с `service="gateway-service"`) → `Metrics` (`orbit_gateway_http_requests_total`, `orbit_gateway_http_request_duration_seconds`, `orbit_gateway_http_in_flight_requests` по `r.Pattern`) → `Recovery` → `CORS`.
 
 Для Schedule handler читает `group`, необязательные `date_from`/`date_to`, создаёт контекст с `SCHEDULE_RPC_TIMEOUT`, вызывает gRPC и преобразует DTO. Выбор недели остаётся в usecase Schedule. См. [полный API](schedule-api.md).
 
@@ -121,11 +127,8 @@ func (h *TasksHandler) CreateTask(w http.ResponseWriter, r *http.Request) {
 
 ## Метаданные текущего API расписания
 
-Gateway использует `contracts v0.5.3` (Schedule API совместим с `v0.5.0`) и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
-
-См. [публичное API расписания](schedule-api.md).
-
+Gateway использует `contracts@v0.5.9` (Schedule API совместим с `v0.5.0`) и явно маппит `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED`. Передаются `published_from` и `published_to`, если они известны. Ожидание фоновой синхронизации — это `200`, а не gRPC-ошибка. См. [публичное API расписания](schedule-api.md).
 
 ## AI handlers
 
-Текущие AI handlers находятся в `internal/transport/http/v1/ai`: валидация, проверенный actor, gRPC → SSE и отмена. Полные DTO, события и обработка ошибок до/после начала потока описаны в [AI API](ai-api.md); учебные JSON handlers выше не заменяют потоковую обработку.
+Текущие AI handlers лежат в `internal/transport/http/v1/ai`: `stream.go` (валидация, SSE-поток), `cancel.go`, `conversations.go` (список, история, удаление) и `feedback.go` (лайки/дизлайки). Подробности — в [AI API](ai-api.md).

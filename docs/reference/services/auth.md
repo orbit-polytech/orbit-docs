@@ -2,46 +2,45 @@
 
 **Репозиторий:** [`orbit-polytech/auth-service`](https://github.com/orbit-polytech/auth-service)
 
-**Статус:** работает сейчас; контейнеризация находится в `main` и используется полным Compose-стеком.
+**Статус:** работает сейчас в `main` (`contracts@v0.5.5`), входит в профиль Compose `apps` / `all`.
 
-## Назначение
+## Назначение и границы
 
-Auth отвечает за аккаунты и способы входа, а не за пользовательские профили.
+Отвечает за аккаунты, способы аутентификации, выпуск JWT и управление внешними привязками.
 
-Реализовано:
+Что уже реализовано:
+- Email OTP (отправка через Resend, HMAC-хэширование, cooldown и TTL в Redis);
+- выпуск access JWT с подписью **Ed25519**;
+- refresh-сессии в PostgreSQL с ротацией и отзывом всего семейства при повторном использовании старого токена;
+- Google OAuth/OIDC (`BeginOAuthLogin`, `FinishOAuthLogin` — web и mobile);
+- привязка, список и отвязка внешних identities (`BeginIdentityLink`, `FinishIdentityLink`, `ListLinkedIdentities`, `UnlinkIdentity`) с проверкой intent, binding cookie и re-auth окна;
+- получение и обновление предпочтений учебных групп аккаунта (`GetAccount`, `UpdateAccountPreferences`: `primary_group` и `favorite_groups`, миграция `00005_add_account_preferences.sql`);
+- структурированное JSON-логирование `log/slog` (`service="auth-service"`) и внутренний HTTP-сервер метрик `:9091` (`/metrics` с `grpcprom`, `/livez`);
+- gRPC Health Checking Protocol.
 
-- Email OTP;
-- JWT Ed25519;
-- refresh-сессии и ротация;
-- Google OAuth/OIDC;
-- linking, listing и unlinking внешних identities;
-- OAuth state и re-auth deadlines в Redis;
-- gRPC health service.
-
-## Не отвечает за
-
-- имя, аватар и учебную группу пользователя;
-- расписание, задачи и навигацию;
-- бизнес-роли ресурсов других сервисов.
-
-Эти данные принадлежат будущему `users-service` и соответствующим bounded contexts.
+За что **не отвечает**:
+- ФИО, аватар, курс и роль старосты (это зона разрабатываемого `users-service`; поля `primary_group` и `favorite_groups` временно живут в `auth-service`, чтобы синхронизация выбранных групп в мобилке работала уже сейчас);
+- расписание, задачи, AI и навигация.
 
 ## Интерфейсы и зависимости
 
 | Категория | Значение |
 |---|---|
 | Транспорт | gRPC `:50051` |
-| Данные | PostgreSQL 16 |
-| Временное состояние | Redis 7 |
+| Metrics HTTP (внутренний) | `:9091` (`/metrics`, `/livez`) |
+| База данных | PostgreSQL 16 (`orbit_auth`, миграции Goose в `auth-migrate`) |
+| Кэш / временное состояние | Redis 7 (`OTP`, `OAuth state`, `re-auth`, rate limits) |
 | Почта | Resend |
 | OAuth | Google |
-| Подпись | Ed25519 private key |
+| Подпись | Приватный Ed25519-ключ (`jwt_private`) |
 
 ## Основные env
 
 ```ini
 AUTH_GRPC_HOST=0.0.0.0
 AUTH_GRPC_PORT=50051
+METRICS_ADDR=0.0.0.0:9091
+LOG_LEVEL=info
 POSTGRES_DSN=postgres://...
 REDIS_ADDR=redis:6379
 REDIS_PASSWORD=...
@@ -55,8 +54,10 @@ AUTH_GOOGLE_CLIENT_SECRET=
 AUTH_GOOGLE_REDIRECT_URI=http://localhost:8080/api/v1/auth/oauth/google/callback
 ```
 
-Реальные секреты не добавляются в Git.
+Секреты заполняются только в локальном `.env` и не коммитятся.
 
-## Следующие возможности
+## Дальнейшие планы
 
-Telegram identity может быть добавлена в будущем как ещё один провайдер после отдельного security review. Она не является текущим способом входа.
+Вход через Telegram (Login Widget / Mini App `initData`) по-прежнему остаётся будущей интеграцией и требует отдельной проработки модели безопасности до добавления в `contracts`.
+
+См. также: [Модель безопасности](../../security/overview.md), [Observability](../../contracts-infra/observability.md).

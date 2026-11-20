@@ -1,51 +1,53 @@
-# ai-service — потоковый AI и RAG
+# ai-service — потоковый AI, RAG и диалоги
 
-**Репозиторий:** [orbit-polytech/ai-service](https://github.com/orbit-polytech/ai-service). **Статус:** реализация в `main`, подключена к Gateway и профилям `ai` / `all` в infra.
+**Репозиторий:** [`orbit-polytech/ai-service`](https://github.com/orbit-polytech/ai-service)
+
+**Статус:** работает сейчас в `main` (`contracts@v0.5.9`), запускается в Compose через профили `ai` и `all`.
 
 ## Назначение и границы
 
-Генерация потоковых ответов, поиск по базе знаний, цитаты, сохранение результата и проверка владения диалогом. Сервис не выпускает JWT, не хранит профиль Users и пока не вызывает Schedule как инструмент.
+Отвечает за потоковые ответы ИИ-ассистента, классификацию и маршрутизацию запросов, гибридный RAG-поиск по базе знаний, хранение диалогов, фидбэк пользователей и учёт токенов/квот. Сервис не выпускает JWT, не хранит профиль студента и пока не вызывает `schedule-service` как инструмент.
 
-## Текущий стек
+## Стек
 
 | Слой | Реализация |
 |---|---|
-| Runtime | Python 3.13+, uv, `uv.lock` |
-| Транспорт | `grpc.aio`, порт `50057`, health protocol |
-| Генерация | OpenAI-совместимый API (по умолчанию Groq); URL задаётся `AI_API_BASE_URL`, модель — `AI_MODEL` |
-| Эмбеддинги | FastEmbed, `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, 384 измерения |
-| Хранилище | SQLAlchemy asyncio + asyncpg; PostgreSQL 16 + pgvector |
-| Миграции | Alembic, отдельный `ai-migrate` |
-| Контракты | Python-пакет `orbit-contracts` из Git по тегу `v0.5.3` |
+| Runtime | Python 3.13+, `uv`, `uv.lock` |
+| Транспорт | `grpc.aio`, порт `50057`, gRPC Health Checking |
+| Генерация LLM | Мультипровайдерный `RouterLLMClient` (Groq / OpenRouter / Gemini), роутинг ролей по `config/model_routing.json` |
+| Эмбеддинги | FastEmbed, `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (384 измерения) |
+| Reranker | Опциональный cross-encoder (`RAG_RERANKER_ENABLED`, по умолчанию `BAAI/bge-reranker-v2-m3`) |
+| Хранилище | SQLAlchemy asyncio + asyncpg; PostgreSQL 16 + `pgvector` (HNSW + Russian/simple FTS) |
+| Миграции | Alembic `001–006` (отдельный one-shot контейнер `ai-migrate`) |
+| Метрики | `prometheus-client` на внутреннем порту `:9093` (`/metrics`), учёт токенов и квот |
+| Контракты | Пакет `orbit-contracts` из Git по тегу `v0.5.9` |
 
-База приложения — `orbit_ai`; изолированная база интеграционных тестов — `orbit_ai_test`. Между контейнерами используется `postgres:5432`, с хоста по умолчанию `localhost:5434`. Не переносите сюда старые `ai_knowledge_db`, `vector(768)` или Gemini env из учебного примера.
+База приложения — `orbit_ai`, отдельная тестовая база — `orbit_ai_test`. В `production` логи пишутся в JSON (`service="ai-service"`).
 
-## Запрос и безопасность
+## Безопасность и RPC
 
-Gateway проверяет Bearer JWT и передаёт `x-user-id` в gRPC metadata. AI требует идентичность и проверяет владельца. Этот заголовок сам по себе не является криптографической аутентификацией: прямой gRPC доступ должен быть ограничен доверенной сетью, локальный порт — loopback.
+Gateway проверяет Bearer JWT и передаёт `x-user-id` в gRPC metadata (при настройке `ORBIT_INTERNAL_SERVICE_SECRET` дополнительно проверяется общий внутренний секрет). AI проверяет владение диалогом, повтором (replay), отменой и оценкой.
 
-RPC: `ChatStream` и `CancelGeneration`. HTTP-клиент использует [AI API Gateway](../../gateway/ai-api.md), а не прямой порт сервиса.
+Реализованные RPC в `orbit.ai.v1.AIService`:
+- `ChatStream` (server streaming со стадиями `START`, `RETRIEVAL`, `DELTA`, `CITATIONS`, `DONE`, `CANCELLED`, `ERROR`);
+- `CancelGeneration`;
+- `GetConversations`, `GetConversationHistory`, `DeleteConversation`;
+- `SubmitFeedback`.
+
+Внешние клиенты работают через [AI API Gateway](../../gateway/ai-api.md), а не напрямую по gRPC.
 
 ## Конфигурация
 
-Актуальный шаблон — [`.env.example`](https://github.com/orbit-polytech/ai-service/blob/main/.env.example). Основные параметры: `DATABASE_URL`, `GROQ_API_KEY`, `AI_API_BASE_URL`, `AI_MODEL`, `AI_ALLOWED_MODELS`, `CHAT_HISTORY_LIMIT`, `RAG_ENABLED`, `EMBEDDING_MODEL_NAME`, `RAG_MIN_SIMILARITY`, `RAG_TOP_K`, лимиты и таймауты `AI_*`. В `APP_ENV=production` отсутствие ключа или DSN останавливает запуск. В development без ключа используется FakeLLMClient — это не реальная генерация.
+Шаблон настроек: [`.env.example`](https://github.com/orbit-polytech/ai-service/blob/main/.env.example). Основные переменные: `DATABASE_URL`, `AI_PROVIDER` (`groq`/`openrouter`/`gemini`), `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `AI_MODEL` (в коде `openai/gpt-oss-120b`), `AI_ALLOWED_MODELS`, `CHAT_HISTORY_LIMIT`, `RAG_ENABLED`, `RAG_ROUTER_ENABLED`, `RAG_RERANKER_ENABLED`, `RAG_MIN_SIMILARITY` (`0.45`), `RAG_TOP_K` (`8`), `METRICS_PORT` (`9093`), лимиты и таймауты `AI_*`.
 
-`GROQ_API_KEY` используется клиентом и при другом совместимом провайдере; проверьте его требования, модель и совместимость. По умолчанию включена проверка TLS; при корпоративной инспекции можно настроить доверенный `GROQ_CA_BUNDLE`. Отключение проверки TLS запрещено в production.
+В `APP_ENV=production` сервис не запустится без API-ключа для выбранного `AI_PROVIDER` и `DATABASE_URL`. Для Groq валидатор дополнительно ограничивает `AI_MAX_OUTPUT_TOKENS <= 2048`. В `development` без ключей поднимается `FakeLLMClient` для локальных проверок.
 
-Настройки процесса и переменные, передаваемые Compose, различаются: произвольная строка в `infra/.env` не добавляет параметр контейнеру. См. [справочник env](../ports-and-env.md).
+Помните, что Compose передаёт контейнеру только переменные, перечисленные в `compose.yaml` (см. [порты и env](../ports-and-env.md)).
 
-## Разбор аудиторий
+## Эксплуатация и база знаний
 
-В `ai-service` есть детерминированный парсер номеров: например, по заложенному правилу `АВ-2315` разбирается как кампус Автозаводская, корпус 2, этаж 3, аудитория 315; для `АВ-315` требуется уточнение корпуса. Текущий и предыдущий вопрос могут использоваться как контекст. Это результат работы правил, а не проверка реального существования аудитории. Соответствие правил и этажей официальным источникам требует отдельной проверки; предупреждение модели не гарантирует, что итоговый ответ будет верным. Отдельный `navigation-service` остаётся запланированным.
+- В Docker модель эмбеддингов FastEmbed загружается на этапе сборки образа; перед переходом в `SERVING` сервер проверяет БД и прогревает модель (и reranker, если включён).
+- Актуальный корпус Московского Политеха собирается отдельным репозиторием [`knowledge-pipeline`](knowledge-pipeline.md) в `output/manifest.json` и загружается командой `ingest_documents --manifest`.
+- Ошибки генерации и негативные отзывы студентов попадают из `orbit_ai` в топики `#untriaged` и `#feedback` операционного бота [`ops-bot`](ops-bot.md).
 
-## Эксплуатация
-
-В Docker модель эмбеддингов предварительно загружается при сборке; сервер проверяет БД и прогревает эмбеддер перед `SERVING`. Healthcheck не выполняет реальный запрос к Groq и не подтверждает качество базы знаний. Ingestion не запускается автоматически при старте сервера.
-
-- [Запуск стенда с AI](../../how-to/ai-local-stack.md)
-- [Поток обработки запроса](../../python-ai/request-flow.md)
-- [Загрузка и версии документов](../../python-ai/knowledge-ingestion.md)
-- [Ограничения](../../python-ai/current-limitations.md)
-- [Диагностика](../../how-to/ai-diagnostics.md)
-
-**Источники реализации:** [зависимости](https://github.com/orbit-polytech/ai-service/blob/main/pyproject.toml), [точка входа](https://github.com/orbit-polytech/ai-service/blob/main/src/orbit_ai/__main__.py), [Dockerfile](https://github.com/orbit-polytech/ai-service/blob/main/Dockerfile).
+Дальше: [запуск стенда с AI](../../how-to/ai-local-stack.md), [поток запроса](../../python-ai/request-flow.md), [загрузка базы знаний](../../python-ai/knowledge-ingestion.md), [ограничения](../../python-ai/current-limitations.md), [диагностика](../../how-to/ai-diagnostics.md).

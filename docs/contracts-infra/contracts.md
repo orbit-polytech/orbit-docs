@@ -1,6 +1,6 @@
 # Репозиторий contracts: Protobuf и Buf CLI
 
-Согласованные gRPC-контракты экосистемы Orbit AI живут в едином репозитории [**`contracts`**](https://github.com/orbit-polytech/contracts). Сервисы не хранят копии `.proto` файлов у себя, а используют сгенерированный код.
+Согласованные gRPC-контракты экосистемы Orbit AI живут в едином репозитории [**`contracts`**](https://github.com/orbit-polytech/contracts). Сервисы не хранят копии `.proto` файлов у себя, а подключают сгенерированный код.
 
 ---
 
@@ -15,11 +15,13 @@ contracts/
 │   │   └── identity.proto
 │   ├── ai/v1/
 │   │   └── ai.proto
-│   └── schedule/v1/
-│       └── schedule.proto
-├── gen/go/                 # Go
-├── gen/python/orbit/       # Python, .pyi и py.typed
-├── pyproject.toml          # устанавливаемый orbit-contracts
+│   ├── schedule/v1/
+│   │   └── schedule.proto
+│   └── users/v1/
+│       └── users.proto
+├── gen/go/                 # сгенерированный Go-код
+├── gen/python/orbit/       # Python gRPC, .pyi и py.typed
+├── pyproject.toml          # устанавливаемый пакет orbit-contracts
 ├── buf.yaml
 ├── buf.gen.yaml
 ├── Taskfile.yml
@@ -27,33 +29,37 @@ contracts/
 └── README.md
 ```
 
-Срез `v0.5.0`: пакет `orbit.schedule.v1` содержит `SearchGroups` и `GetGroupSchedule`. Ответ чтения содержит `date_from = 6` и `date_to = 7`; номера старых полей не меняются. В `ScheduleMetadata` добавлены `status = 4` (`UNSPECIFIED`, `READY`, `PENDING_SYNC`), `published_from = 5` и `published_to = 6`. Старые номера полей сохранены. Schedule сохраняет эту версию модуля; Gateway с AI использует `v0.5.3`. Поле `model` в AI-запросе необязательно; сервер проверяет явно переданный ID по списку разрешённых моделей. Users, Tasks, общие pagination-схемы и события добавляются после согласования; учебные proto Tasks находятся отдельно в `orbit-docs/examples/tasks-service`.
+Актуальный тег — **`v0.5.9`**:
+- `gateway-service` и `ai-service` используют `v0.5.9`;
+- `auth-service` использует `v0.5.5` (OTP, JWT, Google OAuth, identities, `GetAccount`, `UpdateAccountPreferences`);
+- `schedule-service` использует `v0.5.0` (`SearchGroups`, `GetGroupSchedule`, `date_from`/`date_to`, `ScheduleStatus`: `UNSPECIFIED`, `READY`, `PENDING_SYNC`, `published_from`/`published_to`);
+- в `proto/orbit/users/v1/users.proto` уже описан контракт `UserService` для разрабатываемого `users-service`;
+- учебные схемы `Tasks` лежат отдельно в `orbit-docs/examples/tasks-service` и будут перенесены в `contracts` при проектировании production-сервиса.
 
 Подключение Go-модуля из корня репозитория сервиса:
 
 ```bash
-go get github.com/orbit-polytech/contracts@v0.5.3
+go get github.com/orbit-polytech/contracts@v0.5.9
 go mod tidy
 ```
 
-Путь импорта пакета: `github.com/orbit-polytech/contracts/gen/go/orbit/schedule/v1`. Версия `v0.5.0` — версия Go-модуля, `orbit.schedule.v1` — версия protobuf-пакета; это разные уровни версионирования.
-
+Пример импорта: `github.com/orbit-polytech/contracts/gen/go/orbit/schedule/v1`. При этом `v0.5.9` — тег Go-модуля, а `orbit.schedule.v1` — версия protobuf-пакета.
 
 > [!IMPORTANT]
-> Путь к `.proto` файлу строго соответствует пакету Protobuf: файл с декларацией `package orbit.tasks.v1;` обязан лежать в каталоге `proto/orbit/tasks/v1/`. Это требование Buf CLI и стандарт экосистемы Google.
+> Путь к `.proto` файлу обязан совпадать с именем пакета: файл с `package orbit.tasks.v1;` должен лежать в `proto/orbit/tasks/v1/`.
 
 ---
 
-## 2. Официальный Protobuf Style Guide
+## 2. Protobuf Style Guide
 
-Мы следуем [Google Protobuf Style Guide](https://protobuf.dev/programming-guides/style/):
+Мы придерживаемся [Google Protobuf Style Guide](https://protobuf.dev/programming-guides/style/):
 
-1. **Имена файлов**: `lower_snake_case.proto`.
-2. **Имя пакета**: `orbit.<сервис>.v1`. Указание версии (`v1`, `v2`) обязательно.
-3. **Имена сущностей**: `PascalCase` для сообщений, перечислений (enum) и сервисов.
-4. **Имена полей**: `snake_case` в нижнем регистре: `due_at`, `user_id`, `idempotency_key`.
-5. **Массивы**: `repeated` во множественном числе: `repeated Task tasks = 1;`.
-6. **Перечисления (enum)**: имена значений в `UPPER_SNAKE_CASE` с обязательным префиксом названия самого enum. Нулевое значение строго `_UNSPECIFIED = 0`:
+1. **Имена файлов:** `lower_snake_case.proto`.
+2. **Имя пакета:** `orbit.<сервис>.v1`. Указание мажорной версии обязательно.
+3. **Имена сущностей:** `PascalCase` для message, enum и service.
+4. **Имена полей:** `snake_case` в нижнем регистре: `due_at`, `user_id`, `idempotency_key`.
+5. **Списки:** `repeated` во множественном числе: `repeated Task tasks = 1;`.
+6. **Перечисления (`enum`):** значения в `UPPER_SNAKE_CASE` с префиксом имени перечисления, нулевое значение — строго `_UNSPECIFIED = 0`:
    ```proto
    enum TaskStatus {
      TASK_STATUS_UNSPECIFIED = 0;
@@ -61,15 +67,15 @@ go mod tidy
      TASK_STATUS_DONE = 2;
    }
    ```
-7. **Изолированные Request и Response**: каждый RPC-метод обязан иметь свои собственные сообщения `XxxRequest` и `XxxResponse`, даже если на текущем этапе они не содержат полей. Это гарантирует возможность расширения API в будущем без поломки обратной совместимости.
-8. **Временные типы**: для момента времени используйте `google.protobuf.Timestamp`, для длительности — `google.protobuf.Duration`. Календарные даты Schedule передаются строками `YYYY-MM-DD`, время пары — `HH:mm` вместе с `time_zone`. Это не момент UTC; нельзя заменять календарную дату timestamp без изменения семантики.
-9. **Удаление полей**: номера полей Protobuf никогда не переиспользуются. При удалении поля его номер и имя объявляются зарезервированными: `reserved 4; reserved "old_field";`.
+7. **Отдельные Request и Response:** у каждого RPC свои сообщения `XxxRequest` и `XxxResponse`, даже если они пока пустые — чтобы потом не сломать совместимость.
+8. **Даты и время:** для моментов времени используйте `google.protobuf.Timestamp`, для длительности — `google.protobuf.Duration`. Календарные даты расписания передаются строками `YYYY-MM-DD`, время пар — `HH:mm` вместе с `time_zone`.
+9. **Удаление полей:** номера удалённых полей не переиспользуются, а помечаются через `reserved 4; reserved "old_field";`.
 
 ---
 
 ## 3. Конфигурация Buf v2
 
-Файл `buf.yaml`:
+`buf.yaml`:
 
 ```yaml
 version: v2
@@ -83,7 +89,7 @@ breaking:
     - FILE
 ```
 
-Файл генерации кода `buf.gen.yaml`:
+Фрагмент `buf.gen.yaml` (полная конфигурация в репозитории `contracts` включает плагины и для Go, и для Python `.pyi`):
 
 ```yaml
 version: v2
@@ -98,31 +104,34 @@ plugins:
       - paths=source_relative
 ```
 
-Текущий `buf.gen.yaml` генерирует Go и Python, включая Python `.pyi`. Фрагмент выше показывает только Go-плагины; полный источник — репозиторий contracts. Dart-генерация пока не настроена.
+Dart-кодогенерация по `.proto` не используется — мобильное приложение общается с Gateway по HTTP/REST/SSE.
 
-
-Команды проверки и кодогенерации:
+Команды проверки и генерации:
 
 ```bash
-buf lint                 # Проверка стиля и оформления proto-схем
-buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.4.0' # согласованная база сравнения
-buf generate             # Кодогенерация в gen/go
+buf lint
+buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.5.8' # актуальный базовый тег перед изменением
+buf generate
 ```
 
+---
 
-## AI и Python-пакет
+## 4. `orbit.auth.v1` и `orbit.ai.v1` (актуальный срез)
 
-`orbit.ai.v1.AIService` содержит `ChatStream` (server streaming) и `CancelGeneration`. Стадии: START, DELTA, CITATIONS, DONE, ERROR. Контракт цитат содержит название, раздел, URL, score и excerpt; внутренний `source_id` не передаётся клиенту.
+- **`orbit.auth.v1.AuthService`**: помимо `SendCode`, `VerifyCode`, `RefreshToken`, `Logout`, OAuth и управления внешними identities, содержит `GetAccount` и `UpdateAccountPreferences` (поля `primary_group` и `favorite_groups` с флагами обновления `update_primary_group` / `update_favorite_groups`).
+- **`orbit.ai.v1.AIService`**:
+  - `ChatStream` (server streaming со стадиями `START`, `RETRIEVAL`, `DELTA`, `CITATIONS`, `DONE`, `ERROR`, `CANCELLED` и полем `duration_ms`);
+  - `CancelGeneration`;
+  - `GetConversations`, `GetConversationHistory`, `DeleteConversation`;
+  - `SubmitFeedback` (`FeedbackRating`: `UP`, `DOWN`, `UNSPECIFIED`).
 
 В `ai-service/pyproject.toml` зависимость `orbit-contracts` закреплена Git-тегом:
 
 ```toml
 [tool.uv.sources]
-orbit-contracts = { git = "https://github.com/orbit-polytech/contracts.git", tag = "v0.5.3" }
+orbit-contracts = { git = "https://github.com/orbit-polytech/contracts.git", tag = "v0.5.9" }
 ```
 
-Для существующего checkout AI используйте `uv sync --locked`. Для изолированной проверки установки контракта: `python -m pip install "orbit-contracts @ git+https://github.com/orbit-polytech/contracts.git@v0.5.3"`. Editable-соседство `../contracts` не является требованием Docker-сборки. Версия Python distribution в `pyproject.toml` и Git release-tag — разные значения; нельзя автоматически считать `version=0.1.0` тегом контракта.
+В `ai-service` используйте `uv sync --locked`. Пакет включает `gen/python/orbit`, `.pyi` и `py.typed`. Руками сгенерированные файлы править нельзя: любые изменения делаются в `.proto` и перегенерируются через `task generate` и `task check`.
 
-Пакет включает `gen/python/orbit`, `.pyi` и `py.typed`. Генерируемые файлы вручную не исправляются. После изменения proto запускаются `task generate` и `task check`, проверяется diff; совместимость Go и Python проверяется потребителями. Для breaking-check выбирайте согласованную базовую версию, не копируйте устаревший тег из примера вслепую.
-
-Источники: [proto](https://github.com/orbit-polytech/contracts/blob/main/proto/orbit/ai/v1/ai.proto), [Buf](https://github.com/orbit-polytech/contracts/blob/main/buf.gen.yaml), [Python package](https://github.com/orbit-polytech/contracts/blob/main/pyproject.toml).
+Исходники: [ai.proto](https://github.com/orbit-polytech/contracts/blob/main/proto/orbit/ai/v1/ai.proto), [auth.proto](https://github.com/orbit-polytech/contracts/blob/main/proto/orbit/auth/v1/auth.proto), [buf.gen.yaml](https://github.com/orbit-polytech/contracts/blob/main/buf.gen.yaml), [pyproject.toml](https://github.com/orbit-polytech/contracts/blob/main/pyproject.toml).

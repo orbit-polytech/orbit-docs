@@ -1,22 +1,30 @@
 # Запуск локального стенда с AI
 
-## 1. Предварительные условия
+## 1. Подготовка
 
-Пройдите [основной Quickstart](../quickstart/local-setup.md): Docker Compose v2, Task, клон `infra`, локальный `.env`, доступ к GHCR. Для AI дополнительно нужен Read-доступ к `ghcr.io/orbit-polytech/ai-service`. Образ используется и сервером, и `ai-migrate`; отдельного `ai-migrate` пакета нет.
+Перед началом пройдите [базовый Quickstart](../quickstart/local-setup.md): установите Docker Compose v2, Task, склонируйте `infra`, создайте `.env` и настройте [доступ к GHCR](../quickstart/ghcr-access.md) для `ai-service` (сервер и `ai-migrate` берут один и тот же образ).
 
-В `infra/.env` заполните `GROQ_API_KEY` и выберите `AI_MODEL`, доступную вашему аккаунту Groq. Другой OpenAI-совместимый провайдер можно настроить через `AI_API_BASE_URL` и совместимый ключ, но параметры должны быть явно переданы в контейнер через Compose override; работоспособность конкретного провайдера проверяется отдельно. Шаблон содержит модель по умолчанию, но её доступность и квоты нужно проверять у провайдера. В Compose `APP_ENV` по умолчанию `production`: пустой ключ не является offline-режимом и останавливает AI.
+В `infra/.env` выберите провайдера и заполните соответствующий ключ:
 
-Не помещайте ключи в Git и не отправляйте `.env`/полный вывод `docker compose config` в переписку.
+```ini
+AI_PROVIDER=groq         # или openrouter / gemini
+GROQ_API_KEY=...
+OPENROUTER_API_KEY=...
+GEMINI_API_KEY=...
+AI_MODEL=openai/gpt-oss-120b
+```
 
-## 2. Выберите профиль
+При `APP_ENV=production` отсутствие API-ключа для выбранного `AI_PROVIDER` останавливает запуск `ai-service`. Реальные ключи в Git добавлять нельзя.
 
-| Запуск | Состав |
+## 2. Запуск с нужным профилем
+
+| Команда | Что поднимется |
 |---|---|
-| `task up` (`apps`) | Auth, Schedule, Gateway и зависимости; **без AI** |
-| `docker compose --profile ai up -d` | AI, его миграции и необходимые зависимости; без Gateway/Auth |
-| `docker compose --profile all up -d` | Совместный backend-стенд с AI |
+| `task up` | Только `apps` (Auth, Schedule, Gateway, БД/Redis) — без AI |
+| `docker compose --profile ai up -d` | Только `ai-service`, `ai-migrate` и `postgres` + `postgres-init` |
+| `docker compose --profile all up -d --wait --wait-timeout 180` | Полный стенд: `apps` + `ai` + `monitoring` + `ops` + `tunnel` |
 
-Для работы HTTP AI API нужен последний вариант:
+Для работы HTTP API через Gateway с AI (и при желании с Grafana/`ops-bot`) запускайте `--profile all`:
 
 ```bash
 git pull --ff-only
@@ -25,15 +33,11 @@ docker compose --profile all up -d --wait --wait-timeout 180
 docker compose --profile all ps -a
 ```
 
-Увеличенный wait-timeout позволяет дождаться запуска, но не меняет параметры healthcheck контейнера. Если выбран локальный override, убедитесь, что он содержит только реально имеющиеся build-context. Потребителю готовых образов override не нужен.
+`postgres-init`, `jwt-keygen` и миграторы (`auth-migrate`, `schedule-migrate`, `ai-migrate`) должны завершиться с `Exited (0)`, а остальные контейнеры перейти в `healthy` / `running`.
 
-`postgres-init`, keygen и миграторы должны завершиться с кодом `0`; серверы — стать `healthy`. AI зависит от успешного `ai-migrate`. Gateway не ждёт AI в `depends_on`: готовность Gateway не доказывает готовность AI.
+## 3. Если том PostgreSQL уже был создан раньше
 
-## 3. Обновление существующей базы
-
-Текущий PostgreSQL образ — `pgvector/pgvector:pg16`. Для существующего volume сделайте резервную копию и проверьте совместимость перед сменой образа; Compose не заменяет major-upgrade PostgreSQL.
-
-Provisioner создаёт базы `orbit_ai` и `orbit_ai_test`, расширение vector и права приложения. initdb-скрипты сами не выполняются повторно на непустом volume; для явного повторного provision:
+`infra` использует `pgvector/pgvector:pg16`. Если база уже поднималась раньше до появления AI, удалять volume (`task clean`) не нужно — достаточно переинициализировать роли и базы через `postgres-init`:
 
 ```bash
 task up:deps
@@ -41,31 +45,30 @@ task db:init
 docker compose --profile all up -d --wait --wait-timeout 180
 ```
 
-Не используйте `task clean` / `down -v` для добавления AI: это удаляет данные и JWT-ключи. `ai-migrate` применяет Alembic к `orbit_ai`, **не** к `orbit_ai_test`. Для live-тестов миграции тестовой базы применяются отдельно с тестовым DSN; не направляйте тесты на рабочую БД.
+`ai-migrate` накатит Alembic только на рабочую `orbit_ai`. Для интеграционных тестов с `POSTGRES_TEST_DSN` применяйте миграции на `orbit_ai_test` отдельно.
 
-## 4. Проверка
+## 4. Проверка и загрузка базы знаний
+
+Проверить здоровье AI-сервиса:
 
 ```bash
 docker compose --profile all logs --tail 100 postgres-init ai-migrate ai-service
 docker compose --profile all exec ai-service python -m orbit_ai.presentation.grpc.health_probe
 ```
 
-После запуска получите JWT через Auth и выполните [пример AI API](../gateway/ai-api.md). Пустая база знаний допустима для старта, но не подтверждает готовность RAG. Для наполнения базы отдельно соберите и загрузите [проверенные документы](../python-ai/knowledge-ingestion.md). Каталог `data/knowledge` в готовый образ не включён; ingestion не запускается автоматически.
+Без загруженных документов `ai-service` запустится, но отвечать по регламентам вуза не сможет. Как собрать Knowledge Bundle в `knowledge-pipeline` и залить `manifest.json`, описано в [инструкции по загрузке базы знаний](../python-ai/knowledge-ingestion.md).
 
-БД внутри сети: `postgres:5432/orbit_ai`; с хоста: `127.0.0.1:5434`. gRPC AI: внутри `ai-service:50057`, на хосте только `127.0.0.1:50057`. Пользовательский API — Gateway `:8080`.
+Расход токенов, задержки LLM и остатки квот после тестовых запросов удобно смотреть в Grafana (`http://127.0.0.1:3000`, дашборд **Orbit — AI & LLM Tokens / Quotas**) или через команду `/tokens` в [`ops-bot`](../reference/services/ops-bot.md).
 
-## 5. Локальная сборка и управление
+## 5. Локальная сборка AI из соседнего клона
 
-Шаблон `compose.override.yaml.example` уже содержит **активные** build-блоки для всех сервисов. После копирования удалите/закомментируйте все ненужные блоки; иначе Compose потребует соседние репозитории.
+Шаблон `compose.override.yaml.example` содержит активные `build:`-секции для всех сервисов. Скопируйте его в `compose.override.yaml` и оставьте только `ai-service` и `ai-migrate`:
 
 ```bash
-# После настройки override для ai-service и ai-migrate:
 docker compose --profile all build ai-service ai-migrate
 docker compose --profile all up -d --pull never --wait --wait-timeout 180
 ```
 
-Оба AI-сервиса должны собираться из одного Dockerfile/исходного кода. Контракты устанавливаются как Git-зависимость, соседний `contracts` для контейнера не нужен. Модель FastEmbed включена в образ; смена `EMBEDDING_MODEL_NAME` требует отдельной проверки кэша, размерности и повторной индексации, а не только изменения env.
+Зависимость `orbit-contracts` подтягивается при сборке прямо из Git (`v0.5.9`), а модель FastEmbed кэшируется в Docker-слое.
 
-Для AI используйте Compose явно: `docker compose --profile all logs -f ai-service`, `docker compose --profile all ps -a`, `docker compose --profile all down`. Текущие `task logs/status/down/build` ориентированы на `apps`, отдельных `task up:ai` / `up:all` нет. `down` без `-v` сохраняет данные.
-
-Источники: [Compose](https://github.com/orbit-polytech/infra/blob/main/compose.yaml), [Taskfile](https://github.com/orbit-polytech/infra/blob/main/Taskfile.yml), [override](https://github.com/orbit-polytech/infra/blob/main/compose.override.yaml.example).
+Источники: [compose.yaml](https://github.com/orbit-polytech/infra/blob/main/compose.yaml), [Taskfile.yml](https://github.com/orbit-polytech/infra/blob/main/Taskfile.yml), [observability](../contracts-infra/observability.md).

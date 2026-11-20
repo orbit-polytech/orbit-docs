@@ -1,69 +1,69 @@
 # Внешнее HTTP API и Swagger
 
-- **База URL:** `http://localhost:8080/api/v1`.
+- **Базовый URL:** `http://localhost:8080/api/v1` (или HTTPS-домен туннеля Ngrok).
 - **Swagger UI:** `http://localhost:8080/swagger/index.html`.
 - **Схема JSON:** `http://localhost:8080/swagger/doc.json`.
 
-Точная схема поставляется вместе с Gateway из генерируемого `api/docs`. Не следует называть её OpenAPI 3 без проверки поля версии в JSON: текущая генерация Swag использует формат Swagger 2.0. Ниже разделены работающие маршруты и проектные примеры.
+Схема генерируется пакетом Swag из аннотаций в `gateway-service` (`api/docs`, формат Swagger 2.0). Ниже разделены реально работающие маршруты и проектные примеры на будущее.
 
 ## Текущее API Auth
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| POST | `/auth/send-code` | Запрос Email OTP |
-| POST | `/auth/verify-code` | Подтверждение OTP и вход/регистрация |
-| POST | `/auth/refresh` | Ротация сессии |
-| POST | `/auth/logout` | Завершение сессии |
-| GET | `/auth/me` | Проверенный JWT-контекст; требуется Bearer JWT |
-| GET | `/auth/oauth/{provider}/login` | Начало OAuth |
-| GET / POST | `/auth/oauth/{provider}/callback` | OAuth callback |
-| POST | `/auth/identities/link/begin` | Начало привязки; требуется Bearer JWT |
-| POST | `/auth/identities/link/finish` | Завершение протокола привязки |
-| GET | `/auth/identities` | Список identities; требуется Bearer JWT |
-| DELETE | `/auth/identities/{provider}` | Отвязка; требуется Bearer JWT |
+| `POST` | `/auth/send-code` | Запрос 6-значного Email OTP |
+| `POST` | `/auth/verify-code` | Подтверждение OTP и вход/регистрация |
+| `POST` | `/auth/refresh` | Ротация refresh-токена |
+| `POST` | `/auth/logout` | Завершение сессии |
+| `GET` | `/auth/oauth/{provider}/login` | Начало OAuth (поддерживается `google`, web и mobile PKCE) |
+| `GET` / `POST` | `/auth/oauth/{provider}/callback` | OAuth callback; для mobile редиректит на `ru.mospolytech.orbit://auth/callback` |
+| `POST` | `/auth/oauth/exchange` | Обмен одноразового кода мобильного OAuth + `code_verifier` на пару токенов |
+| `GET` | `/auth/me` | Данные текущего аккаунта (`user_id`, `email`, `primary_group`, `favorite_groups`); требуется JWT |
+| `PATCH` | `/auth/preferences` | Обновление `primary_group` и `favorite_groups`; требуется JWT |
+| `POST` | `/auth/identities/link/begin` | Начало привязки внешнего провайдера (web и mobile); требуется JWT |
+| `POST` | `/auth/identities/link/finish` | Завершение привязки |
+| `GET` | `/auth/identities` | Список привязанных провайдеров; требуется JWT |
+| `DELETE` | `/auth/identities/{provider}` | Отвязка внешнего провайдера; требуется JWT |
 
-Пути в таблице относительны к `/api/v1`. Поддерживаемый внешний OAuth provider сейчас — Google. Отсутствие JWT middleware не отменяет проверки OTP, OAuth state, binding cookie, refresh-токена и других требований конкретного endpoint; формат запроса смотрите в Swagger.
+Все пути указаны относительно `/api/v1`. Парольного `POST /api/v1/auth/login` нет — вход идёт через Email OTP или Google OAuth. Расширенные профили студентов и роли старост появятся позже в `users-service`, а пока выбранные группы временно хранятся в предпочтениях аккаунта Auth.
 
-**Парольного `POST /api/v1/auth/login` сейчас нет.** Текущий вход — Email OTP или Google OAuth. `/auth/me` не заменяет будущий профиль Users.
-
-## Текущее API расписания — без JWT
-
-| Метод | Путь | Назначение |
-|---|---|---|
-| GET | `/schedule/groups?query=261&limit=20` | Поиск групп |
-| GET | `/schedule/groups/261-334` | Текущая неделя по Москве |
-| GET | `/schedule/groups/261-334?date_from=2026-10-24` | Один день |
-| GET | `/schedule/groups/261-334?date_from=2026-10-19&date_to=2026-10-25` | Явный период |
-
-Обе даты необязательны; только `date_to` недопустим. Максимум — 93 дня включительно. В JSON используются `group_title`, `slot_number`, `subject`, `start_time`, `end_time`, `metadata`, `date_from`, `date_to`, `time_zone` — не старые проектные поля `group_id`, `pair_number`, `discipline` и `is_even_week`.
-
-Полная схема с примерами, пустыми ответами и ошибками: [публичное API расписания](../../gateway/schedule-api.md). Общий [формат ошибок](../error-codes.md).
-
-## Текущее AI API — с JWT
+## Текущее API расписания (без JWT)
 
 | Метод | Путь | Назначение |
 |---|---|---|
-| POST | `/ai/chat/stream` | Поток SSE: start, delta, citations, done/error |
-| POST | `/ai/chat/cancel` | Отмена активной генерации |
+| `GET` | `/schedule/groups?query=261&limit=20` | Поиск учебных групп |
+| `GET` | `/schedule/groups/261-334` | Расписание на текущую неделю по Москве |
+| `GET` | `/schedule/groups/261-334?date_from=2026-10-24` | Один день |
+| `GET` | `/schedule/groups/261-334?date_from=2026-10-19&date_to=2026-10-25` | Произвольный период (до 93 дней включительно) |
 
-Тело использует `message_id`, `query`, необязательные `conversation_id` и `model`, не `prompt`. Явная модель проверяется по списку `AI_ALLOWED_MODELS`; при отсутствии используется `AI_MODEL`. `POST /api/v1/ai/query` не реализован. Примеры, ошибки до/после открытия потока и replay — [AI API](../../gateway/ai-api.md).
+Обе даты необязательны, передавать только `date_to` нельзя. Подробнее со схемами и примерами: [публичное API расписания](../../gateway/schedule-api.md). Общий формат ошибок — в [справочнике кодов ошибок](../error-codes.md).
 
-## Будущие API: проектные примеры
+## Текущее AI API (требует JWT)
+
+| Метод | Путь | Назначение |
+|---|---|---|
+| `POST` | `/ai/chat/stream` | Потоковый ответ SSE (`start`, `retrieval`, `delta`, `citations`, `done` / `error`) |
+| `POST` | `/ai/chat/cancel` | Отмена активной генерации |
+| `GET` | `/ai/conversations` | Список диалогов пользователя (`limit`, `offset`) |
+| `GET` | `/ai/conversations/{id}` | История сообщений диалога (с цитатами, длительностью и оценкой) |
+| `DELETE` | `/ai/conversations/{id}` | Удаление диалога |
+| `PUT` | `/ai/conversations/{id}/messages/{message_id}/feedback` | Оценка ответа (`up`, `down`, `none`, `reason`, `comment`) |
+
+Подробное описание DTO, стадий потока и правил идемпотентности — в [AI API](../../gateway/ai-api.md).
+
+Gateway использует `contracts@v0.5.9` (Schedule совместим с `v0.5.0`) и явно маппит `ScheduleStatus` в `READY`, `PENDING_SYNC` или `UNSPECIFIED`, передавая `published_from` и `published_to`.
+
+---
+
+## Будущие API (проектные примеры)
 
 !!! warning "Не реализовано в текущем Gateway"
-    Ниже сохранены идеи Tasks. Пути, enum, поля и ответы не являются опубликованными контрактами. Перед реализацией нужно согласовать `contracts` и отдельно обновить Swagger. AI уже имеет отдельные защищённые маршруты, описанные выше.
+    Ниже оставлены черновые идеи API для будущего `tasks-service`. Эти маршруты не работают в `gateway-service` — сначала контракты будут согласованы в `contracts`.
 
 ### Управление задачами (`/api/v1/tasks`)
 
 #### `GET /api/v1/tasks`
-Получение списка задач аутентифицированного пользователя с пагинацией и фильтрацией.
+Список задач пользователя с пагинацией и фильтрацией (`limit`, `offset`, `status`).
 
-- **Query-параметры:**
-  * `limit` (int, default: 20, max: 100): количество элементов на страницу.
-  * `offset` (int, default: 0): смещение.
-  * `status` (string, optional): фильтр (`TASK_STATUS_OPEN`, `TASK_STATUS_COMPLETED`).
-
-- **Response 200 OK:**
 ```json
 {
   "tasks": [
@@ -85,7 +85,6 @@
 #### `POST /api/v1/tasks`
 Создание новой задачи.
 
-- **Request Body:**
 ```json
 {
   "title": "Подготовить презентацию для предзащиты",
@@ -95,12 +94,3 @@
   "idempotency_key": "task-uuid-or-client-hash"
 }
 ```
-
----
-
-
-## Метаданные текущего API расписания
-
-Gateway использует `contracts v0.5.3` (Schedule API совместим с `v0.5.0`) и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED` для неизвестного значения. Передаются `published_from` / `published_to`, если известны. Ожидание подтверждённого фонового задания — успешный `200`, не gRPC-ошибка. Правила периода, кэш и постановка задач остаются в Schedule.
-
-См. [публичное API расписания](../../gateway/schedule-api.md).

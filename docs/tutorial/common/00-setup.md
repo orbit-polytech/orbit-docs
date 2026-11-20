@@ -221,7 +221,7 @@ buf --version
 
 ## 7. Стек Flutter & Dart (Mobile трек)
 
-Для кроссплатформенного клиента `client-mobile`:
+Для кроссплатформенного клиента `mobile`:
 1. Установите [Flutter SDK](https://docs.flutter.dev/get-started/install);
 2. Добавьте `flutter/bin` в переменную окружения `PATH`;
 3. Проверьте окружение командой:

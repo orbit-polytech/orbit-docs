@@ -49,6 +49,7 @@ internal/
 ├── domain/               # модели, ошибки, сетка звонков
 ├── usecase/              # сценарии поиска и чтения, выбор периода
 ├── infrastructure/       # адаптеры PostgreSQL и Redis (кэш, очередь, lease, limiter)
+├── metrics/              # Prometheus-метрики gRPC/синхронизации и HTTP-сервер :9092
 ├── parser/               # преобразование и валидация данных источника
 ├── syncer/               # HTTP-клиент, ограничитель, синхронизация
 ├── worker/               # плановая постановка задач и обработка очередей
@@ -69,10 +70,11 @@ migrations/               # SQL-миграции Goose
 
 HTTP-маршруты, поведение необязательных дат, JSON и ошибки описаны в [руководстве по API расписания](../../gateway/schedule-api.md).
 
-## Адреса и конфигурация
+## Адреса, метрики и конфигурация
 
-- Compose DNS: `schedule-service:50054`.
-- Порт для диагностики на хосте: `127.0.0.1:50054` (переопределяется `SCHEDULE_GRPC_HOST_PORT`).
+- Compose DNS: `schedule-service:50054` (gRPC) и `schedule-service:9092` (метрики `/metrics` и `/livez`).
+- Порт для диагностики на хосте: `127.0.0.1:50054` (`SCHEDULE_GRPC_HOST_PORT`). Порт метрик `9092` наружу не публикуется.
+- Наблюдаемость: gRPC-метрики `grpcprom`, бизнес-метрики синхронизации (`orbit_schedule_sync_runs_total`, `orbit_schedule_sync_duration_seconds`, `orbit_schedule_sync_groups_updated`) и JSON-логи `log/slog` с полем `service="schedule-service"`.
 - База в Compose: `${SCHEDULE_POSTGRES_DB:-orbit_schedule}`; приложение получает `POSTGRES_DSN`.
 - Образы: `ghcr.io/orbit-polytech/schedule-service` и `ghcr.io/orbit-polytech/schedule-migrate`.
 
@@ -80,6 +82,7 @@ HTTP-маршруты, поведение необязательных дат, J
 |---|---|
 | `POSTGRES_DSN` | Обязателен, без дефолта |
 | `SCHEDULE_GRPC_HOST` / `SCHEDULE_GRPC_PORT` | `0.0.0.0` / `50054` |
+| `METRICS_ADDR` | `0.0.0.0:9092` |
 | `SCHEDULE_SHUTDOWN_TIMEOUT` | `10s` |
 | `SCHEDULE_FRESHNESS_TTL` | `24h` |
 | `SCHEDULE_CACHE_TTL` / `SCHEDULE_CACHE_JITTER` | `24h` / `2h` |

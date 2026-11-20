@@ -121,12 +121,18 @@ docker logout ghcr.io
 - [Docker: login и credential stores](https://docs.docker.com/reference/cli/docker/login/)
 
 
-## Дополнительно для AI
+## Дополнительно для AI и Ops Bot
 
-Шесть пакетов выше относятся к базовому профилю `apps`. Для AI/full-стенда нужен также **Read** на `ghcr.io/orbit-polytech/ai-service` — всего семь Orbit-пакетов. Проверьте отдельно:
+Шесть пакетов выше относятся к базовому профилю `apps`.
+
+- Для **AI** (`--profile ai` / `--profile all`) нужен доступ **Read** на `ghcr.io/orbit-polytech/ai-service` (этот образ используется и сервером, и `ai-migrate`).
+- Для **Ops Bot** (`--profile ops` / `--profile all`) нужен доступ **Read** на приватный пакет `ghcr.io/orbit-polytech/ops-bot`.
+
+Проверить оба образа заранее:
 
 ```bash
 docker pull ghcr.io/orbit-polytech/ai-service:latest
+docker pull ghcr.io/orbit-polytech/ops-bot:latest
 ```
 
-Сервер и `ai-migrate` используют один образ, отдельного пакета `ai-migrate` нет. Переопределение — `AI_SERVICE_IMAGE`. Те же правила PAT, SSO, наследования и персонального доступа действуют для седьмого пакета. Продолжение — [запуск с AI](../how-to/ai-local-stack.md).
+При необходимости в `infra/.env` теги переопределяются переменными `AI_SERVICE_IMAGE` и `OPS_BOT_IMAGE`. На оба пакета действуют те же правила PAT classic (`read:packages`) и прав в организации. Продолжение: [запуск с AI](../how-to/ai-local-stack.md) и [паспорт ops-bot](../reference/services/ops-bot.md).
