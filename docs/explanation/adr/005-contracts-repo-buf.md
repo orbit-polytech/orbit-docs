@@ -23,14 +23,14 @@
    - Автоматический линтинг Protobuf-стиля (`buf lint`).
    - Контроль обратной совместимости (`buf breaking --against ".git#branch=main"`).
 3. **Генерация артефактов:**
-   - **Для Go (реализовано):** код генерируется в `gen/go/`, подключается корневой модуль `github.com/orbit-polytech/contracts@<tag>`; импортируется пакет из `gen/go/orbit/...`. Gateway с AI использует `v0.5.2`; пакет включает Auth, Schedule и AI.
-   - **Для Python (реализовано):** `gen/python/orbit`, gRPC, `.pyi` и `py.typed`; устанавливаемый `orbit-contracts` через корневой `pyproject.toml`. AI закрепляет Git-тег `v0.5.2`; это не утверждение о публикации пакета в PyPI.
+   - **Для Go (реализовано):** код генерируется в `gen/go/`, подключается корневой модуль `github.com/orbit-polytech/contracts@<tag>`; импортируется пакет из `gen/go/orbit/...`. Пакет включает контракты Auth, Users, Schedule, AI и Support.
+   - **Для Python (реализовано):** `gen/python/orbit`, gRPC, `.pyi` и `py.typed`; устанавливаемый `orbit-contracts` через корневой `pyproject.toml` по Git-тегу (без публикации в PyPI).
    - **Для Dart/Flutter:** REST/JSON через Gateway. Текущая Swagger-схема генерируется Swag из HTTP-аннотаций Gateway в `api/docs`, не proto-плагином в `contracts`. Генерация клиента из этой схемы — отдельный этап мобильной разработки.
 
 ---
 
-!!! note "Актуализация зависимостей"
-    В первоначальном описании выше упоминался `v0.5.2`. Текущий Gateway и AI используют `v0.5.9`, Auth — `v0.5.5`, Schedule — `v0.5.0`; точные версии всегда проверяйте в `go.mod` и `pyproject.toml` конкретных сервисов.
+!!! note "Актуальные версии контрактов"
+    В сервисах закреплены следующие теги `contracts`: `gateway-service` и `users-service` используют `v0.5.12`, `auth-service` — `v0.5.11`, `ai-service` — `v0.5.10`, `schedule-service` — `v0.5.0`. Точные версии всегда проверяйте в `go.mod` и `pyproject.toml` конкретных сервисов.
 
 ## Последствия
 

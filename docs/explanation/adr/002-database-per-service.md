@@ -6,7 +6,7 @@
 ---
 
 !!! info "Текущее локальное окружение"
-    Auth использует `POSTGRES_DB` (обычно `orbit_auth`), Schedule — `SCHEDULE_POSTGRES_DB` (обычно `orbit_schedule`). Базы отдельные, но сейчас им выдана общая непривилегированная роль `APP_DB_USER`; отдельные роли сервисов и миграций остаются целевым усилением. `postgres-init` подготавливает базу Schedule на существующем volume; Goose-миграции находятся в репозиториях сервисов, не в учебном SQL ниже.
+    В `infra/compose.yaml` настроены изолированные базы: `orbit_auth` (`auth-service`), `orbit_users` (`users-service`), `orbit_schedule` (`schedule-service`) и `orbit_ai` (`ai-service` с расширением `pgvector`, а также `orbit_ai_test` для тестов). Им выдана общая непривилегированная роль `APP_DB_USER` (`orbit_user`), а для мониторинга и операционного бота созданы отдельные роли (`orbit_metrics`, `orbit_ops_bot`). Goose- и Alembic-миграции находятся в репозиториях соответствующих сервисов.
 
 ## Контекст
 В микросервисной архитектуре распространен антипаттерн «Общая база данных» (Shared Database), когда несколько сервисов напрямую читают и пишут в одни и те же таблицы PostgreSQL через единый пул соединений.
@@ -23,10 +23,11 @@
 Принят классический архитектурный паттерн **Database-per-Service (База данных на микросервис)**:
 
 1. Каждый сервис владеет **собственной изолированной базой данных**:
-   - `tasks-service` $\rightarrow$ `tasks_db`;
-   - `schedule-service` $\rightarrow$ `orbit_schedule`;
    - `auth-service` $\rightarrow$ `orbit_auth`;
-   - `ai-service` $\rightarrow$ `ai_knowledge_db` (с расширением `pgvector`).
+   - `users-service` $\rightarrow$ `orbit_users`;
+   - `schedule-service` $\rightarrow$ `orbit_schedule`;
+   - `ai-service` $\rightarrow$ `orbit_ai` (с расширением `pgvector`; тестовая БД — `orbit_ai_test`);
+   - `tasks-service` (план) $\rightarrow$ `tasks_db`.
 2. В локальном окружении `infra` сервисы могут использовать один инстанс PostgreSQL кластера, но **строго под разными именами баз данных и пользователями**.
 3. **Прямые SQL-соединения между сервисами категорически запрещены:** Ни один сервис не имеет права подключаться к чужой базе данных.
 4. Любой обмен данными между сервисами происходит **исключительно через gRPC API** или **асинхронные события RabbitMQ**.

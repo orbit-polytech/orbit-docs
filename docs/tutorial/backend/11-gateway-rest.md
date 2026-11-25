@@ -83,34 +83,35 @@ func JWTMiddleware(publicKey any) func(http.Handler) http.Handler {
     return func(next http.Handler) http.Handler {
         return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
             authHeader := r.Header.Get("Authorization")
-            if authHeader == "" {
-                http.Error(w, `{"error":"заголовок Authorization обязателен"}`, http.StatusUnauthorized)
+            if !strings.HasPrefix(authHeader, "Bearer ") {
+                http.Error(w, `{"error":"заголовок Authorization (Bearer <token>) обязателен"}`, http.StatusUnauthorized)
                 return
             }
 
-            tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-            token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
+            tokenStr := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
+            if tokenStr == "" {
+                http.Error(w, `{"error":"пустой токен авторизации"}`, http.StatusUnauthorized)
+                return
+            }
+
+            // В реальном gateway-service также проверяются iss ("orbit-auth"), aud ("orbit-api") и обязательный exp
+            parser := jwt.NewParser(
+                jwt.WithValidMethods([]string{jwt.SigningMethodEdDSA.Alg()}),
+                jwt.WithIssuer("orbit-auth"),
+                jwt.WithAudience("orbit-api"),
+                jwt.WithExpirationRequired(),
+            )
+            var claims jwt.RegisteredClaims
+            token, err := parser.ParseWithClaims(tokenStr, &claims, func(t *jwt.Token) (any, error) {
                 return publicKey, nil
             })
 
-            if err != nil || !token.Valid {
+            if err != nil || !token.Valid || claims.Subject == "" {
                 http.Error(w, `{"error":"недействительный токен"}`, http.StatusUnauthorized)
                 return
             }
 
-            claims, ok := token.Claims.(jwt.MapClaims)
-            if !ok {
-                http.Error(w, `{"error":"некорректный payload токена"}`, http.StatusUnauthorized)
-                return
-            }
-
-            userID, ok := claims["sub"].(string)
-            if !ok || userID == "" {
-                http.Error(w, `{"error":"отсутствует sub в токене"}`, http.StatusUnauthorized)
-                return
-            }
-
-            ctx := context.WithValue(r.Context(), UserIDKey, userID)
+            ctx := context.WithValue(r.Context(), UserIDKey, claims.Subject)
             next.ServeHTTP(w, r.WithContext(ctx))
         })
     }

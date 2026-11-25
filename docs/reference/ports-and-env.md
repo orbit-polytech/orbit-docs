@@ -4,10 +4,13 @@
 
 | Сервис | Протокол | В контейнере | На хосте по умолчанию | Доступ |
 |---|---|---:|---:|---|
-| `gateway-service` (API) | HTTP | 8080 | `127.0.0.1:8080` | Публичный периметр (и через Ngrok) |
+| `web` (Flutter Web/PWA + Nginx) | HTTP | 80 | `127.0.0.1:8088` | Внешний клиентский периметр (`ngrok` → `web:80`) |
+| `gateway-service` (API) | HTTP | 8080 | `127.0.0.1:8080` | Прямой HTTP API Gateway (и прокси через `web:80`) |
 | `gateway-service` (Metrics) | HTTP | 9094 | Не публикуется | Только внутренняя сеть Docker |
 | `auth-service` (gRPC) | gRPC | 50051 | `127.0.0.1:50051` | Внутренний + диагностика с хоста |
 | `auth-service` (Metrics) | HTTP | 9091 | Не публикуется | Только внутренняя сеть Docker |
+| `users-service` (gRPC) | gRPC | 50052 | `127.0.0.1:50052` | Внутренний + диагностика с хоста |
+| `users-service` (Metrics) | HTTP | 9096 | Не публикуется | Только внутренняя сеть Docker |
 | `schedule-service` (gRPC) | gRPC | 50054 | `127.0.0.1:50054` | Внутренний + диагностика с хоста |
 | `schedule-service` (Metrics) | HTTP | 9092 | Не публикуется | Только внутренняя сеть Docker |
 | `ai-service` (gRPC) | gRPC | 50057 | `127.0.0.1:50057` | Внутренний + диагностика с хоста |
@@ -33,16 +36,19 @@
 APP_ENV=production
 LOG_LEVEL=info
 
-# Gateway & Host Ports
+# Gateway
 GATEWAY_HOST_PORT=8080
 CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080,http://127.0.0.1:8080
 SWAGGER_ENABLED=true
 COOKIE_SECURE=false
 
+# gRPC
 AUTH_GRPC_HOST_PORT=50051
+USERS_GRPC_HOST_PORT=50052
 SCHEDULE_GRPC_HOST_PORT=50054
 AI_GRPC_HOST_PORT=50057
 AUTH_GRPC_ADDR=auth-service:50051
+USERS_GRPC_ADDR=users-service:50052
 SCHEDULE_GRPC_ADDR=schedule-service:50054
 AI_GRPC_ADDR=ai-service:50057
 
@@ -55,6 +61,7 @@ APP_DB_USER=orbit_user
 APP_DB_PASSWORD=change_this_app_password
 POSTGRES_DB=orbit_auth
 SCHEDULE_POSTGRES_DB=orbit_schedule
+USERS_POSTGRES_DB=orbit_users
 AI_POSTGRES_DB=orbit_ai
 AI_TEST_POSTGRES_DB=orbit_ai_test
 
@@ -81,7 +88,7 @@ SCHEDULE_SYNC_RPS=2
 SCHEDULE_SHUTDOWN_TIMEOUT=10s
 SCHEDULE_SOURCE_BASE_URL=https://rasp.dmami.ru
 
-# AI (мультипровайдер)
+# AI
 AI_PROVIDER=groq
 GROQ_API_KEY=
 GEMINI_API_KEY=
@@ -91,6 +98,14 @@ RAG_ENABLED=true
 EMBEDDING_MODEL_NAME=sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
 AI_MAX_OUTPUT_TOKENS=768
 AI_MAX_CONCURRENT_GENERATIONS=50
+AI_RATE_LIMIT_ENABLED=true
+AI_RATE_LIMIT_MAX_REQUESTS=15
+AI_RATE_LIMIT_WINDOW=1h
+AI_RATE_LIMIT_COOLDOWN=5s
+
+# Images & Web
+WEB_IMAGE=ghcr.io/orbit-polytech/web:latest
+WEB_HOST_PORT=8088
 
 # Tunnel (Ngrok)
 NGROK_AUTHTOKEN=
@@ -106,10 +121,11 @@ ALERTMANAGER_HOST_PORT=9093
 METRICS_DB_USER=orbit_metrics
 METRICS_DB_PASSWORD=change_this_metrics_db_password
 
-# Ops Bot
+# Ops Bot (DB minimal role & webhook auth)
 OPS_BOT_IMAGE=ghcr.io/orbit-polytech/ops-bot:latest
 OPS_BOT_DB_USER=orbit_ops_bot
 OPS_BOT_DB_PASSWORD=change_this_ops_bot_password
+OPS_BOT_WEBHOOK_URL=http://ops-bot:8081
 OPS_BOT_WEBHOOK_TOKEN=change_this_webhook_bearer_token
 OPS_BOT_TELEGRAM_TOKEN=
 OPS_BOT_GROUP_ID=0
@@ -128,25 +144,28 @@ OPS_BOT_TOPIC_DIGEST_ID=0
 - `JWT_KEYGEN_IMAGE` (`ghcr.io/orbit-polytech/auth-keygen:latest`)
 - `AUTH_MIGRATE_IMAGE` (`ghcr.io/orbit-polytech/auth-migrate:latest`)
 - `AUTH_SERVICE_IMAGE` (`ghcr.io/orbit-polytech/auth-service:latest`)
+- `USERS_MIGRATE_IMAGE` (`ghcr.io/orbit-polytech/users-migrate:latest`)
+- `USERS_SERVICE_IMAGE` (`ghcr.io/orbit-polytech/users-service:latest`)
 - `GATEWAY_SERVICE_IMAGE` (`ghcr.io/orbit-polytech/gateway-service:latest`)
 - `SCHEDULE_SERVICE_IMAGE` (`ghcr.io/orbit-polytech/schedule-service:latest`)
 - `SCHEDULE_MIGRATE_IMAGE` (`ghcr.io/orbit-polytech/schedule-migrate:latest`)
 - `AI_SERVICE_IMAGE` (`ghcr.io/orbit-polytech/ai-service:latest` — и для `ai-service`, и для `ai-migrate`)
+- `WEB_IMAGE` (`ghcr.io/orbit-polytech/web:latest`)
 - `OPS_BOT_IMAGE` (`ghcr.io/orbit-polytech/ops-bot:latest`)
 
 ## Env приложения и Compose — не одно и то же
 
 Файл `.env` подставляет значения `${...}` в `compose.yaml`, но контейнер получает только те переменные, которые явно перечислены в его секции `environment`.
 
-Для Schedule в Compose фиксированы `SCHEDULE_GRPC_PORT=50054`, `METRICS_ADDR=0.0.0.0:9092` и `REDIS_ADDR=redis:6379`. Для Go-сервисов `METRICS_ADDR` по умолчанию задан как `0.0.0.0:9091` (Auth), `0.0.0.0:9092` (Schedule) и `0.0.0.0:9094` (Gateway). При изменении `.env` контейнеры нужно пересоздать (`docker compose ... up -d`).
+Для Schedule в Compose фиксированы `SCHEDULE_GRPC_PORT=50054`, `METRICS_ADDR=0.0.0.0:9092` и `REDIS_ADDR=redis:6379`. Для Go-сервисов `METRICS_ADDR` по умолчанию задан как `0.0.0.0:9091` (Auth), `0.0.0.0:9092` (Schedule), `0.0.0.0:9094` (Gateway) и `0.0.0.0:9096` (Users). При изменении `.env` контейнеры нужно пересоздать (`docker compose ... up -d`).
 
 ## Правила
 
 1. `.env.example` хранит только безопасные плейсхолдеры.
 2. Локальный `.env` никогда не коммитится.
-3. Gateway не получает БД DSN, Resend key, OTP secret или ключи LLM-провайдеров.
+3. Gateway не получает БД DSN, Resend key, OTP secret или ключи LLM-провайдеров (но получает `REDIS_ADDR`/`REDIS_PASSWORD` для rate limiter и `OPS_BOT_WEBHOOK_URL`/`OPS_BOT_WEBHOOK_TOKEN` для отправки обращений в поддержку).
 4. `ops-bot` и `postgres-exporter` работают под отдельными ограниченными ролями (`orbit_ops_bot` и `orbit_metrics`), а не под `orbit_user` или `postgres`.
-5. Внешний трафик идёт только в `:8080` Gateway; порты метрик `9091–9094` наружу не публикуются.
+5. Наружу публикуются `:8088` (`web` — Nginx-прокси и статика Flutter Web) и `:8080` (`gateway-service`); порты метрик `9091–9094`, `9096` наружу не публикуются.
 
 ## AI: параметры приложения
 
@@ -175,4 +194,4 @@ OPS_BOT_TOPIC_DIGEST_ID=0
 
 ## Запланированные порты
 
-`50054` занят Schedule, `50057` — AI, контур мониторинга (`9090`, `9093`, `3000`, `9091–9094`) и `ops-bot` (`8081`) уже работают в `infra`. К будущим этапам относятся `users-service` (`50052`), `tasks-service` (`50055`), `notification-service` (`50056`), `navigation-service`, RabbitMQ (`5672`/`15672`) и Jaeger (`16686`). См. [канонические значения](canonical-values.md).
+`50051` занят Auth, `50052` — Users (`:9096` метрики), `50054` — Schedule, `50057` — AI, `8088` — `web` (Nginx + Flutter Web), контур мониторинга (`9090`, `9093`, `3000`, `9091–9094`, `9096`) и `ops-bot` (`8081`) уже работают в `infra`. К будущим этапам относятся `tasks-service` (`50055`), `notification-service` (`50056`), `navigation-service`, RabbitMQ (`5672`/`15672`) и Jaeger (`16686`). См. [канонические значения](canonical-values.md).

@@ -6,16 +6,19 @@
 
 ### 1. Проверьте доступ к пакетам
 
-Попросите администратора предоставить вашей учётной записи или команде право **Read** на все шесть пакетов:
+Попросите администратора предоставить вашей учётной записи или команде право **Read** на все **9 пакетов** базового профиля `apps` (или на все **11 пакетов**, если запускаете `--profile all` с AI и `ops-bot`):
 
 | Пакет | Назначение |
 |---|---|
-| `ghcr.io/orbit-polytech/auth-keygen` | Подготовка ключей Ed25519 |
-| `ghcr.io/orbit-polytech/auth-migrate` | Миграции PostgreSQL |
+| `ghcr.io/orbit-polytech/auth-keygen` | Подготовка ключей Ed25519 (`jwt-keygen`) |
+| `ghcr.io/orbit-polytech/auth-migrate` | Миграции базы Auth |
 | `ghcr.io/orbit-polytech/auth-service` | Сервис аутентификации |
-| `ghcr.io/orbit-polytech/gateway-service` | HTTP API и Swagger |
-| `ghcr.io/orbit-polytech/schedule-service` | Публичное расписание и синхронизация |
+| `ghcr.io/orbit-polytech/users-migrate` | Миграции базы Users |
+| `ghcr.io/orbit-polytech/users-service` | Сервис профилей пользователей |
 | `ghcr.io/orbit-polytech/schedule-migrate` | Миграции базы Schedule |
+| `ghcr.io/orbit-polytech/schedule-service` | Публичное расписание и синхронизация |
+| `ghcr.io/orbit-polytech/gateway-service` | HTTP API и Swagger |
+| `ghcr.io/orbit-polytech/web` | Web/PWA клиент и Nginx reverse proxy (`:8088`) |
 
 **Членство в организации само по себе не гарантирует доступ к каждому private-пакету.** PAT действует с правами владельца и не добавляет отсутствующие права.
 
@@ -56,12 +59,15 @@ Docker Desktop обычно использует системное хранил
 docker pull ghcr.io/orbit-polytech/auth-keygen:latest
 docker pull ghcr.io/orbit-polytech/auth-migrate:latest
 docker pull ghcr.io/orbit-polytech/auth-service:latest
-docker pull ghcr.io/orbit-polytech/gateway-service:latest
-docker pull ghcr.io/orbit-polytech/schedule-service:latest
+docker pull ghcr.io/orbit-polytech/users-migrate:latest
+docker pull ghcr.io/orbit-polytech/users-service:latest
 docker pull ghcr.io/orbit-polytech/schedule-migrate:latest
+docker pull ghcr.io/orbit-polytech/schedule-service:latest
+docker pull ghcr.io/orbit-polytech/gateway-service:latest
+docker pull ghcr.io/orbit-polytech/web:latest
 ```
 
-Ожидайте успешное скачивание либо сообщение `Image is up to date` для **каждого** образа. Если в локальном `.env` переопределены `JWT_KEYGEN_IMAGE`, `AUTH_MIGRATE_IMAGE`, `AUTH_SERVICE_IMAGE`, `GATEWAY_SERVICE_IMAGE`, `SCHEDULE_SERVICE_IMAGE` или `SCHEDULE_MIGRATE_IMAGE`, проверяйте соответствующие имена и теги. Авторизация едина для `ghcr.io`, а доступ проверяется отдельно для каждого пакета.
+Ожидайте успешное скачивание либо сообщение `Image is up to date` для **каждого** образа. Если в локальном `.env` переопределены `JWT_KEYGEN_IMAGE`, `AUTH_MIGRATE_IMAGE`, `AUTH_SERVICE_IMAGE`, `USERS_MIGRATE_IMAGE`, `USERS_SERVICE_IMAGE`, `SCHEDULE_MIGRATE_IMAGE`, `SCHEDULE_SERVICE_IMAGE`, `GATEWAY_SERVICE_IMAGE` или `WEB_IMAGE`, проверяйте соответствующие имена и теги. Авторизация едина для `ghcr.io`, а доступ проверяется отдельно для каждого пакета.
 
 После [клонирования `infra` и заполнения `.env`](local-setup.md) запустите из каталога `infra`:
 
@@ -86,7 +92,7 @@ docker logout ghcr.io
 
 ## Администратору: предоставить доступ
 
-Проверьте настройки **каждого из шести пакетов** на [странице Packages организации](https://github.com/orgs/orbit-polytech/packages).
+Проверьте настройки **каждого из 9 пакетов профиля `apps`** (и двух дополнительных для AI и Ops Bot — всего **11 пакетов**) на [странице Packages организации](https://github.com/orgs/orbit-polytech/packages).
 
 Есть два способа выдать людям право чтения:
 
@@ -98,7 +104,7 @@ docker logout ghcr.io
 !!! info "Доступ человека и GitHub Actions — разные настройки"
     **Manage Actions access → Add repository** предоставляет доступ workflow указанного репозитория через `GITHUB_TOKEN`. Добавление туда `infra` не предоставляет автоматически его участникам доступ с персональных компьютеров. В CI используйте `GITHUB_TOKEN` с необходимыми правами, а не персональный PAT разработчика.
 
-Для проверки попросите участника с ролью Read выполнить вход и шесть `docker pull`. Успешное скачивание администратором не доказывает доступ остальных участников. Не меняйте видимость пакетов на Public только ради исправления ошибки доступа.
+Для проверки попросите участника с ролью Read выполнить вход и все 9 `docker pull` (или 11 для `--profile all`). Успешное скачивание администратором не доказывает доступ остальных участников. Не меняйте видимость пакетов на Public только ради исправления ошибки доступа.
 
 ## Диагностика
 
@@ -106,7 +112,7 @@ docker logout ghcr.io
 |---|---|
 | `unauthorized`, `denied`, `403` | Вход именно в `ghcr.io`, логин владельца PAT, срок действия, `read:packages`, Read-доступ пользователя, SSO и политику организации |
 | Вход успешен, pull запрещён | `Login Succeeded` не доказывает право чтения конкретного пакета; проверьте Manage access/Inherited access |
-| Один образ скачивается, другой нет | Доступ отдельно к каждому из шести пакетов |
+| Один образ скачивается, другой нет | Доступ отдельно к каждому из 9 (или 11) пакетов |
 | `manifest unknown` / `not found` | Имя и тег, факт публикации; для private-пакета сначала исключите отсутствие доступа |
 | `no matching manifest` | Архитектуру компьютера и платформы опубликованного образа; смена токена это не исправит |
 | В одном терминале работает, в другом нет | Пользователя ОС, `sudo`, WSL и переменную `DOCKER_CONFIG` |
@@ -123,7 +129,7 @@ docker logout ghcr.io
 
 ## Дополнительно для AI и Ops Bot
 
-Шесть пакетов выше относятся к базовому профилю `apps`.
+Девять пакетов выше относятся к базовому профилю `apps`. Вместе с AI и Ops Bot общее число образов Orbit в GHCR — **11**.
 
 - Для **AI** (`--profile ai` / `--profile all`) нужен доступ **Read** на `ghcr.io/orbit-polytech/ai-service` (этот образ используется и сервером, и `ai-migrate`).
 - Для **Ops Bot** (`--profile ops` / `--profile all`) нужен доступ **Read** на приватный пакет `ghcr.io/orbit-polytech/ops-bot`.

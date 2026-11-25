@@ -21,20 +21,22 @@
 1. Создана официальная организация GitHub: [`orbit-polytech`](https://github.com/orbit-polytech).
 2. Под каждый логический сервис выделен отдельный репозиторий:
    - `contracts` — единственный репозиторий Protobuf-схем и сгенерированного кода;
-   - `orbit-service-template` — эталонный шаблон микросервиса на Go;
-   - `gateway-service` — API Gateway (REST $\leftrightarrow$ gRPC);
-   - `tasks-service`, `schedule-service`, `navigation-service`, `auth-service`, `users-service`, `notification-service` — Go бэкенды;
-   - `ai-service`, `bot-service` — Python сервисы;
-   - `client-mobile` — мобильное приложение на Flutter;
-   - `infra` — единый репозиторий локальной оркестрации (Docker Compose, скрипты баз данных, Prometheus, Grafana);
+   - `gateway-service` — API Gateway (REST/SSE $\leftrightarrow$ gRPC);
+   - `auth-service`, `users-service`, `schedule-service` — действующие Go бэкенды (`tasks-service`, `navigation-service`, `notification-service` — в планах);
+   - `ai-service`, `knowledge-pipeline`, `ops-bot` — Python сервисы и пайплайн базы знаний (`bot-service` — в планах);
+   - `mobile` — кроссплатформенное приложение на Flutter (Android, iOS, а также Web / PWA — сервис `web` в `infra`, собираемый из `mobile/Dockerfile.web`);
+   - `infra` — единый репозиторий локальной оркестрации (Docker Compose, скрипты БД, Prometheus, Grafana, Alertmanager, Loki/Alloy);
    - `orbit-docs` — сайт технической документации.
+
+!!! note "О шаблоне сервиса"
+    Изначально планировавшийся отдельный репозиторий `orbit-service-template` как живой репозиторий в организации не создавался — новые Go-сервисы опираются на структуру действующих сервисов (`auth-service`, `users-service`, `schedule-service`, `gateway-service`).
 
 ---
 
 ## Последствия
 
 ### Позитивные последствия:
-- **Полная изоляция кодовой базы:** Разработчик Flutter работает только в `client-mobile`, не трогая код бэкенда на Go.
+- **Полная изоляция кодовой базы:** Разработчик Flutter работает только в `mobile`, не трогая код бэкенда на Go.
 - **Чистый и быстрый CI/CD:** Каждый репозиторий имеет легковесный workflow (20–40 секунд на проверку линтеров и тестов).
 - **Независимые релизы:** Баг-фикс в `schedule-service` деплоится без пересборки остальных 7 сервисов.
 - **Отсутствие проблем с Git Submodules:** Контракты подключаются через стандартные пакетные менеджеры (`go get`, `pip install`).

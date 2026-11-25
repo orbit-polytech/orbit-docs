@@ -1,5 +1,8 @@
 # Вёрстка экранов и виджеты (Tutorial)
 
+!!! note "Учебный пример vs актуальная дизайн-система"
+    Ниже показан базовый учебный пример карточки с условными токенами (`Dimens`, `OrbitColors`). В реальном коде `mobile` дизайн-система находится в `lib/design_system/theme/app_theme.dart` (`AppTheme`) и `lib/design_system/typography/app_typography.dart` (`AppTypography`), а также в компонентах `lib/design_system/components/` и адаптивных брейкпоинтах `lib/design_system/layout/responsive_breakpoints.dart`.
+
 В этом практическом руководстве мы разберём принципы создания адаптивных и оптимизированных виджетов Flutter в проекте Orbit Mobile.
 
 ---
@@ -95,7 +98,7 @@ class TaskTile extends StatelessWidget {
               const SizedBox(width: Dimens.paddingM),
               Expanded(
                 child: Column(
-                  crossContent: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       task.title,

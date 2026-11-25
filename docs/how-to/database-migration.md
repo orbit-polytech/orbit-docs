@@ -10,7 +10,7 @@ Goose подключается к PostgreSQL с использованием с�
 
 ```bash
 export GOOSE_DRIVER=postgres
-export GOOSE_DBSTRING="host=localhost port=5432 user=orbit password=orbit_dev_secret dbname=tasks_db sslmode=disable"
+export GOOSE_DBSTRING="host=localhost port=5434 user=orbit_user password=change_this_app_password dbname=orbit_users sslmode=disable"
 ```
 
 Для установки утилиты локально:
@@ -138,10 +138,10 @@ goose -dir migrations up
 
 ```bash
 docker run --rm \
-  --network orbit-net \
+  --network orbit-infra_default \
   -v $(pwd)/migrations:/migrations \
   -e GOOSE_DRIVER=postgres \
-  -e GOOSE_DBSTRING="host=postgres port=5432 user=orbit password=orbit_dev_secret dbname=tasks_db sslmode=disable" \
+  -e GOOSE_DBSTRING="host=postgres port=5432 user=orbit_user password=change_this_app_password dbname=orbit_users sslmode=disable" \
   pressly/goose:latest -dir /migrations up
 ```
 

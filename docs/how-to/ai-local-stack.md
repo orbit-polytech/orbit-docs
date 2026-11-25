@@ -11,7 +11,7 @@ AI_PROVIDER=groq         # или openrouter / gemini
 GROQ_API_KEY=...
 OPENROUTER_API_KEY=...
 GEMINI_API_KEY=...
-AI_MODEL=openai/gpt-oss-120b
+AI_MODEL=qwen/qwen3.8-27b
 ```
 
 При `APP_ENV=production` отсутствие API-ключа для выбранного `AI_PROVIDER` останавливает запуск `ai-service`. Реальные ключи в Git добавлять нельзя.
@@ -20,7 +20,7 @@ AI_MODEL=openai/gpt-oss-120b
 
 | Команда | Что поднимется |
 |---|---|
-| `task up` | Только `apps` (Auth, Schedule, Gateway, БД/Redis) — без AI |
+| `task up` | Профиль `apps`: `postgres`, `redis`, `jwt-keygen`, `postgres-init`, миграторы (`auth-migrate`, `schedule-migrate`, `users-migrate`), `auth-service`, `users-service`, `schedule-service`, `gateway-service`, `web` — без AI |
 | `docker compose --profile ai up -d` | Только `ai-service`, `ai-migrate` и `postgres` + `postgres-init` |
 | `docker compose --profile all up -d --wait --wait-timeout 180` | Полный стенд: `apps` + `ai` + `monitoring` + `ops` + `tunnel` |
 
@@ -33,7 +33,7 @@ docker compose --profile all up -d --wait --wait-timeout 180
 docker compose --profile all ps -a
 ```
 
-`postgres-init`, `jwt-keygen` и миграторы (`auth-migrate`, `schedule-migrate`, `ai-migrate`) должны завершиться с `Exited (0)`, а остальные контейнеры перейти в `healthy` / `running`.
+`postgres-init`, `jwt-keygen` и миграторы (`auth-migrate`, `schedule-migrate`, `users-migrate`, `ai-migrate`) должны завершиться с `Exited (0)`, а остальные контейнеры перейти в `healthy` / `running`.
 
 ## 3. Если том PostgreSQL уже был создан раньше
 
@@ -69,6 +69,6 @@ docker compose --profile all build ai-service ai-migrate
 docker compose --profile all up -d --pull never --wait --wait-timeout 180
 ```
 
-Зависимость `orbit-contracts` подтягивается при сборке прямо из Git (`v0.5.9`), а модель FastEmbed кэшируется в Docker-слое.
+Зависимость `orbit-contracts` подтягивается при сборке прямо из Git (`v0.5.10`), а модель FastEmbed кэшируется в Docker-слое.
 
 Источники: [compose.yaml](https://github.com/orbit-polytech/infra/blob/main/compose.yaml), [Taskfile.yml](https://github.com/orbit-polytech/infra/blob/main/Taskfile.yml), [observability](../contracts-infra/observability.md).

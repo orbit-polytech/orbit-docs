@@ -7,6 +7,9 @@ repo_name: orbit-polytech/orbit-docs
 repo_url: https://github.com/orbit-polytech/orbit-docs
 edit_uri: edit/main/docs/
 
+exclude_docs: |
+  mobile-flutter/image/README.md
+
 theme:
   name: material
   language: ru
@@ -76,6 +79,7 @@ nav:
   - Главная: index.md
   - Проект:
       - Текущее состояние: project/current-state.md
+      - Роли и зоны ответственности: project/roles.md
       - Задачи:
           - Разработка users-service: project/tasks/users-service.md
           - "Мобильное приложение: каркас и расписание": project/tasks/mobile-foundation-and-schedule.md

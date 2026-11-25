@@ -1,31 +1,38 @@
 # Репозиторий infra: Docker Compose и БД
 
-`infra` (`v0.4.0`) — единая точка запуска локального стенда Orbit из готовых OCI-образов в GHCR. Для запуска базовый `compose.yaml` не требует клонировать соседние репозитории, достаточно настроить [доступ к приватным пакетам GHCR](../quickstart/ghcr-access.md).
+`infra` (`v0.6.0`) — единая точка запуска локального стенда Orbit из готовых OCI-образов в GHCR. Для запуска базовый `compose.yaml` не требует клонировать соседние репозитории, достаточно настроить [доступ к приватным пакетам GHCR](../quickstart/ghcr-access.md).
 
 ## Состав стенда
 
 | Сервис | Профиль | Роль |
 |---|---|---|
-| `postgres` | всегда | PostgreSQL 16 (`pgvector`); базы Auth, Schedule, AI и AI test |
-| `redis` | всегда | OTP, OAuth state и rate limits Auth; кэш, Streams и координация Schedule |
+| `postgres` | всегда | PostgreSQL 16 (`pgvector`); базы Auth, Users, Schedule, AI и AI test |
+| `redis` | всегда | OTP, OAuth state Auth; кэш, Streams и координация Schedule; rate limiters Gateway (`AI`, `Support`) |
 | `jwt-keygen` | `apps`, `all` | One-shot генерация Ed25519-ключей без доступа в сеть |
 | `postgres-init` | `apps`, `ai`, `monitoring`, `ops`, `all` | One-shot создание баз, расширения `vector` и ролей БД |
 | `auth-migrate` | `apps`, `all` | One-shot миграции Goose базы `orbit_auth` |
+| `users-migrate` | `apps`, `all` | One-shot миграции Goose базы `orbit_users` |
 | `schedule-migrate` | `apps`, `all` | One-shot миграции Goose базы `orbit_schedule` |
 | `auth-service` | `apps`, `all` | gRPC `:50051`, метрики `:9091` |
+| `users-service` | `apps`, `all` | gRPC `:50052`, метрики `:9096` |
 | `schedule-service` | `apps`, `all` | gRPC `:50054`, метрики `:9092`, фоновая синхронизация |
 | `gateway-service` | `apps`, `all` | HTTP `:8080`, Swagger, метрики `:9094` (только внутренняя сеть) |
+| `web` | `apps`, `all` | Flutter Web/PWA + Nginx (`:8088` → `:80`), прокси `/api/`, `/healthz`, `/swagger/` в `gateway-service:8080` |
 | `ai-migrate` | `ai`, `all` | One-shot Alembic-миграции `orbit_ai` (тот же образ, что у `ai-service`) |
 | `ai-service` | `ai`, `all` | gRPC `:50057`, метрики `:9093`, мультипровайдерный LLM и RAG |
-| `ngrok` (`orbit-ngrok`) | `tunnel`, `all` | Внешний HTTPS-туннель к `gateway-service:8080`, инспектор `:4040` |
+| `ngrok` (`orbit-ngrok`) | `tunnel`, `all` | Внешний HTTPS-туннель к `web:80`, инспектор `:4040` |
 | `postgres-exporter`, `redis-exporter` | `monitoring`, `all` | Экспорт метрик PostgreSQL и Redis в Prometheus |
-| `prometheus` | `monitoring`, `all` | Сбор метрик (`:9090`) и проверка alert rules |
+| `prometheus` | `monitoring`, `all` | Сбор метрик (`:9090`, 8 таргетов) и проверка alert rules |
 | `alertmanager` | `monitoring`, `all` | Маршрутизация алертов в `ops-bot` (`:9093`) |
 | `loki`, `alloy` | `monitoring`, `all` | Сбор и хранение JSON-логов Docker-контейнеров |
 | `grafana` | `monitoring`, `all` | Дашборды `Orbit Polytech` (`:3000`) |
-| `ops-bot` | `ops`, `all` | Операционный Telegram-бот, вебхук Alertmanager (`:8081`) |
+| `ops-bot` | `ops`, `all` | Операционный Telegram-бот, вебхуки `/alerts/webhook` и `/issues/webhook` (`:8081`) |
 
 **`task up` поднимает только профиль `apps` (без AI, мониторинга, `ops-bot` и Ngrok).** Для полного стенда запускайте `docker compose --profile all up -d --wait --wait-timeout 180`. Обычный `docker compose up -d` без `--profile` поднимет только `postgres` и `redis`.
+
+На хосте одновременно доступны два HTTP-порта:
+- **`127.0.0.1:8080`** — прямой HTTP API `gateway-service` (удобен для `curl`, мобильного эмулятора и локальных запросов к API/Swagger);
+- **`127.0.0.1:8088`** — контейнер `web` (Web/PWA на Nginx, который сам проксирует `/api/`, `/healthz` и `/swagger/` в `gateway-service:8080`; именно на `web:80` смотрит туннель `ngrok`).
 
 RabbitMQ и Jaeger в текущий Compose пока не включены.
 
@@ -33,9 +40,10 @@ RabbitMQ и Jaeger в текущий Compose пока не включены.
 
 1. `postgres` и `redis` проходят healthcheck.
 2. `postgres-init` создаёт роли и базы; параллельно `jwt-keygen` готовит Ed25519-ключи (если тома ещё пустые).
-3. `auth-migrate`, `schedule-migrate` и `ai-migrate` ждут завершения `postgres-init`.
-4. Микросервисы стартуют после своих миграций и зависимостей; `gateway-service` ждёт `auth-service`, `schedule-service` и `jwt-keygen` (от `ai-service` в `depends_on` не зависит).
-5. Контейнеры мониторинга и `ops-bot` поднимаются после `postgres-init` и своих БД/источников.
+3. `auth-migrate`, `users-migrate`, `schedule-migrate` и `ai-migrate` ждут завершения `postgres-init`.
+4. Микросервисы стартуют после своих миграций и зависимостей; `gateway-service` ждёт `auth-service`, `users-service`, `schedule-service`, `redis` и `jwt-keygen` (от `ai-service` в `depends_on` не зависит).
+5. `web` стартует после healthy-статуса `gateway-service`; `ngrok` запускается после старта `web`.
+6. Контейнеры мониторинга и `ops-bot` поднимаются после `postgres-init` и своих БД/источников.
 
 У всех one-shot сервисов нормальный статус после старта — `Exited (0)`. Healthcheck `schedule-service` говорит о запуске сервиса, а не о том, что расписание всех групп уже выкачано.
 
@@ -50,7 +58,7 @@ task status
 
 | Команда | Назначение |
 |---|---|
-| `task up` | Профиль `apps` (PostgreSQL, Redis, Auth, Schedule, Gateway) |
+| `task up` | Профиль `apps` (PostgreSQL, Redis, Auth, Users, Schedule, Gateway, Web) |
 | `task up:deps` | Только PostgreSQL и Redis |
 | `task db:init` / `task init:db` | Повторный запуск `postgres-init` без удаления томов |
 | `task build` | Локальная сборка сервисов из `compose.override.yaml` |
@@ -58,7 +66,7 @@ task status
 | `task logs` | Логи профиля `apps` |
 | `task down` | Остановка с сохранением данных и ключей |
 | `task clean` | Полное удаление контейнеров и томов (PostgreSQL, Redis, JWT, Prometheus, Loki, Grafana) |
-| `task tunnel:up` / `task tunnel:down` | Запуск и остановка Ngrok-туннеля для `gateway-service` |
+| `task tunnel:up` / `task tunnel:down` | Запуск и остановка Ngrok-туннеля для `web:80` |
 | `task test` | Прогон Go-тестов инфраструктурных скриптов |
 
 Команды для полного стека выполняются напрямую через Docker Compose с `--profile all` (или `--profile monitoring` / `--profile ops`):
@@ -79,7 +87,7 @@ task db:init
 ```
 
 Скрипт `scripts/initdb/01-init-user.sh` идемпотентно создаёт:
-- `APP_DB_USER` (`orbit_user`) — рабочую роль без superuser с правами на базы `orbit_auth`, `orbit_schedule`, `orbit_ai` и `orbit_ai_test` (пароль обновляется из `APP_DB_PASSWORD`);
+- `APP_DB_USER` (`orbit_user`) — рабочую роль без superuser с правами на базы `orbit_auth`, `orbit_users`, `orbit_schedule`, `orbit_ai` и `orbit_ai_test` (пароль обновляется из `APP_DB_PASSWORD`);
 - `METRICS_DB_USER` (`orbit_metrics`) — роль мониторинга с `pg_monitor` (создаётся при непустом `METRICS_DB_PASSWORD`);
 - `OPS_BOT_DB_USER` (`orbit_ops_bot`) — ограниченную роль для `orbit_ai`: `SELECT` на все таблицы схемы `public` и `UPDATE (triaged_at, triaged_by, ops_notified_at)` в `generation_attempts` (создаётся при непустом `OPS_BOT_DB_PASSWORD`).
 
@@ -98,6 +106,9 @@ task build
 docker compose --profile apps up -d --pull never --wait --wait-timeout 120
 ```
 
-`compose.override.yaml` не должен попадать в Git. При изменении миграций Schedule или Auth собирайте также `schedule-migrate` / `auth-migrate`.
+`compose.override.yaml` не должен попадать в Git. При изменении миграций Auth, Users или Schedule собирайте также `auth-migrate`, `users-migrate` или `schedule-migrate`.
+
+> [!NOTE] Шаблон `compose.override.yaml.example`
+> В текущем `compose.override.yaml.example` описаны `build`-секции только для `jwt-keygen`, `auth-*`, `gateway-service`, `schedule-*` и `ai-*`. Если вы разрабатываете локально `users-service`, `users-migrate`, `web` или `ops-bot`, добавьте для них `build`-секцию в свой `compose.override.yaml` вручную.
 
 Подробнее о мониторинге: [Мониторинг и логи](observability.md), о запуске AI: [локальный стенд с AI](../how-to/ai-local-stack.md).

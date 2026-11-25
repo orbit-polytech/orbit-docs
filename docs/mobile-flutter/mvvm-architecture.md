@@ -1,7 +1,7 @@
 # Архитектура MVVM и управление состоянием
 
-!!! note "Архитектурный стандарт проекта"
-    Для новых функций Orbit Mobile принят подход **Clean Architecture + BLoC**. Ранее описанный вариант с `ChangeNotifier` сохранён для справки. Новые примеры и рекомендации находятся в разделе [Архитектура BLoC](bloc-architecture.md).
+!!! warning "Архив / Устарело"
+    Этот документ относится к раннему прототипу на `ChangeNotifier`/MVVM и **не соответствует текущему коду `mobile`**. В реальном приложении используется Clean Architecture + BLoC (`flutter_bloc`), см. [Архитектура BLoC](bloc-architecture.md) и [Хранилище Hive, Cache-First и Сетевой слой](offline-and-storage.md).
 
 В этом разделе детально рассматривается реализация паттерна **MVVM (Model-View-ViewModel)** и управление состоянием с помощью паттерна **Command** и sealed class **Result**.
 

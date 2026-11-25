@@ -66,18 +66,27 @@ git commit -m "feat(tasks): implement deadline calculation invariants"
 
 ```bash
 # Для Go:
-go test -count=1 ./...
+go test -race -count=1 ./...
 golangci-lint run ./...
 
-# Для Python:
-pytest
-ruff check .
-ruff format --check .
+# Для Python (ai-service, knowledge-pipeline, ops-bot через uv):
+uv run ruff check .
+uv run ruff format --check .
+uv run mypy src
+uv run pytest
 
-# Для Flutter:
+# Для Flutter (mobile; на Windows перед запуском задайте TEMP/TMP на F:, например:
+# $env:TEMP = "F:\Temp"; $env:TMP = "F:\Temp"):
+flutter analyze --fatal-infos
 flutter test
-flutter analyze
+python tool/check_version.py
+
+# Для документации (orbit-docs):
+python scripts/check-doc-links.py
+mkdocs build --strict
 ```
+
+Для `mobile` перед открытием PR с изменениями кода обязательно поднимайте и видимую версию, и `build number` в `pubspec.yaml` (например, `0.1.27-beta+28` → `0.1.28-beta+29`); CI `mobile` запускается на self-hosted runner с меткой `orbit-mobile` (см. [паспорт `mobile`](../reference/services/mobile.md)).
 
 ### Шаг 5. Отправка ветки на GitHub
 ```bash

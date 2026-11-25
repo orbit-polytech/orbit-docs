@@ -1,8 +1,8 @@
 # Дизайн-система: светлая тема и навигация
 
-**Статус:** базовая светлая дизайн-система и парящая навигационная панель (`FloatingBottomNavBar`) реализованы в `mobile/lib/design_system/` и `mobile/lib/features/shell/`. Примеры с `go_router` на 5 вкладок ниже сохранены как целевой ориентир по мере добавления новых модулей («Задачи», «Заметки»).
+**Статус:** базовая светлая дизайн-система, мобильная парящая панель `FloatingBottomNavBar` и широкая боковая панель `DesktopShellSidebar` реализованы в `mobile/lib/design_system/` и `mobile/lib/features/shell/`.
 
-**Светлая тема — по умолчанию** (`AppTheme.lightTheme`: фон `#F7F8F5`, карточки `#FFFFFF`, основной акцент `#202622`, границы `#E2E7E0`, вторичный текст `#4A4A4A` с контрастом ≥ 8.4:1 по WCAG AA). В текущей бете в `MainShellScreen` работают 3 активные вкладки: **Ассистент**, **Расписание** и **Профиль**; разделы «Задачи» и «Заметки» появятся позже вместе с их сервисами. Историю сравнения ранних вариантов оформления можно посмотреть в [направлениях и референсах](design-directions-and-references.md).
+**Светлая тема — по умолчанию** (`AppTheme.lightTheme`: фон `#F7F8F5`, карточки `#FFFFFF`, основной акцент `#202622`, границы `#E2E7E0`, вторичный текст `#4A4A4A` с контрастом ≥ 8.4:1 по WCAG AA). В `OrbitApp` (`mobile/lib/app/app.dart`) используется `MaterialApp(home: ...)` без `go_router`: корневой маршрут выбирается реактивно по `SessionState`, а основное пространство в `MainShellScreen` объединяет 3 вкладки через `IndexedStack` (**Ассистент**, **Расписание**, **Профиль**). Разделы «Задачи» и «Заметки» остаются в планах развития. Историю сравнения ранних вариантов оформления можно посмотреть в [направлениях и референсах](design-directions-and-references.md).
 
 ## 1. Цветовые роли и варианты палитры
 
@@ -52,80 +52,15 @@ Apple рекомендует отделять Liquid Glass навигации о
 
 ---
 
-## 4. Декларативная маршрутизация: 5 Вкладок
+## 4. Фактическая навигация и адаптивный Shell (`MainShellScreen`)
 
-Роутер на базе `go_router 14+` использует `StatefulShellRoute.indexedStack`. Это сохраняет введенный текст, позицию скролла и открытые карточки в каждой из 5 вкладок:
+На текущем этапе маршрутизация в `OrbitApp` (`mobile/lib/app/app.dart`) устроена через `MaterialApp(home: ...)` и `BlocConsumer<SessionBloc, SessionState>` (хотя пакет `go_router` присутствует в `pubspec.yaml`, `StatefulShellRoute` в коде не используется):
 
-```dart
-// lib/app/routes/app_router.dart
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import '../../ui/shell/adaptive_dock.dart';
-import '../../ui/shell/shell_screen.dart';
-import '../../features/schedule/presentation/schedule_screen.dart';
-import '../../features/tasks/presentation/tasks_screen.dart';
-import '../../features/ai_assistant/presentation/ai_screen.dart';
-import '../../features/notes/presentation/notes_screen.dart';
-import '../../features/profile/presentation/profile_screen.dart';
+- `SessionUnknown()` → `SplashScreen`;
+- `SessionOnboardingRequired()` → `WelcomeScreen`;
+- `SessionGuest()` или `SessionAuthenticated()` → `MainShellScreen` (`initialTabIndex = 1`, то есть «Расписание» по умолчанию).
 
-final appRouter = GoRouter(
-  initialLocation: '/schedule',
-  routes: [
-    StatefulShellRoute.indexedStack(
-      builder: (context, state, navigationShell) {
-        return ShellScreen(navigationShell: navigationShell);
-      },
-      branches: [
-        // 1. Расписание занятий
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/schedule',
-              builder: (context, state) => const ScheduleScreen(),
-            ),
-          ],
-        ),
-        // 2. Личные и групповые задачи
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/tasks',
-              builder: (context, state) => const TasksScreen(),
-            ),
-          ],
-        ),
-        // 3. ИИ-помощник (Защищен AuthWall для гостей)
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/ai',
-              builder: (context, state) => const AiScreen(),
-            ),
-          ],
-        ),
-        // 4. Заметки и конспекты лекций
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/notes',
-              builder: (context, state) => const NotesScreen(),
-            ),
-          ],
-        ),
-        // 5. Профиль студента и настройки группы
-        StatefulShellBranch(
-          routes: [
-            GoRoute(
-              path: '/profile',
-              builder: (context, state) => const ProfileScreen(),
-            ),
-          ],
-        ),
-      ],
-    ),
-  ],
-);
-```
+Внутри `MainShellScreen` (`mobile/lib/features/shell/presentation/screens/main_shell_screen.dart`) все 3 экрана (`AssistantScreen`, `ScheduleScreen`, `ProfileScreen`) удерживаются в `IndexedStack`, что сохраняет скролл и введённый текст при переключении вкладок:
 
-### Повторный тап по активной вкладке:
-Параметр `initialLocation: index == navigationShell.currentIndex` возвращает вложенную навигацию вкладки к корневому экрану ветки. Плавная прокрутка к текущей паре дня при этом реализуется непосредственно на самом экране расписания через привязанный `ScrollController.animateTo()`.
+- **Мобильный экран (`< 820 px`, `AppLayoutSize.mobile`):** поверх `IndexedStack` выводится плавающая нижняя панель `FloatingBottomNavBar` (при переходе на экран Ассистента она скрывается, а системная кнопка «Назад» через `PopScope` возвращает на предыдущую вкладку или закрывает drawer истории).
+- **Планшет, десктоп и Web (`>= 820 px`, `AppLayoutSize.tablet` / `AppLayoutSize.desktop`):** используется двухколоночный каркас со сворачиваемой боковой панелью `DesktopShellSidebar` (ширина регулируется перетаскиванием `DesktopSidebarResizeHandle` в пределах `200..360 px` или сворачивается до `64 px`) и областью основного контента справа.

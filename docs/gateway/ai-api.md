@@ -27,7 +27,7 @@ Gateway проверяет JWT, валидирует JSON (до 64 KiB) и пе�
 - `message_id` — обязательный UUIDv4 новой попытки (генерируется на клиенте).
 - `query` — непустой текст, максимум 4000 символов после обрезки пробелов.
 - `conversation_id` — необязательный UUIDv4. Если не передавать, `ai-service` заведёт новый диалог и вернёт его ID в событии `start`.
-- `model` — необязательная строка (`AI_ALLOWED_MODELS`). Если не передавать (или передать `auto`), сработает роутинг модели по роли запроса. Переданная модель входит в ключ идемпотентности — для другой модели нужен новый `message_id`.
+- `model` — необязательная строка из белого списка `AI_ALLOWED_MODELS` (см. `ai-service/src/orbit_ai/config/llm_defaults.py`). Если `model` не передавать или указать `"auto"`, срабатывает роутинг по роли запроса согласно `src/orbit_ai/config/model_routing.json` (`router`, `casual`, `knowledge_rag`, `campus_navigation`, `general_study` и `default_fallbacks`). Переменная `AI_MODEL` задаёт запасную модель по умолчанию (`openai/gpt-oss-120b` в коде `settings.py`, `qwen/qwen3.8-27b` в `infra/.env.example`). Переданная модель входит в ключ идемпотентности — для другой модели нужен новый `message_id`.
 
 Пример запуска в Bash:
 
@@ -53,13 +53,27 @@ curl -N --fail-with-body http://localhost:8080/api/v1/ai/chat/stream \
 | `citations` | Показывает список источников (`document_title`, `section`, `url`, `relevance_score`, `excerpt`) |
 | `done` | Финализирует ответ; может содержать `duration_ms` (длительность генерации в мс) |
 | `cancelled` | Генерация была прервана |
-| `error` | Показывает `error_message` и учитывает `error_code` (`1001` upstream unavailable, `1002` timeout, `1003` rate limit, `1004` context too large, `1005` content filtered, `1099` internal) |
+| `error` | Показывает `error_message`, учитывает `error_code` (`1001` upstream unavailable, `1002` timeout, `1003` rate limit, `1004` context too large, `1005` content filtered, `1099` internal) и необязательное поле `retry_after_sec` (секунды до повтора при `1003`) |
 
 `HTTP 200` на старте SSE не гарантирует успешный финал: ошибка может прийти уже внутри потока через `event: error`. Если поток оборвался без `done` или `error`, ответ нельзя считать завершённым.
 
-### Ошибки и повторные запросы (replay)
+### Ограничение частоты (`429 Too Many Requests`) и ошибки до потока
 
-До первого чанка Gateway возвращает обычные HTTP-ошибки: `400`, `401`, `403`, `409`, `413`, `503`, `504`.
+До первого чанка Gateway возвращает обычные HTTP-ошибки: `400`, `401`, `403`, `409`, `413`, `429`, `503`, `504`.
+
+Маршрут `POST /api/v1/ai/chat/stream` защищён Redis rate limiter (`middleware.AIRateLimit`, префикс ключей `orbit:ai:rl`, настройки `AI_RATE_LIMIT_ENABLED=true`, `AI_RATE_LIMIT_MAX_REQUESTS=15`, `AI_RATE_LIMIT_WINDOW=1h`, `AI_RATE_LIMIT_COOLDOWN=5s`):
+- В каждом ответе, прошедшем через limiter, выставляются заголовки `X-RateLimit-Limit`, `X-RateLimit-Remaining` и `X-RateLimit-Reset` (Unix timestamp).
+- При превышении квоты или срабатывании cooldown (а также при `codes.ResourceExhausted` с `RetryInfo` от `ai-service`) Gateway возвращает **`429 Too Many Requests`**, заголовок **`Retry-After`** (в секундах) и JSON с полем **`retry_after_sec`** внутри `error` (`error.code = "RATE_LIMIT"` или `"RESOURCE_EXHAUSTED"`):
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMIT",
+    "message": "Слишком частые запросы. Подождите 5 сек.",
+    "retry_after_sec": 5
+  }
+}
+```
 
 | Ситуация с тем же `message_id` | Поведение |
 |---|---|
@@ -86,9 +100,9 @@ curl --fail-with-body http://localhost:8080/api/v1/ai/chat/cancel \
 ## 3. История и удаление диалогов
 
 - **`GET /api/v1/ai/conversations?limit=20&offset=0`**
-  Возвращает `conversations` (`id`, `title`, `created_at`, `updated_at`, `messages_count`, `last_message_snippet`) и `total_count`. По умолчанию `limit=20`, `offset=0`.
+  Возвращает `conversations` (`id`, `title`, `created_at`, `updated_at`, `messages_count`, `last_message_snippet`) и `total_count`. По умолчанию `limit=20`, `offset=0`; на стороне `ai-service` `limit` ограничивается диапазоном **`1..100`**, `offset >= 0`. Заголовок `title` формируется из первого сообщения пользователя с обрезкой до **120** символов (`summary_builder.py`), а `last_message_snippet` — до **50** символов.
 - **`GET /api/v1/ai/conversations/{id}?limit=50`**
-  `id` — UUIDv4 диалога. Возвращает `messages`: `id`, `role`, `content`, `citations`, `created_at`, `duration_ms`, `feedback_rating` (`up` / `down`), `feedback_reason`. Если диалог чужой или не найден, вернутся `403` или `404`.
+  `id` — UUIDv4 диалога. По умолчанию `limit=50`, на стороне `ai-service` `limit` ограничивается диапазоном **`1..200`**. Возвращает `messages`: `id`, `role`, `content`, `citations`, `created_at`, `duration_ms`, `feedback_rating` (`up` / `down`), `feedback_reason`. Если диалог чужой или не найден, вернутся `403` или `404`.
 - **`DELETE /api/v1/ai/conversations/{id}`**
   Удаляет диалог пользователя (с проверкой владельца) и возвращает `{"success": true}`.
 

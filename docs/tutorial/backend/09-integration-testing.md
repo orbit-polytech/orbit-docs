@@ -51,7 +51,7 @@ func setupTestDB(t *testing.T) *pgxpool.Pool {
 
     dsn := os.Getenv("TEST_POSTGRES_DSN")
     if dsn == "" {
-        dsn = "postgres://tasks_user:tasks_pass@localhost:5432/tasks_db?sslmode=disable"
+        dsn = "postgres://orbit_user:change_this_app_password@localhost:5434/tasks_db?sslmode=disable"
     }
 
     ctx := context.Background()

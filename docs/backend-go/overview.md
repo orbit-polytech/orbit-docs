@@ -1,63 +1,49 @@
 # Go-бэкенд: Архитектура и структура микросервисов
 
-Все бэкенд-сервисы команды Orbit AI на Go (`auth-service`, `users-service`, `schedule-service`, `navigation-service`, `tasks-service`, `notification-service`) следуют общим принципам портов и адаптеров, но не обязаны иметь побайтово одинаковое дерево каталогов. Ниже — учебная структура Tasks. В текущем Schedule сценарии находятся в `internal/usecase`, адаптер PostgreSQL — в `internal/infrastructure`, а `internal/app` собирает зависимости и управляет жизненным циклом. См. [паспорт Schedule](../reference/services/schedule.md).
+Все активные Go-сервисы команды Orbit (`auth-service`, `users-service`, `schedule-service`, `gateway-service`) строятся по единым принципам **Clean Architecture** (порты и адаптеры). Как устроен каждый слой подробно разобрано в [Чистой архитектуре и DDD](clean-architecture.md).
 
 ---
 
 ## 1. Официальный стандарт размещения кода Go
 
-Архитектура наших сервисов опирается на официальное руководство команды Go [«Organizing a Go module»](https://go.dev/doc/modules/layout). 
+Архитектура сервисов опирается на официальное руководство команды Go [«Organizing a Go module»](https://go.dev/doc/modules/layout).
 
-> [!WARNING]
-> Мы **не используем** неофициальный репозиторий `golang-standards/project-layout` с десятками каталогов (`pkg/`, `api/`, `scripts/` и т.д.). Команда разработчиков языка Go прямо подчёркивает, что этот шаблон не является официальным стандартом и избыточно усложняет модули. Наша структура — чистая, компактная и практичная.
+!!! warning "Без `golang-standards/project-layout`"
+    Мы **не используем** неофициальный шаблон `golang-standards/project-layout` с избыточными каталогами (`pkg/`, `scripts/` и т.д.). Структура модулей остаётся компактной, а изоляцию слоёв обеспечивает `internal/`.
 
 ---
 
-## 2. Эталонное дерево файлов сервиса
+## 2. Каноническая структура действующих Go-сервисов
 
-На примере `tasks-service`:
+Ниже — фактическая раскладка каталогов на базе живых сервисов (`auth-service`, `users-service`, `schedule-service`, `gateway-service`):
 
 ```text
-tasks-service/
+<service-name>/
 ├── cmd/
-│   └── tasks-service/
-│       └── main.go              # Точка входа: сборка зависимостей, чтение env, запуск и Graceful Shutdown
+│   └── <service>/
+│       └── main.go                  # Минимальная точка входа (запуск internal/app)
 ├── internal/
-│   ├── config/
-│   │   └── config.go            # Чтение переменных окружения в типизированную структуру Config
-│   ├── domain/
-│   │   ├── task.go              # Агрегат Task и его бизнес-методы
-│   │   ├── task_test.go         # Модульные тесты инвариантов домена
-│   │   ├── status.go            # Доменные статусы (Pending, Completed) и допустимые переходы
-│   │   └── errors.go            # Типовые ошибки: ErrTaskNotFound, ErrVersionConflict...
-│   ├── app/                     # (или usecase/) — сценарии использования системы
-│   │   ├── create_task.go       # Сценарий создания задачи с проверкой идемпотентности
-│   │   ├── complete_task.go     # Сценарий завершения задачи с проверкой прав владения
-│   │   ├── list_tasks.go        # Сценарий пагинации
-│   │   └── ports.go             # Интерфейсы портов (TaskSaver, TaskFinder, EventPublisher, Clock)
-│   ├── adapters/                # Реализации портов для конкретных технологий
-│   │   ├── postgres/
-│   │   │   ├── task_repo.go     # Реализация TaskSaver и TaskFinder на pgx / sqlc
-│   │   │   ├── task_repo_test.go
-│   │   │   └── queries.sql      # SQL-запросы для sqlc
-│   │   ├── rabbitmq/
-│   │   │   └── publisher.go     # Публикация доменных событий в RabbitMQ
-│   │   └── redis/
-│   │       └── idempotency.go   # Хранилище ключей идемпотентности в Redis
-│   └── transport/
-│       └── grpc/
-│           ├── server.go        # Регистрация gRPC-сервера, цепочка интерцепторов
-│           ├── tasks_handler.go # Конвертация Protobuf DTO <-> Domain, вызов app
-│           ├── errors.go        # Маппинг domain errors -> gRPC status codes
-│           └── tasks_handler_test.go
+│   ├── app/                         # Composition Root: сборка зависимостей, жизненный цикл, метрики
+│   ├── config/                      # Типизированный Config, загрузка и валидация env
+│   ├── domain/                      # Чистое бизнес-ядро: сущности, Value Objects, доменные ошибки
+│   ├── usecase/                     # Бизнес-сценарии (use cases) и интерфейсы портов (ports.go)
+│   ├── infrastructure/              # Реализации портов:
+│   │   ├── postgres/                # SQL-репозитории на pgx/v5
+│   │   ├── redisstore/              # Кэш, сессии, rate-limit на go-redis (при наличии)
+│   │   └── ...                      # Внешние клиенты (email, oauth, gRPC-клиенты в gateway)
+│   └── transport/                   # Входящий транспорт:
+│       ├── grpc/                    # gRPC-сервер, хендлеры, маппинг ошибок (в доменных сервисах)
+│       ├── http/                    # HTTP-роутер, middleware, REST/SSE хендлеры (в gateway-service)
+│       └── metrics/                 # Prometheus /metrics endpoint (при выделении в transport)
 ├── migrations/
-│   ├── 000001_create_tasks.up.sql
-│   └── 000001_create_tasks.down.sql
+│   ├── 00001_init_schema.sql        # Единый файл Goose (-- +goose Up / -- +goose Down)
+│   └── 00002_...sql
 ├── .env.example
 ├── .gitignore
-├── .golangci.yml
+├── .golangci.yml                    # Конфигурация golangci-lint v2 (version: "2")
 ├── Dockerfile
-├── Makefile
+├── Dockerfile.migrate               # Образ миграций с Goose (в сервисах с БД)
+├── Taskfile.yml                     # Единые команды: task run / test / lint / build / migrate-*
 ├── go.mod
 ├── go.sum
 └── README.md
@@ -67,31 +53,30 @@ tasks-service/
 
 ## 3. Зоны ответственности директорий
 
-* **`cmd/<имя-сервиса>/main.go` (Composition Root)**: Точка сборки программы. Читает конфигурацию, инициализирует пулы БД, репозитории, юзкейсы, gRPC-сервер, перехватчики, регистрирует health-сервер и корректно ожидает системных сигналов завершения (`SIGINT`, `SIGTERM`). В `main.go` **нет бизнес-логики**. Если этот файл превышает 150 строк — это сигнал, что в него попало что-то лишнее.
-* **`internal/`**: Защитная область модуля. Компилятор Go на уровне языка запрещает импортировать пакеты из `internal` другим внешним модулям. Это гарантирует, что микросервисы не станут неявно связываться между собой кодом.
-* **`internal/domain/`**: Чистое бизнес-ядро. Содержит структуры сущностей, Value Objects с инвариантами и доменные события. **Здесь строго запрещены любые внешние зависимости** (`pgx`, `grpc`, `net/http`, сторонние библиотеки) — только стандартная библиотека Go (`time`, `errors`, `strings`).
-* **`internal/app/`** (или `internal/usecase/`): Сценарии использования. Сервис получает внешние зависимости через интерфейсы портов, описанные в `ports.go`. Здесь координируется выполнение команд: проверка прав владения («эта задача принадлежит текущему студенту»), проверка идемпотентности, сбор событий из агрегата и их публикация.
-* **`internal/adapters/<технология>/`**: Вторичные адаптеры (Driven Adapters). Папки именуются строго по названию технологии: `postgres`, `redis`, `rabbitmq`. Не `db`, не `repository`, не `storage`. Это позволяет с первого взгляда понять, с какой инфраструктурой работает код.
-* **`internal/transport/grpc/`**: Первичный адаптер (Driving Adapter). Принимает gRPC-запросы, распаковывает protobuf-сообщения, валидирует формат, вызывает нужный сценарий `app`, транслирует доменные ошибки в стандартизированные коды статусов gRPC.
-* **`internal/config/`**: Структура конфигурации `Config` и функция `Load()`. Единственное место в сервисе, где читаются переменные окружения через `os.Getenv` или библиотеку `envconfig`.
+* **`cmd/<service>/main.go`**: тонкая точка запуска, которая передаёт управление в `internal/app`.
+* **`internal/app/` (Composition Root)**: чтение конфигурации (`internal/config`), инициализация подключений к PostgreSQL/Redis, сборка репозиториев, юзкейсов, gRPC/HTTP-сервера и сервера метрик, регистрация healthcheck и корректное завершение (`SIGINT`, `SIGTERM`).
+* **`internal/config/`**: структура `Config`, чтение переменных окружения и их валидация.
+* **`internal/domain/`**: чистое бизнес-ядро. Содержит сущности, Value Objects с проверкой инвариантов и доменные ошибки (`errors.go`). Без зависимостей от БД, сетей и транспорта.
+* **`internal/usecase/`**: сценарии использования. Сервис обращается к внешнему миру только через интерфейсы портов (`ports.go`), не зная деталей реализации PostgreSQL или Redis.
+* **`internal/infrastructure/<технология>/`**: вторичные адаптеры (Driven Adapters): `postgres`, `redisstore`, `email`, `oauth`, а в `gateway-service` — gRPC-клиенты (`authclient`, `usersclient`, `scheduleclient`, `aiclient`) и `ratelimit`.
+* **`internal/transport/`**: первичный адаптер (Driving Adapter) — `grpc/` (в `auth-service`, `users-service`, `schedule-service`) или `http/` (в `gateway-service`). Принимает запросы, валидирует вход, вызывает `usecase` (или gRPC-клиент в gateway) и маппит доменные ошибки в коды gRPC / HTTP.
 
 ---
 
 ## 4. Направление зависимостей (Dependency Rule)
 
 ```text
-transport/grpc ──> app ──> domain
-                    ^
-adapters/* ─────────┘ (реализуют интерфейсы из app/ports.go)
+transport/* ──> usecase ──> domain
+                   ^
+infrastructure/* ──┘ (реализуют интерфейсы из usecase/ports.go)
 
-cmd/main.go знает обо всех слоях и связывает их воедино
+internal/app знает обо всех слоях и связывает их в Composition Root
 ```
 
 Стрелки зависимостей идут **строго внутрь**:
-1. `domain` не зависит ни от кого.
-2. `app` зависит только от `domain`. `app` ничего не знает про PostgreSQL, Redis или RabbitMQ — он видит только абстрактные интерфейсы (`TaskSaver`, `EventPublisher`).
-3. `adapters` реализуют интерфейсы `app` и оперируют моделями `domain`.
-4. `transport` вызывает сценарии `app` и не содержит доменной логики.
+1. `domain` не зависит ни от одного внутреннего инфраструктурного или транспортного слоя.
+2. `usecase` зависит от `domain` и абстрактных интерфейсов портов, но не импортирует `pgx`, `go-redis` или `transport/*`.
+3. `infrastructure` реализует порты `usecase` и оперирует моделями `domain`.
+4. `transport` вызывает `usecase` и не содержит доменной логики.
 
-> [!CAUTION]
-> Если в слое `domain` или `app` появляется импорт вроде `github.com/.../internal/adapters/postgres` — это грубейшее архитектурное нарушение, которое немедленно блокируется линтером `depguard` в CI.
+Изоляция слоёв проверяется на code review, а базовый статический анализ и форматирование в CI обеспечивает **`golangci-lint` v2** (`.golangci.yml`).

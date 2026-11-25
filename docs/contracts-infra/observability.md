@@ -9,8 +9,9 @@ auth-service (:9091/metrics)      ──┐
 schedule-service (:9092/metrics)  ──┤
 ai-service (:9093/metrics)        ──┼──▶ prometheus (:9090) ──▶ alertmanager (:9093) ──▶ ops-bot (:8081/alerts/webhook)
 gateway-service (:9094/metrics)   ──┤         │
-postgres-exporter (:9187)         ──┤         ▼
-redis-exporter (:9121)            ──┘      grafana (:3000) ◀── loki (:3100) ◀── alloy (/var/run/docker.sock)
+users-service (:9096/metrics)     ──┤         ▼
+postgres-exporter (:9187)         ──┤      grafana (:3000) ◀── loki (:3100) ◀── alloy (/var/run/docker.sock)
+redis-exporter (:9121)            ──┘
 ```
 
 Все сервисы при запуске в Compose пишут логи в `stdout` в формате JSON с полем `service` (у Go-сервисов через стандартный `log/slog`, у `ai-service` через JSON-форматтер в production-режиме). Alloy автоматически забирает логи всех контейнеров проекта `orbit-infra`, извлекает `level`, `request_id` и `trace_id` (конфигурация — `monitoring/alloy/config.alloy`) и складывает их в Loki.
@@ -37,8 +38,9 @@ redis-exporter (:9121)            ──┘      grafana (:3000) ◀── loki 
 | `schedule-service` | `schedule-service:9092` | `/metrics` (`grpcprom` и метрики синка `orbit_schedule_sync_*`), `/livez` |
 | `ai-service` | `ai-service:9093` | `/metrics` (токены, квоты, длительность и TTFT LLM, RAG-исходы, gRPC) |
 | `gateway-service` | `gateway-service:9094` | `/metrics` (HTTP RED-метрики `orbit_gateway_http_*`), `/livez` |
+| `users-service` | `users-service:9096` | `/metrics` (`grpcprom`), `/livez` |
 
-Наружный порт `gateway-service:8080` (и туннель Ngrok) намеренно не открывает `/metrics` — запрос `GET /metrics` на `8080` возвращает `404`.
+Наружный порт `gateway-service:8080`, клиентский прокси `web:8088` и туннель Ngrok намеренно не открывают `/metrics` — запрос `GET /metrics` на `:8080` возвращает `404` (а на `:8088` отдаётся SPA fallback).
 
 ## Дашборды Grafana
 
@@ -83,7 +85,7 @@ docker compose --profile all up -d --wait --wait-timeout 180
 
 Что проверить после запуска:
 
-1. В `http://127.0.0.1:9090/targets` все 7 таргетов (`prometheus`, `gateway-service`, `auth-service`, `schedule-service`, `ai-service`, `postgres`, `redis`) в состоянии `UP`.
+1. В `http://127.0.0.1:9090/targets` все **8** таргетов (`prometheus`, `gateway-service`, `auth-service`, `users-service`, `schedule-service`, `ai-service`, `postgres`, `redis`) в состоянии `UP`.
 2. `curl -i http://127.0.0.1:8080/metrics` возвращает `404 Not Found` (метрики не торчат наружу).
 3. В Grafana (`http://127.0.0.1:3000`) открываются дашборды в папке **Orbit Polytech**, а в `Orbit — Centralized Logs (Loki)` идут свежие логи сервисов.
 

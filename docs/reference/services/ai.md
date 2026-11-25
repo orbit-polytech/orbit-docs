@@ -2,7 +2,7 @@
 
 **Репозиторий:** [`orbit-polytech/ai-service`](https://github.com/orbit-polytech/ai-service)
 
-**Статус:** работает сейчас в `main` (`contracts@v0.5.9`), запускается в Compose через профили `ai` и `all`.
+**Статус:** работает сейчас в `main` (`contracts@v0.5.10`), запускается в Compose через профили `ai` и `all`.
 
 ## Назначение и границы
 
@@ -14,19 +14,19 @@
 |---|---|
 | Runtime | Python 3.13+, `uv`, `uv.lock` |
 | Транспорт | `grpc.aio`, порт `50057`, gRPC Health Checking |
-| Генерация LLM | Мультипровайдерный `RouterLLMClient` (Groq / OpenRouter / Gemini), роутинг ролей по `config/model_routing.json` |
+| Генерация LLM | Мультипровайдерный `RouterLLMClient` (Groq / OpenRouter / Gemini), роутинг ролей по `src/orbit_ai/config/model_routing.json` (`router`, `casual`, `knowledge_rag`, `campus_navigation`, `general_study`, `default_fallbacks`) |
 | Эмбеддинги | FastEmbed, `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2` (384 измерения) |
 | Reranker | Опциональный cross-encoder (`RAG_RERANKER_ENABLED`, по умолчанию `BAAI/bge-reranker-v2-m3`) |
 | Хранилище | SQLAlchemy asyncio + asyncpg; PostgreSQL 16 + `pgvector` (HNSW + Russian/simple FTS) |
 | Миграции | Alembic `001–006` (отдельный one-shot контейнер `ai-migrate`) |
 | Метрики | `prometheus-client` на внутреннем порту `:9093` (`/metrics`), учёт токенов и квот |
-| Контракты | Пакет `orbit-contracts` из Git по тегу `v0.5.9` |
+| Контракты | Пакет `orbit-contracts` из Git по тегу `v0.5.10` |
 
 База приложения — `orbit_ai`, отдельная тестовая база — `orbit_ai_test`. В `production` логи пишутся в JSON (`service="ai-service"`).
 
 ## Безопасность и RPC
 
-Gateway проверяет Bearer JWT и передаёт `x-user-id` в gRPC metadata (при настройке `ORBIT_INTERNAL_SERVICE_SECRET` дополнительно проверяется общий внутренний секрет). AI проверяет владение диалогом, повтором (replay), отменой и оценкой.
+Gateway проверяет Bearer JWT и передаёт `x-user-id` в gRPC metadata (при настройке `ORBIT_INTERNAL_SERVICE_SECRET` дополнительно проверяется общий внутренний секрет). AI проверяет владение диалогом, повтором (replay), отменой и оценкой (при чужом ресурсе возвращает `PERMISSION_DENIED`).
 
 Реализованные RPC в `orbit.ai.v1.AIService`:
 - `ChatStream` (server streaming со стадиями `START`, `RETRIEVAL`, `DELTA`, `CITATIONS`, `DONE`, `CANCELLED`, `ERROR`);
@@ -38,7 +38,7 @@ Gateway проверяет Bearer JWT и передаёт `x-user-id` в gRPC me
 
 ## Конфигурация
 
-Шаблон настроек: [`.env.example`](https://github.com/orbit-polytech/ai-service/blob/main/.env.example). Основные переменные: `DATABASE_URL`, `AI_PROVIDER` (`groq`/`openrouter`/`gemini`), `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `AI_MODEL` (в коде `openai/gpt-oss-120b`), `AI_ALLOWED_MODELS`, `CHAT_HISTORY_LIMIT`, `RAG_ENABLED`, `RAG_ROUTER_ENABLED`, `RAG_RERANKER_ENABLED`, `RAG_MIN_SIMILARITY` (`0.45`), `RAG_TOP_K` (`8`), `METRICS_PORT` (`9093`), лимиты и таймауты `AI_*`.
+Шаблон настроек: [`.env.example`](https://github.com/orbit-polytech/ai-service/blob/main/.env.example). Основные переменные: `DATABASE_URL`, `AI_PROVIDER` (`groq`/`openrouter`/`gemini`), `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `AI_MODEL` (в коде `settings.py` по умолчанию `openai/gpt-oss-120b`, в `infra/.env.example` — `qwen/qwen3.8-27b`; при пустом `model` или `model: "auto"` в запросе используется роутинг ролей из `model_routing.json`), `AI_ALLOWED_MODELS`, `CHAT_HISTORY_LIMIT`, `RAG_ENABLED`, `RAG_ROUTER_ENABLED`, `RAG_RERANKER_ENABLED`, `RAG_MIN_SIMILARITY` (`0.45`), `RAG_TOP_K` (`8`), `METRICS_PORT` (`9093`), лимиты и таймауты `AI_*`.
 
 В `APP_ENV=production` сервис не запустится без API-ключа для выбранного `AI_PROVIDER` и `DATABASE_URL`. Для Groq валидатор дополнительно ограничивает `AI_MAX_OUTPUT_TOKENS <= 2048`. В `development` без ключей поднимается `FakeLLMClient` для локальных проверок.
 
