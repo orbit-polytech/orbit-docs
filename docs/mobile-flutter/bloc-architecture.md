@@ -1,8 +1,8 @@
 # Архитектура BLoC и управление состоянием
 
-В мобильном приложении **Orbit Mobile** управление состоянием клиентского интерфейса построено на библиотеке **`flutter_bloc`** и возможностях **Dart 3.5+ (`sealed classes`, pattern matching)**.
+В клиентском приложении **Orbit** (`mobile`) управление состоянием построено на библиотеке **`flutter_bloc` (`^9.1.1`)**, **`bloc_concurrency` (`^0.3.0`)** и возможностях **Dart 3 (`sealed classes`, pattern matching)**.
 
-Паттерн BLoC (Business Logic Component) обеспечивает строгий однонаправленный поток данных (**Unidirectional Data Flow**), изолируя верстку виджетов от бизнес-логики и сетевых запросов.
+Паттерн BLoC обеспечивает однонаправленный поток данных (**Unidirectional Data Flow**), изолируя виджеты от бизнес-логики и сетевых запросов.
 
 ---
 
@@ -11,304 +11,265 @@
 ```mermaid
 flowchart LR
     UI["UI (Flutter Widget)"] -->|1. add(Event)| BLoC["ScheduleBloc"]
-    BLoC -->|2. вызов UseCase| UseCase["Domain / UseCases"]
-    UseCase -->|3. данные из Hive / Dio| BLoC
+    BLoC -->|2. вызов UseCase| UseCase["LoadWeekScheduleUseCase"]
+    UseCase -->|3. поток данных Hive / Dio| BLoC
     BLoC -->|4. emit(State)| Stream["Stream состояний"]
-    Stream -->|5. BlocBuilder / Consumer| UI
+    Stream -->|5. BlocBuilder / BlocConsumer| UI
 ```
 
 ---
 
-## 2. Модель неисключающих состояний (`ScheduleReady`)
+## 2. Состояния `ScheduleBloc` (`schedule_state.dart`)
 
-В реальном приложении экран расписания не может быть просто «либо загрузка, либо ошибка, либо данные». У студента одновременно могут быть:
-1. Загруженное расписание из локального кэша Hive;
-2. Фоновый процесс проверки свежих данных с сервера (`isRefreshing = true`);
-3. Ошибка последней попытки обновления (например, потеря связи в метро), при которой само расписание **обязано оставаться на экране** с поясняющим баннером.
+Файл: `lib/features/schedule/presentation/bloc/schedule/schedule_state.dart`
 
-### 2.1 Модель состояний (`schedule_state.dart`)
+На экране расписания отображаются не просто «загрузка или ошибка», а комбинированное состояние с учётом кэша Hive, статуса синхронизации сервера (`READY` / `PENDING_SYNC`) и признака устаревания (`isStale`):
 
 ```dart
-// lib/features/schedule/presentation/bloc/schedule_state.dart
-import 'package:flutter/foundation.dart';
-import '../../../../core/error/failures.dart';
-import '../../domain/entities/schedule_data.dart';
-
-@immutable
-sealed class ScheduleState {
+// lib/features/schedule/presentation/bloc/schedule/schedule_state.dart
+sealed class ScheduleState extends Equatable {
   const ScheduleState();
+
+  @override
+  List<Object?> get props => [];
 }
 
 final class ScheduleInitial extends ScheduleState {
   const ScheduleInitial();
 }
 
-final class ScheduleLoadingFirstTime extends ScheduleState {
-  const ScheduleLoadingFirstTime();
+/// Группа ещё не выбрана — UI предлагает выбрать учебную группу
+final class ScheduleSelectGroupRequired extends ScheduleState {
+  const ScheduleSelectGroupRequired();
 }
 
-/// Основное рабочее состояние экрана
-final class ScheduleReady extends ScheduleState {
-  const ScheduleReady({
-    required this.group,
-    required this.data,
-    required this.selectedDayIndex,
-    required this.deviceUpdatedAt,
-    this.serverLastCheckedAt,
-    this.isRefreshing = false,
-    this.refreshFailure,
+/// Первичная загрузка недели (когда готового кэша для этой цели ещё нет)
+final class ScheduleLoading extends ScheduleState {
+  const ScheduleLoading({
+    required this.groupTitle,
+    required this.weekMonday,
+    this.serverStatus,
   });
 
-  final String group;
-  final ScheduleData data;
-  final int selectedDayIndex;
-  /// Момент локального сохранения данных на устройстве (DateTime.now() при записи в Hive/кэш)
-  final DateTime deviceUpdatedAt;
-  /// Момент проверки данных бэкендом в источнике (из metadata.last_checked_at), может отсутствовать
-  final DateTime? serverLastCheckedAt;
-  final bool isRefreshing;
-  final Failure? refreshFailure;
-
-  ScheduleReady copyWith({
-    String? group,
-    ScheduleData? data,
-    int? selectedDayIndex,
-    DateTime? deviceUpdatedAt,
-    DateTime? serverLastCheckedAt,
-    bool clearServerLastCheckedAt = false,
-    bool? isRefreshing,
-    Failure? refreshFailure,
-    bool clearRefreshFailure = false, // Явный флаг для сброса ошибки
-  }) {
-    return ScheduleReady(
-      group: group ?? this.group,
-      data: data ?? this.data,
-      selectedDayIndex: selectedDayIndex ?? this.selectedDayIndex,
-      deviceUpdatedAt: deviceUpdatedAt ?? this.deviceUpdatedAt,
-      serverLastCheckedAt: clearServerLastCheckedAt ? null : (serverLastCheckedAt ?? this.serverLastCheckedAt),
-      isRefreshing: isRefreshing ?? this.isRefreshing,
-      refreshFailure: clearRefreshFailure ? null : (refreshFailure ?? this.refreshFailure),
-    );
-  }
+  final String groupTitle;
+  final DateTime weekMonday;
+  final String? serverStatus;
 }
 
-/// Экран полной ошибки (показывается только если локального кэша нет совсем)
-final class ScheduleEmptyError extends ScheduleState {
-  const ScheduleEmptyError({required this.failure});
-  final Failure failure;
+/// Сервер ещё синхронизирует расписание с источником (`PENDING_SYNC`)
+final class SchedulePendingSync extends ScheduleState {
+  const SchedulePendingSync({
+    required this.groupTitle,
+    required this.weekMonday,
+    this.serverStatus = 'PENDING_SYNC',
+  });
+
+  final String groupTitle;
+  final DateTime weekMonday;
+  final String? serverStatus;
+}
+
+/// Основное рабочее состояние экрана (кэш + фоновая синхронизация / ошибка)
+final class ScheduleLoaded extends ScheduleState {
+  const ScheduleLoaded({
+    required this.groupTitle,
+    required this.weekMonday,
+    required this.selectedDate,
+    required this.days,
+    required this.syncStatus,
+    this.isStale = false,
+    this.lastUpdatedAt,
+    this.lastCheckedAt,
+    this.cachedAt,
+    this.serverStatus,
+    this.errorMessage,
+    this.publishedFrom,
+    this.publishedTo,
+  });
+
+  final String groupTitle;
+  final DateTime weekMonday;
+  final DateTime selectedDate;
+  final List<AcademicDayEntity> days;
+  final ScheduleSyncStatus syncStatus;
+  final bool isStale;
+  final DateTime? lastUpdatedAt;
+  final DateTime? lastCheckedAt;
+  final DateTime? cachedAt;
+  final String? serverStatus;
+  final String? errorMessage;
+  final DateTime? publishedFrom;
+  final DateTime? publishedTo;
+}
+
+/// Критическая ошибка при отсутствии локального кэша
+final class ScheduleFailure extends ScheduleState {
+  const ScheduleFailure({
+    required this.groupTitle,
+    required this.weekMonday,
+    required this.message,
+    this.selectedDate,
+  });
+
+  final String groupTitle;
+  final DateTime weekMonday;
+  final String message;
+  final DateTime? selectedDate;
 }
 ```
 
+Ключевая особенность `ScheduleLoaded`:
+- Поле `syncStatus` (`ScheduleSyncStatus`) показывает, идёт ли сейчас фоновое обновление, завершено ли оно успешно или завершилось ошибкой.
+- Если сеть недоступна, кэш остаётся на экране (`ScheduleLoaded`), а ошибка отображается через `errorMessage` без сброса расписания.
+- При переключении дня внутри уже загруженной недели (`ScheduleDaySelected`) обновляется только `selectedDate`, без повторного запроса на сервер.
+
 ---
 
-## 3. Защита от гонок состояний: Счётчик поколений и отмена сокетов
+## 3. Защита от гонок состояний: `restartable()`, `_currentRequestId` и `CancellationToken`
 
-### Проблема сценария «А ➔ Б ➔ А»:
-Если студент переключился с группы А на Б, а затем быстро вернулся обратно на А, простая проверка `_currentGroup == event.group` пропустит старый ответ первого запроса группы А.
+### Проблема сценария «А ➔ Б ➔ А»
+Если пользователь быстро переключает группы или недели, более ранний асинхронный ответ может прийти позже нового и перезаписать актуальное состояние.
 
-### Решение: Поколения загрузки (Generation Counter) и `CancelToken`:
-1. **Счётчик поколений (`_generation`):** Каждый новый запрос инкрементирует целочисленный счетчик. Локальная переменная `final generation = ++_generation;` захватывается перед асинхронными вызовами. После любого `await` выполняется проверка:
-   ```dart
-   if (generation != _generation || emit.isDone) return;
-   ```
-   Старый запрос группы А (поколение 1) будет отброшен, так как текущее поколение уже равно 3!
-2. **Локальный захват `CancelToken`:** Экземпляр `CancelToken` сохраняется в локальную переменную метода, исключая чтение перезаписанного токена из общего поля после `await`.
-3. **Сохранение выбранного дня:** При переключении дня недели флаг `refreshFailure` сохраняется и не сбрасывается втихую.
+### Как это решено в `ScheduleBloc` (`lib/features/schedule/presentation/bloc/schedule/schedule_bloc.dart`)
+1. **Трансформер `restartable()`:** все события загрузки сгруппированы под базовым типом `ScheduleLoadEvent` (`ScheduleStarted`, `ScheduleGroupChanged`, `ScheduleGroupPreviewRequested`, `ScheduleWeekChanged`, `ScheduleDateSelected`, `ScheduleTodayRequested`, `ScheduleRefreshRequested`) и обрабатываются с `transformer: restartable()` из `bloc_concurrency`.
+2. **Счётчик запросов (`_currentRequestId`):** при каждом вызове `_loadSchedule` создаётся локальный `final requestId = ++_currentRequestId;`, который проверяется в `onData` и `onError` внутри `emit.forEach`.
+3. **`CancellationToken` (`lib/core/cancellation/cancellation_token.dart`):** при новом запросе предыдущий токен отменяется (`_cancelToken?.cancel()`), а новый передаётся в `_loadWeekScheduleUseCase.execute(...)`. Это прерывает активный сетевой запрос и закрывает поток обновлений.
 
 ```dart
-// lib/features/schedule/presentation/bloc/schedule_bloc.dart
-import 'package:bloc_concurrency/bloc_concurrency.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'schedule_event.dart';
-import 'schedule_state.dart';
+// lib/core/cancellation/cancellation_token.dart
+class CancellationToken {
+  bool _isCancelled = false;
+  bool get isCancelled => _isCancelled;
 
+  final Completer<void> _completer = Completer<void>();
+  Future<void> get whenCancel => _completer.future;
+
+  final List<void Function()> _listeners = [];
+
+  void cancel() {
+    if (_isCancelled) return;
+    _isCancelled = true;
+    if (!_completer.isCompleted) {
+      _completer.complete();
+    }
+    for (final listener in List.of(_listeners)) {
+      listener();
+    }
+    _listeners.clear();
+  }
+
+  void onCancel(void Function() listener) {
+    if (_isCancelled) {
+      listener();
+    } else {
+      _listeners.add(listener);
+    }
+  }
+}
+```
+
+Фрагмент из `lib/features/schedule/presentation/bloc/schedule/schedule_bloc.dart`:
+
+```dart
 class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
   ScheduleBloc({
-    required GetCachedScheduleUseCase getCachedSchedule,
-    required SyncScheduleUseCase syncSchedule,
-  })  : _getCachedSchedule = getCachedSchedule,
-        _syncSchedule = syncSchedule,
-        super(const ScheduleInitial()) {
-
-    on<ScheduleGroupChanged>(
-      _onGroupChanged,
-      transformer: restartable(),
-    );
-
-    on<ScheduleRefreshTriggered>(
-      _onRefreshTriggered,
-      transformer: droppable(),
-    );
-
+    required this.repository,
+    LoadWeekScheduleUseCase? loadWeekScheduleUseCase,
+    DateTime Function()? nowProvider,
+  }) : _loadWeekScheduleUseCase =
+           loadWeekScheduleUseCase ?? LoadWeekScheduleUseCase(repository),
+       _nowProvider = nowProvider ?? DateTime.now,
+       super(const ScheduleInitial()) {
+    on<ScheduleLoadEvent>(_onLoadEvent, transformer: restartable());
     on<ScheduleDaySelected>(_onDaySelected);
   }
 
-  final GetCachedScheduleUseCase _getCachedSchedule;
-  final SyncScheduleUseCase _syncSchedule;
+  int _currentRequestId = 0;
+  CancellationToken? _cancelToken;
 
-  int _generation = 0;
-  CancelToken? _activeCancelToken;
-  String? _currentGroup;
+  Future<void> _loadSchedule({
+    required String groupTitle,
+    required DateTime weekMonday,
+    required DateTime selectedDate,
+    bool forceRefresh = false,
+    Completer<void>? refreshCompleter,
+    required Emitter<ScheduleState> emit,
+  }) async {
+    final requestId = ++_currentRequestId;
+    _refreshTracker.setActive(refreshCompleter);
+    _cancelToken?.cancel();
+    final cancelToken = CancellationToken();
+    _cancelToken = cancelToken;
 
-  Future<void> _onGroupChanged(
-    ScheduleGroupChanged event,
-    Emitter<ScheduleState> emit,
-  ) async {
-    final generation = ++_generation;
-    _currentGroup = event.group;
-    
-    // 1. Отменяем сокетный запрос предыдущего поколения
-    _activeCancelToken?.cancel('Отменено переходом на поколение $generation');
-    final localCancelToken = CancelToken();
-    _activeCancelToken = localCancelToken;
+    _emitInitialLoadState(
+      groupTitle: groupTitle,
+      weekMonday: weekMonday,
+      emit: emit,
+    );
 
-    // 2. Мгновенно берем локальный кэш новой группы из Hive
-    final cachedResult = await _getCachedSchedule(event.group);
-
-    // Проверяем актуальность поколения после чтения Hive
-    if (generation != _generation || emit.isDone) return;
-
-    if (cachedResult is Ok<ScheduleData>) {
-      emit(ScheduleReady(
-        group: event.group,
-        data: cachedResult.value,
-        selectedDayIndex: 0,
-        deviceUpdatedAt: cachedResult.value.deviceCachedAt,
-        serverLastCheckedAt: cachedResult.value.serverLastCheckedAt,
-        isRefreshing: true,
-      ));
-    } else {
-      emit(const ScheduleLoadingFirstTime());
-    }
-
-    // 3. Запрашиваем свежие данные у Gateway с локальным токеном отмены
-    final syncResult = await _syncSchedule(event.group, cancelToken: localCancelToken);
-
-    // КРИТИЧЕСКАЯ ПРОВЕРКА ПОКОЛЕНИЯ ПОСЛЕ СЕТЕВОГО AWAIT
-    if (generation != _generation || emit.isDone) return;
-
-    if (state is ScheduleReady) {
-      final current = state as ScheduleReady;
-      emit(switch (syncResult) {
-        Ok(:final value) => current.copyWith(
-            data: value,
-            deviceUpdatedAt: DateTime.now(),
-            serverLastCheckedAt: value.serverLastCheckedAt,
-            clearServerLastCheckedAt: value.serverLastCheckedAt == null,
-            isRefreshing: false,
-            clearRefreshFailure: true,
-          ),
-        Error(:final error) => current.copyWith(
-            isRefreshing: false,
-            refreshFailure: error,
-          ),
-      });
-    } else if (syncResult is Ok<ScheduleData>) {
-      emit(ScheduleReady(
-        group: event.group,
-        data: syncResult.value,
-        selectedDayIndex: 0,
-        deviceUpdatedAt: DateTime.now(),
-        serverLastCheckedAt: syncResult.value.serverLastCheckedAt,
-        isRefreshing: false,
-      ));
-    } else if (syncResult is Error<ScheduleData>) {
-      emit(ScheduleEmptyError(failure: syncResult.error));
-    }
-  }
-
-  void _onDaySelected(
-    ScheduleDaySelected event,
-    Emitter<ScheduleState> emit,
-  ) {
-    if (state is ScheduleReady) {
-      final current = state as ScheduleReady;
-      // Смена дня не сбрасывает ошибку фонового обновления
-      emit(current.copyWith(selectedDayIndex: event.index));
-    }
-  }
-
-  Future<void> _onRefreshTriggered(
-    ScheduleRefreshTriggered event,
-    Emitter<ScheduleState> emit,
-  ) async {
-    if (state is! ScheduleReady) return;
-    final currentBefore = state as ScheduleReady;
-
-    if (currentBefore.group != event.group || _currentGroup != event.group) return;
-
-    final generation = ++_generation;
-    final localCancelToken = CancelToken();
-    _activeCancelToken?.cancel('Отменено ручным обновлением');
-    _activeCancelToken = localCancelToken;
-
-    emit(currentBefore.copyWith(isRefreshing: true));
-
-    final syncResult = await _syncSchedule(event.group, cancelToken: localCancelToken);
-
-    // Проверка актуальности поколения после завершения сетевого запроса
-    if (generation != _generation || emit.isDone) return;
-    if (state is! ScheduleReady) return;
-
-    final currentAfter = state as ScheduleReady;
-
-    emit(switch (syncResult) {
-      Ok(:final value) => currentAfter.copyWith(
-          data: value,
-          deviceUpdatedAt: DateTime.now(),
-          serverLastCheckedAt: value.serverLastCheckedAt,
-          clearServerLastCheckedAt: value.serverLastCheckedAt == null,
-          isRefreshing: false,
-          clearRefreshFailure: true,
+    try {
+      await emit.forEach<ScheduleResult>(
+        _loadWeekScheduleUseCase.execute(
+          groupTitle: groupTitle,
+          weekMonday: weekMonday,
+          forceRefresh: forceRefresh,
+          cancelToken: cancelToken,
         ),
-      Error(:final error) => currentAfter.copyWith(
-          isRefreshing: false,
-          refreshFailure: error,
-        ),
-    });
-  }
-
-  @override
-  Future<void> close() {
-    _activeCancelToken?.cancel('BLoC закрыт');
-    return super.close();
+        onData: (result) {
+          if (requestId != _currentRequestId ||
+              emit.isDone ||
+              result.groupTitle != groupTitle ||
+              !MoscowTime.isSameDay(result.weekMonday, weekMonday)) {
+            return state;
+          }
+          return ScheduleStateMapper.mapResultToState(
+            result: result,
+            currentState: state,
+            groupTitle: groupTitle,
+            weekMonday: weekMonday,
+            fallbackSelectedDate: selectedDate,
+          );
+        },
+        onError: (error, _) {
+          if (requestId != _currentRequestId || emit.isDone) {
+            return state;
+          }
+          if (ScheduleStateMapper.isCancelledError(error) ||
+              _cancelToken?.isCancelled == true) {
+            return state;
+          }
+          return ScheduleStateMapper.mapErrorToState(
+            error: error,
+            groupTitle: groupTitle,
+            weekMonday: weekMonday,
+            currentState: state,
+            selectedDate: selectedDate,
+          );
+        },
+      );
+    } finally {
+      _refreshTracker.completeSpecific(refreshCompleter);
+    }
   }
 }
 ```
 
 ---
 
-## 4. Централизованный `AppBlocObserver` и безопасность логов
+## 4. Другие ключевые BLoC в приложении
 
-> **Критическое правило безопасности логирования:**  
-> В метод `developer.log` категорически запрещено передавать объект ошибки в поле `error: error`. Если исключением является `DioException`, исходный объект может содержать заголовки авторизации, токены и конфиденциальное тело запроса.
+Помимо `ScheduleBloc`, в архитектуре приложения работают ещё два крупных BLoC (а для простых экранов вроде профиля и групп используются `Cubit`-ы: `UserProfileCubit`, `ScheduleGroupsCubit`, `IdentitiesCubit`):
 
-```dart
-// lib/app/observer.dart
-import 'dart:developer' as developer;
-import 'package:flutter_bloc/flutter_bloc.dart';
+* **`SessionBloc`** (`lib/features/auth/presentation/session/bloc/session_bloc.dart`):
+  * Управляет глобальным жизненным циклом сессии и онбординга (`SessionUnknown`, `SessionOnboardingRequired`, `SessionGuest`, `SessionAuthenticated`).
+  * Обрабатывает события последовательно (`transformer: sequential()`) и подписан на `ISessionRepository.sessionStream`.
+  * При смене состояния в `OrbitApp` (`lib/app/app.dart`) автоматически подгружает или очищает профиль в `UserProfileCubit` и возвращает навигатор к корневому экрану при входе в аккаунт.
+* **`AssistantBloc`** (`lib/features/assistant/presentation/bloc/assistant_bloc.dart`):
+  * Координирует работу ИИ-ассистента через специализированные обработчики: `AssistantStreamHandler` (SSE-поток, стадия поиска, отмена, таймаут ожидания, таймер обратного отсчёта при `429` — `AssistantCooldownTicked`), `AssistantHistoryHandler` (загрузка, поиск и удаление диалогов) и `AssistantFeedbackHandler` (отправка оценок и расширенного фидбэка).
 
-class AppBlocObserver extends BlocObserver {
-  @override
-  void onTransition(Bloc bloc, Transition transition) {
-    super.onTransition(bloc, transition);
-    developer.log(
-      '${bloc.runtimeType}: ${transition.event.runtimeType} -> ${transition.nextState.runtimeType}',
-      name: 'BLoC',
-    );
-  }
+---
 
-  @override
-  void onError(BlocBase bloc, Object error, StackTrace stackTrace) {
-    // Безопасное логирование: передается только имя типа ошибки, без приватных полей
-    developer.log(
-      'Error in ${bloc.runtimeType}: ${error.runtimeType}',
-      name: 'BLoC',
-      error: error.runtimeType.toString(), // Очищенная строковая диагностика
-      stackTrace: stackTrace,
-    );
-    super.onError(bloc, error, stackTrace);
-  }
-}
-```
+## 5. Безопасность логов при работе с сетью и BLoC
+
+> **Правило безопасности логирования:**  
+> В логи нельзя передавать целиком `DioException` или сырые объекты ошибок с заголовками запросов, так как они могут содержать `Authorization: Bearer ...` и токены сессии. Для диагностики передаются только безопасные сообщения и коды ошибок без секретов.

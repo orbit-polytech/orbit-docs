@@ -1,111 +1,75 @@
 # Локальное хранилище Hive, Cache-First и Сетевой слой
 
-Мобильное приложение **Orbit Mobile** спроектировано по принципу **Offline-First**: даже при полном отсутствии интернета или временной недоступности бэкенда студент может мгновенно открыть расписание своей группы и свои локальные записи.
+Приложение **Orbit** (`mobile`) спроектировано по принципу **Offline-First**: даже при отсутствии интернета или временной недоступности бэкенда студент может мгновенно открыть расписание своей группы и сохранённую историю диалогов с ассистентом.
 
 ---
 
-## 1. Единое локальное хранилище: Hive
+## 1. Единое локальное хранилище: `HiveStorageService`
 
-В качестве единого стандарта локального NoSQL-хранилища в проекте принята библиотека **`hive_ce`** (`hive_ce_flutter`) — поддерживаемый сообществом форк Hive с полной поддержкой Dart 3.5+:
+В проекте используется библиотека **`hive_ce` (`^2.22.0`)** / **`hive_ce_flutter` (`^2.5.0`)** — поддерживаемый форк Hive для Dart 3.
 
-* **Почему Hive:** Высокая скорость чтения бинарных данных при холодном старте, отсутствие нативных зависимостей C++ SQLite и детерминированная сериализация.
+### Фактические коробки (Boxes) и ключи
 
-### Структура коробок (Boxes):
-1. **`schedule_cache_box`**: Временный кэш сеток расписания (восстанавливаемый).
-   * **Формат ключа:** `schedule:{group}:week:{weekStartIso}` (пример: `schedule:261-334:week:2026-10-26`).  
-   * **Архитектурное примечание:** API Gateway поддерживает запросы произвольных диапазонов дат до 93 дней через параметры `?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD`. Нарезка кэша по неделям — это осознанная стратегия мобильного клиента для быстрого пагинирования в горизонтальном таймлайне и экономии оперативной памяти мобильного устройства.
-2. **`app_meta_box`**: Нетипизированная коробка служебных метаданных (`schema_version_<boxName>`, временные метки кэша).
-3. **`settings_box`**: Гостевые и пользовательские настройки (`selected_group`, `is_onboarding_completed`, `theme_mode`).
-4. **`user_tasks_box`** и **`user_notes_box`**: Личные пользовательские задачи и конспекты.
+Имена коробок и ключей централизованы в `lib/core/constants/storage_key.dart` (`StorageKeys`), а их открытие и очистка инкапсулированы в `HiveStorageService` (`lib/core/storage/hive_storage_service.dart`):
 
-### Разделение миграций и защиты данных от сбоев:
-* **Служебные метаданные:** Версии схем хранятся в отдельной коробке `app_meta_box` под строковыми ключами вида `schema_version_<boxName>`. Это исключает падения типизации вида `as T` внутри типизированных коробок `Box<T>`.
-* **Политика миграций и сбоев:**
-  * Для кэша расписания (`schedule_cache_box`): при повреждении файла или несовпадении версий кэш можно очистить и перезапросить с сервера.
-  * Для пользовательских данных (`user_tasks_box`, `user_notes_box`): **автоматическое удаление коробки категорически запрещено**. Если коробка пуста (первый запуск), версия схемы инициализируется автоматически. Если же в коробке есть данные старой версии, **мигратор строго обязателен**: при его отсутствии выбрасывается `StateError`, а версия в `app_meta_box` не меняется.
+1. **`schedule_box`** (`StorageKeys.scheduleBox`): кэш недельных сеток расписания в JSON-формате (`ScheduleResponseModel`), сохранённый через `ScheduleLocalDataSource`.
+2. **`settings_box`** (`StorageKeys.settingsBox`): локальные настройки и предпочтения (`selected_group_title`, `favorite_group_titles`, `is_welcome_completed`, а также параметры профиля/подсказок).
+3. **`assistant_history_box`** (`StorageKeys.assistantHistoryBox`): локальный кэш диалогов с ИИ-ассистентом.
 
 ```dart
-// lib/core/storage/hive_storage.dart
-import 'package:hive_ce_flutter/hive_ce_flutter.dart';
+// lib/core/storage/hive_storage_service.dart
+import 'package:hive_ce_flutter/hive_flutter.dart';
 
-typedef HiveMigrator<T> = Future<void> Function(Box<T> box, int fromVersion, int toVersion);
+import '../constants/storage_key.dart';
 
-class HiveStorage {
-  static const int scheduleCacheSchemaVersion = 1;
-  static const int userTasksSchemaVersion = 1;
+class HiveStorageService {
+  HiveStorageService({HiveInterface? hive}) : _hive = hive ?? Hive;
 
-  static late Box<dynamic> metaBox;
+  final HiveInterface _hive;
 
-  static Future<void> init() async {
-    await Hive.initFlutter();
-    metaBox = await Hive.openBox<dynamic>('app_meta_box');
-  }
+  late Box<dynamic> scheduleBox;
+  late Box<dynamic> settingsBox;
+  late Box<dynamic> assistantHistoryBox;
 
-  /// Открытие восстанавливаемого кэша расписания
-  static Future<Box<T>> openCacheBox<T>(String boxName, {required int version}) async {
-    final versionKey = 'schema_version_$boxName';
-    final savedVersion = metaBox.get(versionKey, defaultValue: 0) as int;
-
+  Future<void> init() async {
     try {
-      final box = await Hive.openBox<T>(boxName);
-      if (savedVersion != version) {
-        await box.clear();
-        await metaBox.put(versionKey, version);
-      }
-      return box;
-    } catch (_) {
-      // Кэш расписания можно безопасно пересоздать с диска
-      await Hive.deleteBoxFromDisk(boxName);
-      await metaBox.put(versionKey, version);
-      return Hive.openBox<T>(boxName);
-    }
+      await Hive.initFlutter();
+    } catch (_) {}
+
+    scheduleBox = await _hive.openBox<dynamic>(StorageKeys.scheduleBox);
+    settingsBox = await _hive.openBox<dynamic>(StorageKeys.settingsBox);
+    assistantHistoryBox =
+        await _hive.openBox<dynamic>(StorageKeys.assistantHistoryBox);
   }
 
-  /// Открытие пользовательских данных с обязательной проверкой мигратора
-  static Future<Box<T>> openUserDataBox<T>(
-    String boxName, {
-    required int targetVersion,
-    HiveMigrator<T>? migrator,
-  }) async {
-    final versionKey = 'schema_version_$boxName';
-    final savedVersion = metaBox.get(versionKey, defaultValue: 0) as int;
+  Future<void> clearAll() async {
+    await scheduleBox.clear();
+    await settingsBox.clear();
+    await assistantHistoryBox.clear();
+  }
 
-    final box = await Hive.openBox<T>(boxName);
-
-    // Сценарий 1: Первичное создание пустой коробки
-    if (savedVersion == 0 && box.isEmpty) {
-      await metaBox.put(versionKey, targetVersion);
-      return box;
-    }
-
-    // Сценарий 2: Повышение версии схемы для существующих данных
-    if (savedVersion < targetVersion) {
-      if (migrator == null) {
-        throw StateError(
-          'Обнаружены существующие данные в $boxName (v$savedVersion), '
-          'но мигратор на v$targetVersion не передан. Обновление версии отменено.',
-        );
-      }
-      // Выполняем миграцию
-      await migrator(box, savedVersion, targetVersion);
-      // Фиксируем версию в мета-боксе ТОЛЬКО после успешной миграции
-      await metaBox.put(versionKey, targetVersion);
-    }
-
-    return box;
+  Future<void> close() async {
+    await scheduleBox.close();
+    await settingsBox.close();
+    await assistantHistoryBox.close();
   }
 }
 ```
+
+Для управления пользовательским кэшем из настроек дополнительно используется `HiveAppCacheService` (`lib/core/storage/app_cache_service.dart`), который подсчитывает количество закэшированных расписаний и при очистке кэша очищает `scheduleBox` и `assistantHistoryBox`, **не затрагивая** `settingsBox` (выбранную группу и избранное).
+
+Токены доступа и обновления хранятся отдельно от Hive — в защищённом хранилище `FlutterSecureTokenStore` (`lib/features/auth/data/datasources/session/secure_token_store.dart`, поверх `flutter_secure_storage ^11.2.0` с `AndroidOptions()` и `IOSOptions(accessibility: KeychainAccessibility.first_unlock_this_device)`).
 
 ---
 
 ## 2. Стратегия Cache-First и согласование со статусами Gateway API
 
 > **Правило сетевой изоляции:**  
-> Мобильное приложение обращается **исключительно к `gateway-service`** (`GET /api/v1/schedule/groups/{group}`). Мобилка никогда не делает прямых запросов к сайту `rasp.dmami.ru` — нагрузку, защиту и опрос внешнего источника контролирует бэкенд `schedule-service`.
+> Приложение обращается **исключительно к `gateway-service`** (`GET /api/v1/schedule/groups/{group}`). Клиент никогда не делает прямых запросов к сайту `rasp.dmami.ru` — нагрузку и опрос внешнего источника контролирует бэкенд `schedule-service`.
 
 ### Семантика серверного ответа Gateway:
-Согласно контракту Gateway, все мета-поля проверки и синхронизации сгруппированы внутри объекта `metadata`:
+Согласно контракту Gateway, мета-поля синхронизации сгруппированы внутри объекта `metadata`:
+
 ```json
 {
   "metadata": {
@@ -117,176 +81,98 @@ class HiveStorage {
 }
 ```
 
-### Обработка статусов в мобильном клиенте:
+### Обработка статусов в клиенте:
 1. **`status == "READY"`:**
-   * Если массив `days` содержит занятия — готовое расписание сохраняется в Hive под недельным ключом.
-   * Если `days` пустой (`days: []`) — **это допустимый штатный результат** (праздники, каникулы или экзаменационная сессия без пар). Интерфейс отображает состояние *«На этой неделе пар нет»*, а не сетевую ошибку!
+   * Если массив `days` содержит занятия — готовое расписание сохраняется в `schedule_box`.
+   * Если `days` пустой (`days: []`) — это допустимый штатный результат (каникулы, праздники или сессия без пар), а не сетевая ошибка.
 2. **`status == "PENDING_SYNC"`:**
-   * Сервер еще выполняет фоновый опрос источника.
-   * **Критическое правило:** Ответ `PENDING_SYNC` **не должен заменять** уже имеющееся в Hive готовое расписание! Если кэш есть — продолжаем показывать его с плашкой *«Синхронизация на сервере...»*.
-3. **Неизвестный статус (`status == "UNKNOWN"` или новый):**
-   * Нельзя автоматически приравнивать к `READY`. Обрабатывается как временная ошибка обновления с сохранением локального кэша.
-4. **Разграничение временных меток в приложении:**
-   * `serverLastCheckedAt: DateTime?` — извлекается из `metadata.last_checked_at` (когда бэкенд проверял сайт вуза, может отсутствовать при статусе `PENDING_SYNC`).
-   * `deviceUpdatedAt: DateTime` — момент локального сохранения/получения данных смартфоном (`DateTime.now()`).
+   * Сервер ещё выполняет фоновый опрос источника.
+   * Если в `schedule_box` уже есть готовый кэш — он остаётся на экране (`ScheduleLoaded`) с индикацией фонового обновления; если кэша нет, показывается `SchedulePendingSync`.
+3. **Сетевая ошибка при наличии кэша:**
+   * При сбое сети готовое расписание из `schedule_box` сохраняется на экране (`ScheduleLoaded` с `errorMessage`).
 
 ---
 
-## 3. Сетевой клиент Dio и канонический `AuthInterceptor`
+## 3. Сетевой клиент `DioClient` и `AuthInterceptor`
 
-Сетевое взаимодействие построено на библиотеке **`Dio 5.4+`**.
+Сетевой слой построен на **`dio` (`^5.11.1`)** (`lib/core/network/dio_client.dart`). Для поддержки Web-сборки адаптер настраивается платформенно через условный экспорт `dio_adapter_config.dart` (`dio_adapter_stub.dart` / `dio_adapter_web.dart` с поддержкой `withCredentials` в браузере).
 
-### Проектируемые правила интерцептора:
-1. **Сравнение токена перед Refresh:** Если несколько параллельных запросов упали с 401, первый запрос запускает обновление. Когда второй запрос выходит из очереди `QueuedInterceptor`, он сначала сравнивает свой заголовок с актуальным токеном в `SecureStorage`. Если токен уже обновился — повторный запрос выполняется сразу без вызова refresh!
-2. **Single-Flight Refresh (Мьютекс):** Единый `Future<String?>? _refreshFuture` гарантирует ровно один сетевой запрос `POST /api/v1/auth/refresh`.
-3. **Устранение взаимной блокировки (Deadlock Prevention):**  
-   Повторный запрос `fetch(retryOptions)` выполняется **через отдельный изолированный клиент `_tokenDio`**, на котором НЕТ `AuthInterceptor`. Это исключает повторное попадание упавшего повторного запроса в заблокированную очередь `QueuedInterceptor`.
-4. **Раздельная обработка ошибок:** Если повторный запрос завершается ошибкой `403 Forbidden` (нет прав на ресурс), ошибка пробрасывается в UI через `handler.next(retryError)` и **не сбрасывает** токены сессии!
-5. **Безопасность токенов при сбоях сети:** При сетевом таймауте (`ConnectionTimeout`, `SocketException`) токены **не удаляются**. Токены сбрасываются только при явном ответе сервера 401/403 на сам эндпоинт `/auth/refresh`.
-6. **Сохранение гостевых настроек:** При выходе из аккаунта (Logout) очищаются только приватные токены в KeyStore/Keychain. Выбранная студентом группа и настройки в `settings_box` сохраняются.
+### Как устроен реальный `AuthInterceptor` (`lib/core/network/auth_interceptor.dart`)
+
+`AuthInterceptor` наследуется от `Interceptor` и делегирует чтение/обновление токенов абстракции **`AuthTokenProvider`** (`lib/core/network/auth_token_provider.dart`):
+
+1. **Пропуск авторизации (`_shouldSkipAuth`):** заголовок `Authorization` не добавляется, если в запросе передано `options.extra['skipAuth'] == true`, либо путь относится к публичным auth-маршрутам (`/api/v1/auth/email/send-code`, `/api/v1/auth/email/verify-code`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/api/v1/auth/oauth/...`).
+2. **Подстановка токена (`onRequest`):** если токен есть и запрос не помечен флагом повторной попытки (`auth_interceptor_retried`), добавляется заголовок `Authorization: Bearer <accessToken>`.
+3. **Обработка `401` (`onError`):**
+   * Если код ответа не `401`, запрос уже повторялся (`auth_interceptor_retried`), включён `skipAuth` или сервер вернул признак обязательной повторной аутентификации (`isReauthRequiredResponse(err.response)` — код `REAUTH_REQUIRED` из `reauth_error_detector.dart`), refresh **не запускается**, ошибка сразу уходит дальше.
+   * Перед вызовом `refreshTokenCredentials()` сравнивается неудавшийся заголовок с текущим токеном из `_tokenProvider.getCurrentTokenCredentials()`: если другой параллельный запрос уже успел обновить токен и он не истёк, используется свежий токен без лишнего сетевого refresh.
+   * После успешного обновления запрос повторяется с флагом `extra['auth_interceptor_retried'] = true` через `_dio!.fetch(retryOptions)` (или инжектированный `retryRequest` в тестах).
 
 ```dart
-// lib/core/network/interceptors/auth_interceptor.dart
-import 'package:dio/dio.dart';
-import '../../storage/secure_storage.dart';
-
-class AuthInterceptor extends QueuedInterceptor {
+// lib/core/network/auth_interceptor.dart (ключевая логика)
+class AuthInterceptor extends Interceptor {
   AuthInterceptor({
-    required SecureStorage secureStorage,
-    required Dio dio,
-    required String tokenRefreshUrl,
-  })  : _secureStorage = secureStorage,
-        _dio = dio,
-        _tokenRefreshUrl = tokenRefreshUrl,
-        _tokenDio = Dio(BaseOptions(
-          baseUrl: dio.options.baseUrl,
-          connectTimeout: const Duration(seconds: 5),
-          receiveTimeout: const Duration(seconds: 5),
-        ));
+    required this._tokenProvider,
+    Dio? dio,
+    Future<Response<dynamic>> Function(RequestOptions options)? retryRequest,
+  }) : assert(
+         dio != null || retryRequest != null,
+         'Either dio or retryRequest must be provided',
+       ),
+       _dio = dio,
+       _retryRequest = retryRequest;
 
-  final SecureStorage _secureStorage;
-  final Dio _dio;
-  final String _tokenRefreshUrl;
-  final Dio _tokenDio; // Изолированный клиент без AuthInterceptor
+  static const String _retryFlagKey = 'auth_interceptor_retried';
 
-  Future<String?>? _refreshFuture;
+  final AuthTokenProvider _tokenProvider;
+  final Dio? _dio;
+  final Future<Response<dynamic>> Function(RequestOptions options)? _retryRequest;
+
+  bool _shouldSkipAuth(RequestOptions options) {
+    if (options.extra['skipAuth'] == true) {
+      return true;
+    }
+    final normalizedPath = Uri.tryParse(options.path)?.path ?? options.path;
+    return normalizedPath == ApiEndpoints.authSendCode ||
+        normalizedPath == ApiEndpoints.authVerifyCode ||
+        normalizedPath == ApiEndpoints.authRefresh ||
+        normalizedPath == ApiEndpoints.authLogout ||
+        normalizedPath.startsWith('/api/v1/auth/oauth/');
+  }
 
   @override
-  Future<void> onRequest(
-    RequestOptions options,
-    RequestInterceptorHandler handler,
+  Future<void> onError(
+    DioException err,
+    ErrorInterceptorHandler handler,
   ) async {
-    if (options.extra['requiresAuth'] == false) {
-      return handler.next(options);
-    }
-
-    final token = await _secureStorage.getAccessToken();
-    if (token != null) {
-      options.headers['Authorization'] = 'Bearer $token';
-    }
-    handler.next(options);
-  }
-
-  @override
-  Future<void> onError(DioException err, ErrorInterceptorHandler handler) async {
     final statusCode = err.response?.statusCode;
-    final isRetry = err.requestOptions.extra['isRetry'] == true;
+    final options = err.requestOptions;
 
-    if (statusCode != 401 || isRetry || err.requestOptions.extra['requiresAuth'] == false) {
-      return handler.next(err);
+    if (statusCode != 401 ||
+        _shouldSkipAuth(options) ||
+        options.extra[_retryFlagKey] == true ||
+        isReauthRequiredResponse(err.response)) {
+      handler.next(err);
+      return;
     }
-
-    // 1. Проверяем: возможно, токен уже обновился параллельным запросом пока этот ждал в очереди
-    final requestHeader = err.requestOptions.headers['Authorization'] as String?;
-    final currentToken = await _secureStorage.getAccessToken();
-
-    String? tokenToUse = currentToken;
-
-    if (currentToken == null || requestHeader == 'Bearer $currentToken') {
-      try {
-        tokenToUse = await _performSingleFlightRefresh();
-      } on DioException catch (refreshDioError) {
-        final refreshCode = refreshDioError.response?.statusCode;
-        if (refreshCode == 401 || refreshCode == 403) {
-          // Сбрасываем токены ТОЛЬКО если сервер подтвердил недействительность Refresh токена
-          await _secureStorage.clearTokens();
-        }
-        return handler.next(err);
-      } catch (_) {
-        return handler.next(err);
-      }
-    }
-
-    if (tokenToUse == null) {
-      return handler.next(err);
-    }
-
-    // 2. Повторяем исходный запрос через _tokenDio (предотвращает Deadlock в QueuedInterceptor)
-    try {
-      final retryOptions = err.requestOptions;
-      retryOptions.headers['Authorization'] = 'Bearer $tokenToUse';
-      retryOptions.extra['isRetry'] = true;
-
-      final response = await _tokenDio.fetch(retryOptions);
-      return handler.resolve(response);
-    } on DioException catch (retryError) {
-      // Ошибка ресурса (например 403 Forbidden) НЕ должна стирать валидные токены!
-      return handler.next(retryError);
-    }
-  }
-
-  Future<String?> _performSingleFlightRefresh() async {
-    if (_refreshFuture != null) {
-      return _refreshFuture;
-    }
-
-    _refreshFuture = () async {
-      final refreshToken = await _secureStorage.getRefreshToken();
-      if (refreshToken == null) {
-        await _secureStorage.clearTokens();
-        return null;
-      }
-
-      final response = await _tokenDio.post<Map<String, dynamic>>(
-        _tokenRefreshUrl,
-        data: {'refresh_token': refreshToken},
-      );
-
-      final newAccessToken = response.data?['access_token'] as String?;
-      final newRefreshToken = response.data?['refresh_token'] as String?;
-
-      if (newAccessToken != null && newRefreshToken != null) {
-        await _secureStorage.saveTokens(
-          accessToken: newAccessToken,
-          refreshToken: newRefreshToken,
-        );
-        return newAccessToken;
-      }
-
-      await _secureStorage.clearTokens();
-      return null;
-    }();
-
-    try {
-      return await _refreshFuture;
-    } finally {
-      _refreshFuture = null;
-    }
+    // ... сравнение текущего токена / вызов _tokenProvider.refreshTokenCredentials()
+    // ... и повтор запроса с _retryFlagKey = true
   }
 }
 ```
 
 ---
 
-## 4. Способы авторизации и статус мобильного контракта
+## 4. Способы авторизации и профиль
 
 ### Реализовано на бэкенде и в `mobile`
 - **Email OTP:** отправка 6-значного кода на почту (`send-code` / `verify-code`) с таймером повторной отправки.
-- **Google OAuth + PKCE:** открытие браузера (`oauth/google/login`), возврат в приложение по deep link **`ru.mospolytech.orbit://auth/callback`** (обрабатывается через `app_links`) и обмен одноразового кода через `POST /api/v1/auth/oauth/exchange`.
-- **Привязка и отвязка Google в настройках:** в `SettingsScreen` авторизованный пользователь может привязать или отвязать Google-аккаунт (`/api/v1/auth/identities/link/begin`, callback с возвратом в `ru.mospolytech.orbit://auth/callback`, `link/finish`, `DELETE /identities/google`).
-- **Синхронизация выбранных групп:** `primary_group` и `favorite_groups` синхронизируются с аккаунтом через `GET /api/v1/auth/me` и `PATCH /api/v1/auth/preferences` (с диалогом разрешения конфликта при первом входе).
+- **Google OAuth + PKCE:** открытие браузера (`oauth/google/login`), возврат в мобильное приложение по deep link **`ru.mospolytech.orbit://auth/callback`** (`app_links`) и обмен одноразового кода через `POST /api/v1/auth/oauth/exchange` (на Web также поддерживается cookie/callback flow).
+- **Привязка/отвязка Google и смена почты:** в `SettingsScreen` доступны привязка и отвязка Google, `ChangeEmailSheet` и `ReauthSheet` для подтверждения свежей сессии (`REAUTH_REQUIRED`).
+- **Синхронизация выбранных групп:** `primary_group` и `favorite_groups` синхронизируются с аккаунтом через `GET /api/v1/auth/me` и `PATCH /api/v1/auth/preferences` (`PreferencesSyncCoordinator`).
+- **Профиль пользователя (`users-service`):** загрузка и редактирование профиля (`EditProfileSheet`, пресеты аватаров) через `UserProfileCubit`.
 
-> **Важно:** вход по Email или Google подтверждает аккаунт, но не академическую группу и не статус старосты — учебную группу студент выбирает сам при онбординге или в профиле.
+> **Важно:** вход по Email или Google подтверждает аккаунт, а учебную группу и курс студент выбирает сам при онбординге, в поиске групп или в редактировании профиля.
 
 ### В планах `[Запланировано]`
-- **Интеграция с Личным кабинетом вуза / `users-service`:** автоматическое подтверждение учебной группы и роли старосты.
+- **Интеграция с Личным кабинетом вуза:** автоматическое подтверждение учебной группы и роли старосты.

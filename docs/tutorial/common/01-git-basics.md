@@ -34,15 +34,18 @@ flowchart LR
 
 ## 2. Соглашение об именовании веток
 
-Имя ветки создаётся строго на английском языке в нижнем регистре с использованием дефисов:
+Имя ветки создаётся строго на английском языке в нижнем регистре с использованием дефисов. В [регламенте GitHub Flow](../../quickstart/git-workflow.md) принят формат **`<тип>/<номер-задачи>-<кратко>`** (`feat/42-task-deadlines`, `fix/57-refresh-token-reuse`, `docs/12-local-setup`).
+
+!!! note "Соответствие форматов"
+    Для коротких фиче-веток используйте `feat/<номер>-<кратко>` (или `feature/<номер>-<кратко>`), `fix/<номер>-<кратко>`, `refactor/...`, `test/...`, `docs/...` — ориентируйтесь на формат из [GitHub Flow](../../quickstart/git-workflow.md).
 
 | Префикс | Назначение | Пример |
 | :--- | :--- | :--- |
-| `feature/` | Новая функциональность сервиса | `feature/reschedule-task-endpoint` |
-| `fix/` | Исправление бага или уязвимости | `fix/jwt-signature-verification` |
+| `feat/` / `feature/` | Новая функциональность сервиса | `feat/42-task-deadlines` |
+| `fix/` | Исправление бага или уязвимости | `fix/57-jwt-signature-verification` |
 | `refactor/` | Изменение структуры без изменения поведения | `refactor/split-repository-interfaces` |
 | `test/` | Добавление или исправление тестов | `test/add-idempotency-race-tests` |
-| `docs/` | Обновление технической документации | `docs/update-auth-flow-diagram` |
+| `docs/` | Обновление технической документации | `docs/12-update-auth-flow-diagram` |
 
 ---
 

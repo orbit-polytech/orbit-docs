@@ -35,7 +35,7 @@ func (uc *GetTaskUseCase) Execute(ctx context.Context, actor domain.OwnerID, id 
 ```
 
 > [!TIP]
-> Возвращайте именно `ErrTaskNotFound` (404), а не `PermissionDenied` (403). Ошибка 403 подтверждает злоумышленнику, что ресурс с таким ID существует в системе, облегчая перебор идентификаторов.
+> Для новых сервисов вроде `tasks-service` рекомендуется возвращать `ErrTaskNotFound` (`404`), а не `PermissionDenied` (`403`), чтобы не подтверждать злоумышленнику существование чужого ID. При этом учитывайте, что в текущем `ai-service` при обращении к чужому диалогу или сообщению возвращается `PermissionDeniedError` (HTTP `403 PERMISSION_DENIED`), а при отсутствии записи — `404 NOT_FOUND`.
 
 ---
 
@@ -53,6 +53,9 @@ row := pool.QueryRow(ctx, "SELECT id, title FROM tasks WHERE id = $1 AND owner_i
 
 ---
 
-## 3. Защита от подмены привилегий (Mass Assignment)
+## 3. Защита от подмены привилегий (Mass Assignment) и ограничение тела
 
-Роли пользователей (`student`, `teacher`, `admin`), баланс и статусы задач **никогда не принимаются из входящего JSON DTO клиента**. Роль извлекается исключительно из криптографически подписанного JWT токена на сервере.
+Системные поля (`role`, `account_id`, владелец диалога, статусы) **никогда не принимаются из входящего JSON DTO клиента**:
+- Текущие Ed25519 JWT-токены **не несут claim `role`** (они содержат `sub`, `iss`, `aud`, `iat`, `exp`, `auth_time`). Системные роли (`unspecified`, `student`, `teacher`, `admin`) хранятся в `users-service` (`profiles.role`) и отсутствуют во входящем DTO `PUT /api/v1/users/profile`, поэтому клиент не может сам назначить себе роль через API профиля.
+- Идентификатор пользователя `account_id` / `x-user-id` извлекается в Gateway исключительно из проверенного JWT, а не из тела запроса или клиентских заголовков.
+- Входной JSON в Gateway декодируется через `httputil.DecodeJSONBody` с `http.MaxBytesReader` (`16 KiB` по умолчанию, `64 KiB` для AI), обязательной проверкой `Content-Type: application/json` (на обычных JSON-маршрутах) и `DisallowUnknownFields()`.

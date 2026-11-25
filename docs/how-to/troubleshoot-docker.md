@@ -1,6 +1,14 @@
 # Диагностика Docker-стенда
 
-Текущий `infra` запускает PostgreSQL, Redis, Auth, Schedule, Gateway и четыре one-shot сервиса. RabbitMQ и Jaeger пока не развёрнуты.
+Актуальный `infra` (`v0.6.0`) разделён на профили (`apps`, `ai`, `monitoring`, `ops`, `tunnel`, `all`):
+- базовые: `postgres`, `redis`, `jwt-keygen`, `postgres-init`;
+- профиль `apps`: `auth-migrate`, `schedule-migrate`, `users-migrate`, `auth-service`, `users-service`, `schedule-service`, `gateway-service`, `web`;
+- профиль `ai`: `ai-migrate`, `ai-service`;
+- профиль `monitoring`: `postgres-exporter`, `redis-exporter`, `prometheus`, `alertmanager`, `loki`, `alloy`, `grafana`;
+- профиль `ops`: `ops-bot`;
+- профиль `tunnel`: `ngrok`.
+
+RabbitMQ и Jaeger пока не развёрнуты.
 
 ## Сначала статус и логи
 
@@ -8,21 +16,30 @@
 
 ```bash
 task status
-docker compose --profile apps logs --tail 100 postgres-init auth-migrate schedule-migrate
-docker compose --profile apps logs --tail 100 auth-service schedule-service gateway-service
+docker compose --profile apps logs --tail 100 postgres-init auth-migrate schedule-migrate users-migrate
+docker compose --profile apps logs --tail 100 auth-service users-service schedule-service gateway-service web
+# при запуске полного стенда (--profile all):
+docker compose --profile all logs --tail 100 ai-migrate ai-service ops-bot prometheus grafana
 ```
 
-`jwt-keygen`, `postgres-init`, `auth-migrate` и `schedule-migrate` в `Exited (0)` — нормальный результат, не CrashLoop. Ненулевой код требует изучения логов. Сохраните имя сервиса, тег образа и сообщение ошибки; не отправляйте секреты `.env` или Docker config.
+`jwt-keygen`, `postgres-init`, `auth-migrate`, `schedule-migrate`, `users-migrate` и `ai-migrate` в `Exited (0)` — нормальный результат, не CrashLoop. Ненулевой код требует изучения логов. Сохраните имя сервиса, тег образа и сообщение ошибки; не отправляйте секреты `.env` или Docker config.
 
 ## Не скачивается private-образ
 
-Проверьте [вход в GHCR и Read-доступ ко всем шести пакетам](../quickstart/ghcr-access.md). `Login Succeeded` не гарантирует права чтения конкретного пакета. `manifest unknown` также может означать отсутствие опубликованного тега.
+Проверьте [вход в GHCR и Read-доступ к приватным пакетам](../quickstart/ghcr-access.md) (`auth-service`, `auth-migrate`, `auth-keygen`, `users-service`, `users-migrate`, `schedule-service`, `schedule-migrate`, `gateway-service`, `web`, `ai-service`, `ops-bot`). `Login Succeeded` не гарантирует права чтения конкретного пакета. `manifest unknown` также может означать отсутствие опубликованного тега.
 
 Если падает **CI на `setup-buildx-action` при скачивании `moby/buildkit`**, это ещё не сборка Dockerfile и не доступ к private-образу Orbit в GHCR. Изучите полный лог с именем реестра, повторите временно неудавшуюся job и проверьте доступ к реестру builder-образа. Предупреждение Node `punycode` само по себе не причина ошибки Docker daemon. Не добавляйте PAT команды в workflow вслепую.
 
 ## Занят порт
 
-Дефолты на хосте: PostgreSQL `5434`, Redis `6380`, Gateway `8080`, Auth `50051`, Schedule `50054`. Меняйте только нужный `*_HOST_PORT` в `.env`, а не межконтейнерный адрес.
+Дефолты портов на хосте (`127.0.0.1`):
+- `apps`: PostgreSQL `5434`, Redis `6380`, Gateway `8080`, Web `8088`, Auth `50051`, Users `50052`, Schedule `50054`;
+- `ai`: AI `50057`;
+- `monitoring`: Grafana `3000`, Prometheus `9090`, Alertmanager `9093`;
+- `tunnel`: Ngrok UI `4040`;
+- `ops`: `ops-bot` слушает webhook на внутреннем порту `8081` в Docker-сети (наружу не публикуется).
+
+Меняйте только нужный `*_HOST_PORT` в `.env`, а не межконтейнерный адрес.
 
 ```powershell
 # PowerShell: пример для PostgreSQL
@@ -79,7 +96,7 @@ docker network ls
 docker network inspect orbit-infra_default
 ```
 
-`orbit-infra_default` — обычное имя сети для текущего `name: orbit-infra`; при переопределении имени проекта оно меняется. Отдельную сеть `orbit-net` текущий Compose не объявляет. Внутри контейнеров нужны DNS-адреса `postgres:5432`, `redis:6379`, `auth-service:50051`, `schedule-service:50054`, а не `localhost` и не host-порты.
+`orbit-infra_default` — обычное имя сети для текущего `name: orbit-infra`; при переопределении имени проекта оно меняется. Отдельную сеть `orbit-net` текущий Compose не объявляет. Внутри контейнеров нужны DNS-адреса `postgres:5432`, `redis:6379`, `auth-service:50051`, `users-service:50052`, `schedule-service:50054`, `ai-service:50057`, `ops-bot:8081`, а не `localhost` и не host-порты.
 
 ## Освобождение места и полный сброс
 

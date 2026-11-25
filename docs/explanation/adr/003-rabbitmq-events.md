@@ -1,7 +1,10 @@
 # ADR-003: RabbitMQ для асинхронных событий
 
+!!! warning "Статус: Целевое решение (пока не развёрнуто в стенде)"
+    Брокер RabbitMQ и таблица `outbox_events` **ещё не развёрнуты** в `infra/compose.yaml` и действующих сервисах (`auth-service`, `users-service`, `schedule-service`, `ai-service`, `gateway-service`). Этот ADR фиксирует целевую архитектуру для будущих событийных интеграций (`tasks-service`, `notification-service`, индексирование событий расписания).
+
 ## Статус
-**Принято (Accepted)** — Октябрь 2026 г.
+**Принято как целевое решение (Target Architecture)** — Октябрь 2026 г.
 
 ---
 

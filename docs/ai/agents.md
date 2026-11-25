@@ -27,7 +27,7 @@
 * **MUST**: Подпись JWT — **Ed25519 (EdDSA)**. Симметричный HS256 запрещён.
 
 ### Наблюдаемость и изоляция портов:
-* **MUST**: Порты `/metrics` и `/livez` (`auth :9091`, `schedule :9092`, `ai :9093`, `gateway :9094`) слушают только во внутренней сети Docker. Не публикуйте `/metrics` на наружном HTTP-порту Gateway `:8080` и не открывайте через туннель Ngrok.
+* **MUST**: Порты `/metrics` и `/livez` (`auth :9091`, `schedule :9092`, `ai :9093`, `gateway :9094`, `users :9096`) слушают только во внутренней сети Docker. Не публикуйте `/metrics` на наружном HTTP-порту Gateway `:8080` и не открывайте через туннель Ngrok.
 * **MUST**: Структурированные логи в Go (`log/slog` с JSONHandler) и Python содержат поле `service` и не логируют секреты, токены, DSN с паролями или личную переписку студентов.
 
 ### Python, AI и ETL:
@@ -37,9 +37,10 @@
 * **MUST**: При реализации будущего `bot-service` сессия `httpx.AsyncClient` создаётся один раз при старте.
 
 ### Flutter и мобилка:
-* **MUST**: Clean Architecture + BLoC/Cubit и Feature-First (`lib/features/<feature>/{data,domain,presentation}`). Виджеты не лезут в сеть или хранилище напрямую.
-* **MUST**: Токены хранятся только через `flutter_secure_storage`. Адрес шлюза настраивается через `--dart-define=BASE_URL=...` (без суффикса `/api/v1`).
-* **MUST**: При изменении кода перед открытием PR поднимайте и видимую версию, и build number в `mobile/pubspec.yaml` (например, `0.1.16-beta+17` → `0.1.17-beta+18`) и проверяйте скриптом `python tool/check_version.py`.
+* **MUST**: Clean Architecture + BLoC/Cubit и Feature-First (`lib/features/<feature>/{data,domain,presentation}` — включая `schedule`, `auth`, `assistant`, `profile`, `support`, `shell`). Виджеты не лезут в сеть или хранилище напрямую.
+* **MUST**: Учитывайте обе целевые поставки `mobile`: Android APK и Web/PWA (`Dockerfile.web`, `web/nginx.conf`, `DesktopShellSidebar`, `IndexedStack`).
+* **MUST**: Токены хранятся только через `flutter_secure_storage`. Адрес шлюза настраивается через `--dart-define=BASE_URL=...` (без суффикса `/api/v1`; в Web за Nginx-прокси `/api/` проксируется на `gateway-service`).
+* **MUST**: При изменении кода перед открытием PR поднимайте и видимую версию, и build number в `mobile/pubspec.yaml` (например, `0.1.27-beta+28` → `0.1.28-beta+29`) и проверяйте скриптом `python tool/check_version.py`.
 * **MUST**: В релизе не используйте обход `usesCleartextTraffic` или проброс секретов в клиент.
 
 ---
@@ -58,7 +59,7 @@
 | **gRPC-обработчик** | `<сервис>/internal/transport/grpc/` |
 | **Миграции PostgreSQL** | Go: `<сервис>/migrations/` (Goose); AI: `ai-service/migrations/` (Alembic); init-роли: `infra/scripts/initdb/01-init-user.sh` |
 | **Docker Compose и мониторинг** | `infra/compose.yaml`, `infra/monitoring/` |
-| **Мобильное приложение** | `mobile/lib/{app,core,design_system,features}` |
+| **Мобильное приложение и Web/PWA** | `mobile/lib/{app,core,design_system,features}` (вкл. `profile`, `support`), `mobile/web/`, `mobile/Dockerfile.web` |
 
 ---
 
@@ -75,7 +76,7 @@ golangci-lint run ./...
 # 2. Protobuf-контракты
 cd contracts
 buf lint
-buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.4.0' # базовая точка сравнения, актуальный тег проверяйте по git tag
+buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.5.12' # актуальный тег проверяйте по git tag
 
 # 3. Python-сервис (ai-service / ops-bot / knowledge-pipeline)
 cd <python-service>
@@ -98,7 +99,7 @@ mkdocs build --strict
 
 ## Памятка по контрактам и стенду
 
-- Актуальные теги `contracts` на сервисах: `gateway-service` и `ai-service` используют **`v0.5.9`**, `auth-service` — `v0.5.5`, `schedule-service` — `v0.5.0`.
-- В `infra` команда `task up` поднимает только профиль `apps` (PostgreSQL, Redis, Auth, Schedule, Gateway). Для совместного стенда с AI, мониторингом, `ops-bot` и Ngrok используйте `--profile all`.
-- Интеграционные тесты AI с БД запускайте только против `POSTGRES_TEST_DSN` (`orbit_ai_test`), не против рабочей `orbit_ai`.
-- При изменении API или переменных окружения сразу обновляйте [AI API](../gateway/ai-api.md), [порты и env](../reference/ports-and-env.md) и [ограничения AI](../python-ai/current-limitations.md).
+- Актуальные теги `contracts` на сервисах: `gateway-service` и `users-service` используют **`v0.5.12`**, `auth-service` — `v0.5.11`, `ai-service` — `v0.5.10`, `schedule-service` — `v0.5.0`.
+- В `infra` (`v0.6.0`) команда `task up` поднимает только профиль `apps` (PostgreSQL, Redis, Auth, `users-service`, Schedule, Gateway и `web` на `:8088`). Для совместного стенда с AI, мониторингом, `ops-bot` и Ngrok (`web:80`) используйте `--profile all`.
+- Интеграционные тесты AI с БД запускайте только против `POSTGRES_TEST_DSN` (`orbit_ai_test`), не против рабочей `orbit_ai` (миграции Alembic на `orbit_ai_test` применяются отдельно, `ai-migrate` обновляет только `orbit_ai`).
+- При изменении API или переменных окружения сразу обновляйте [AI API](../gateway/ai-api.md), [порты и env](../reference/ports-and-env.md), [ограничения AI](../python-ai/current-limitations.md) и `docs/llms.txt` (при изменении структуры страниц в `mkdocs.yml`).

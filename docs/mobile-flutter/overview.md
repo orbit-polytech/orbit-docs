@@ -1,6 +1,6 @@
-# Flutter: Мобильное приложение Orbit Mobile
+# Flutter: Клиентское приложение Orbit
 
-Репозиторий [**`mobile`**](https://github.com/orbit-polytech/mobile) — клиентское приложение Orbit на Android и iOS (сейчас в статусе рабочей беты `0.1.16-beta+17`).
+Репозиторий [**`mobile`**](https://github.com/orbit-polytech/mobile) — кроссплатформенное клиентское приложение Orbit для Android, iOS и **Web / PWA** (сейчас в статусе рабочей беты `v0.1.27-beta+28`).
 
 ---
 
@@ -10,12 +10,15 @@
 
 ### Статусы функциональных блоков
 
-* `[Реализовано]` — светлая дизайн-система (`AppTheme` и компоненты `design_system/`) и нижняя навигационная панель `FloatingBottomNavBar` с тремя активными разделами (`Ассистент`, `Расписание`, `Профиль`).
+* `[Реализовано]` — светлая дизайн-система (`AppTheme` и компоненты `design_system/`), адаптивный shell в `MainShellScreen`: нижняя панель `FloatingBottomNavBar` на мобильных экранах и боковая панель `DesktopShellSidebar` на планшетах/десктопе/вебе с тремя активными разделами (`Ассистент`, `Расписание`, `Профиль`).
+* `[Реализовано]` — **Web / PWA-сборка**: контейнеризованная сборка Flutter Web (WASM) через `Dockerfile.web` (Nginx), манифест PWA `web/manifest.json`, адаптивное представление расписания `schedule_desktop_loaded_view.dart`, платформенная стратегия URL (`core/platform/url_strategy_*.dart`) и настройка HTTP-адаптера Dio для браузера и нативных платформ (`core/network/dio_adapter_*.dart`).
 * `[Реализовано]` — расписание с **Offline-First** кэшем в `hive_ce`, поиском и переключением групп, избранными группами, календарём/неделями, обработкой `READY` / `PENDING_SYNC` / `is_stale` и шторкой деталей пары.
-* `[Реализовано]` — гостевой режим и авторизация: **Email OTP** и **Google OAuth** с PKCE и возвратом в приложение по deep link `ru.mospolytech.orbit://auth/callback`.
-* `[Реализовано]` — синхронизация выбранных групп с сервером (`PreferencesSyncCoordinator`, `PATCH /api/v1/auth/preferences`) и разрешение конфликта при входе (`GroupConflictDialog`), а также экран настроек с привязкой и отвязкой Google.
-* `[Реализовано]` — **ИИ-ассистент**: потоковые ответы SSE, стадия поиска, отмена, список и история диалогов, удаление чатов, цитаты источников, оценки 👍/👎 с отправкой на бэкенд и повтор ответа.
-* `[Запланировано]` — раздел задач и дедлайнов (`tasks-service`), заметки и автоподтверждение группы/роли старосты через ЛК Политеха (`users-service`).
+* `[Реализовано]` — гостевой режим и авторизация: **Email OTP** и **Google OAuth** с PKCE (и возвратом на мобильные устройства по deep link `ru.mospolytech.orbit://auth/callback`, а также web callback/cookie flow).
+* `[Реализовано]` — синхронизация выбранных групп с сервером (`PreferencesSyncCoordinator`, `PATCH /api/v1/auth/preferences`) и разрешение конфликта при входе, а также экран настроек с привязкой и отвязкой Google.
+* `[Реализовано]` — **Профиль пользователя (`features/profile`)**: загрузка и редактирование живого профиля через `users-service`, пресеты аватаров (`avatar_preset.dart` / `AvatarPresetPicker`), шторка редактирования профиля `EditProfileSheet`, смена почты `ChangeEmailSheet` и повторная аутентификация `ReauthSheet`.
+* `[Реализовано]` — **ИИ-ассистент (`features/assistant`)**: потоковые ответы SSE, стадия поиска, отмена, история диалогов с поиском и группировкой по датам, удаление чатов, цитаты источников, выделение и цитирование фрагментов текста ответа, таймер обратного отсчёта при `429` (cooldown / rate limit), шторка расширенного фидбэка (`AssistantFeedbackBottomSheet`), оценки 👍/👎 с отправкой на бэкенд и повтор ответа.
+* `[Реализовано]` — **Обращения в поддержку (`features/support`)**: отправка отзывов и баг-репортов через `ReportIssueBottomSheet`.
+* `[Запланировано]` — раздел задач и дедлайнов (`tasks-service`), заметки и автоподтверждение академической группы/роли старосты через интеграцию с ЛК Политеха.
 
 ---
 
@@ -77,42 +80,49 @@
 ## 4. Фактическая структура `mobile/lib/`
 
 ```text
-mobile/lib/
-├── main.dart
-├── app/
-│   ├── app.dart                     # OrbitApp, SessionBloc, PreferencesSyncCoordinator
-│   ├── app_providers.dart
-│   ├── bootstrap.dart
-│   ├── splash_screen.dart
-│   └── fallbacks/                   # резервные заглушки репозиториев
-├── core/
-│   ├── cancellation/                # отмена операций
-│   ├── config/app_config.dart       # BASE_URL через --dart-define, версия из package_info_plus
-│   ├── constants/                   # endpoints API, ключи хранилища
-│   ├── extensions/
-│   ├── network/                     # DioClient, AuthInterceptor, ErrorHandler
-│   ├── services/                    # ExternalBrowserLauncher и др.
-│   ├── storage/hive_storage_service.dart
-│   ├── time/
-│   └── utils/
-├── design_system/
-│   ├── components/                  # AppButton, AppTextField, AssistantAvatar, ErrorView, SkeletonPlaceholder
-│   ├── layout/                      # метрики отступов под FloatingBottomNavBar
-│   ├── theme/app_theme.dart         # светлая тема AppTheme.lightTheme
-│   └── typography/                  # AppTypography
-└── features/
-    ├── assistant/                   # ИИ-чат (SSE, история, удаление, фидбэк)
-    ├── auth/                        # Email OTP, Google OAuth + PKCE, session, preferences sync, identity
-    ├── profile/                     # профиль, выбор групп, SettingsScreen и привязка Google
-    ├── schedule/                    # расписание, выбор недели, шторка деталей пары, Hive-кэш
-    └── shell/                       # MainShellScreen (3 активные вкладки) и FloatingBottomNavBar
+mobile/
+├── Dockerfile.web                   # Сборка Web/WASM + Nginx для PWA
+├── web/
+│   ├── manifest.json                # Манифест PWA (Orbit)
+│   └── nginx.conf
+└── lib/
+    ├── main.dart
+    ├── app/
+    │   ├── app.dart                 # OrbitApp, SessionBloc, PreferencesSyncCoordinator
+    │   ├── app_providers.dart
+    │   ├── bootstrap.dart
+    │   ├── splash_screen.dart
+    │   └── fallbacks/               # резервные заглушки репозиториев
+    ├── core/
+    │   ├── cancellation/            # CancellationToken (отмена операций)
+    │   ├── config/app_config.dart   # BASE_URL через --dart-define, версия из package_info_plus
+    │   ├── constants/               # ApiEndpoints, StorageKeys
+    │   ├── extensions/
+    │   ├── network/                 # DioClient, dio_adapter_*.dart, AuthInterceptor, ErrorHandler
+    │   ├── platform/                # url_strategy_*.dart для Web/stub
+    │   ├── services/                # DeepLinkService, ExternalBrowserLauncher и др.
+    │   ├── storage/                 # HiveStorageService, AppCacheService
+    │   ├── time/
+    │   └── utils/
+    ├── design_system/
+    │   ├── components/              # AppButton, AppTextField, AppToast, AssistantAvatar, ErrorView, SkeletonPlaceholder
+    │   ├── layout/                  # responsive_breakpoints.dart, метрики отступов
+    │   ├── theme/app_theme.dart     # светлая тема AppTheme.lightTheme
+    │   └── typography/              # AppTypography
+    └── features/
+        ├── assistant/               # ИИ-чат (SSE, история с поиском и группировкой, цитирование, 429 cooldown, фидбэк)
+        ├── auth/                    # Email OTP, Google OAuth + PKCE, session, preferences sync, identity
+        ├── profile/                 # профиль (users-service), пресеты аватаров, EditProfileSheet, ChangeEmailSheet, ReauthSheet
+        ├── schedule/                # расписание (mobile + schedule_desktop_loaded_view.dart), группы, детали пары, Hive-кэш
+        ├── shell/                   # MainShellScreen (IndexedStack), FloatingBottomNavBar, DesktopShellSidebar
+        └── support/                 # обращения в поддержку (ReportIssueBottomSheet)
 ```
 
 ---
 
 ## 5. Дальше в этом разделе
 
-* [**Архитектура BLoC и защита от гонок**](bloc-architecture.md) — состояния `ScheduleReady`, отмена запросов `CancelToken` и защита от гонки переключения групп.
-* [**Хранилище Hive, Cache-First и Сеть**](offline-and-storage.md) — локальный кэш, `AuthInterceptor` с Single-Flight Refresh и deep link OAuth.
-* [**Дизайн-система: светлая тема и навигация**](design-tokens-and-ui.md) — цветовые роли, доступность и навигация.
-* [**Групповые задачи старосты (Запланировано)**](group-tasks.md) — проектный набросок под будущие `tasks-service` и `users-service`.
+* [**Архитектура BLoC и защита от гонок**](bloc-architecture.md) — состояния `ScheduleLoaded` / `SchedulePendingSync` / `ScheduleFailure`, `CancellationToken`, а также `AssistantBloc` и `SessionBloc`.
+* [**Хранилище Hive, Cache-First и Сеть**](offline-and-storage.md) — реальные коробки `HiveStorageService`, `AuthInterceptor` с обновлением токенов и deep link OAuth.
+* [**Дизайн-система: светлая тема и навигация**](design-tokens-and-ui.md) — цветовые роли, доступность и адаптивная навигация (`MainShellScreen`, `FloatingBottomNavBar`, `DesktopShellSidebar`).
+* [**Групповые задачи старосты (Запланировано)**](group-tasks.md) — проектный набросок под будущие задачи и расширение ролевой модели.

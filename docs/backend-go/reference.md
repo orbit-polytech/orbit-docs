@@ -1,59 +1,75 @@
 # Справочник слоёв и правил статического анализа
 
-В этом справочнике собраны строгие правила ограничений импортов, конфигурация линтера `depguard` и правила написания SQL-миграций.
+В этом справочнике зафиксированы границы слоёв Go-сервисов, актуальная конфигурация **`golangci-lint` v2** и стандарты SQL-миграций **Goose**.
 
 ---
 
 ## 1. Матрица разрешённых импортов
 
-| Слой | Разрешённые импорты | Категорически запрещено импортировать |
+| Слой | Разрешённые импорты | Запрещено импортировать |
 |---|---|---|
-| **`internal/domain`** | Только стандартная библиотека Go (`$gostd`): `time`, `errors`, `strings`, `unicode/utf8` | Любые внешние пакеты (`pgx`, `grpc`), другие слои сервиса (`app`, `adapters`, `transport`) |
-| **`internal/app`** | `$gostd`, `internal/domain` | Любые адаптеры (`adapters/*`), транспорт (`transport/*`), библиотеки драйверов БД |
-| **`internal/adapters/*`**| `$gostd`, `internal/domain`, `internal/app` (для интерфейсов портов), внешние библиотеки конкретной технологии (`pgx`, `go-redis`, `amqp`) | Другие адаптеры (например, `adapters/postgres` не может импортировать `adapters/redis`), транспорт `transport/*` |
-| **`internal/transport/grpc`**| `$gostd`, `internal/domain`, `internal/app`, protobuf структуры (`pkg/api/...`), `google.golang.org/grpc` | Адаптеры инфраструктуры (`adapters/*`), прямое чтение базы данных |
-| **`cmd/<service>`** | Имеет доступ ко всем слоям для связывания Composition Root | Бизнес-логика, прямые SQL-запросы |
+| **`internal/domain`** | Стандартная библиотека Go (`time`, `errors`, `strings`, `unicode/utf8`) и базовые типы без привязки к БД/сети | Пакеты БД и транспорта (`pgx`, `grpc`, `net/http`), слои `usecase`, `infrastructure`, `transport` |
+| **`internal/usecase`** | Стандартная библиотека Go, `internal/domain` | Реализации адаптеров (`internal/infrastructure/*`), транспорт (`internal/transport/*`), драйверы БД |
+| **`internal/infrastructure/*`** | Стандартная библиотека, `internal/domain`, `internal/usecase` (интерфейсы портов), драйверы конкретной технологии (`pgx/v5`, `go-redis`, `oauth2`) | Транспорт `internal/transport/*`, другие адаптеры напрямую без интерфейсов |
+| **`internal/transport/grpc`** (или `http`) | Стандартная библиотека, `internal/domain`, `internal/usecase`, сгенерированные контракты (`github.com/orbit-polytech/contracts/...`), `google.golang.org/grpc` | Прямые SQL-запросы и прямая работа с БД/драйверами |
+| **`internal/app`** (Composition Root) | Все слои сервиса для связывания зависимостей | Бизнес-логика и SQL-запросы |
 
 ---
 
-## 2. Конфигурация depguard (`.golangci.yml`)
+## 2. Статический анализ: `golangci-lint` v2 (`.golangci.yml`)
 
-Для автоматического контроля слоев на уровне компилятора в GitHub Actions настроен линтер `depguard`:
+Во всех Go-сервисах используется **`golangci-lint` версии 2** (`version: "2"`). Линтер запускается локально через `task lint` (или `golangci-lint run ./...`) и в GitHub Actions.
+
+Типовая конфигурация `.golangci.yml` (как в `gateway-service` и `auth-service`):
 
 ```yaml
-linters-settings:
-  depguard:
-    rules:
-      domain_isolation:
-        list-mode: strict
-        files:
-          - "!**/*_test.go"
-          - "**/internal/domain/**"
-        allow:
-          - "$gostd"
-      usecase_isolation:
-        list-mode: strict
-        files:
-          - "!**/*_test.go"
-          - "**/internal/app/**"
-          - "**/internal/usecase/**"
-        allow:
-          - "$gostd"
-          - "github.com/orbit-polytech/tasks-service/internal/domain"
+version: "2"
+
+run:
+  tests: true
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 ```
 
-Если новичок попытается импортировать базу данных в домен, линтер моментально заблокирует сборку PR в CI:
-`import of "github.com/jackc/pgx/v5" is not allowed in domain layer according to rule 'domain_isolation'`.
+!!! note "Контроль границ слоёв"
+    В текущей конфигурации CI не используется линтер `depguard` — соблюдение матрицы импортов (`domain` ← `usecase` ← `infrastructure`/`transport`) проверяется при проектировании и на Pull Request Review.
 
 ---
 
-## 3. Стандарты написания SQL-миграций
+## 3. Стандарты написания SQL-миграций (Goose)
 
-Миграции пишутся на чистом SQL для инструмента `goose`:
+Миграции пишутся на чистом SQL для **`goose`** — каждая миграция хранится в **одном** `.sql`-файле внутри `migrations/`:
 
-1. **Файлы создаются парами**: `NNNNNN_<name>.up.sql` и `NNNNNN_<name>.down.sql`.
-2. **Имена таблиц и колонок**: пишутся строго в `snake_case` в нижнем регистре во множественном числе для таблиц (`tasks`, `students`, `course_events`).
-3. **Первичные ключи**: строковые UUIDv4 / UUIDv7 (`VARCHAR(64)` или `UUID`) для распределённых систем.
-4. **Временные метки**: строго `TIMESTAMPTZ` (с сохранением временной зоны), по умолчанию `NOW()`.
-5. **Оптимистичная блокировка**: обязательное поле `version BIGINT NOT NULL DEFAULT 1`.
-6. **Мягкое удаление (Soft Delete)**: поле `deleted_at TIMESTAMPTZ NULL DEFAULT NULL`.
+1. **Единый файл с секциями `-- +goose Up` и `-- +goose Down`**:
+   `00001_<name>.sql`, `00002_<name>.sql` (создаётся командой `goose -dir ./migrations -s create <name> sql` или `task migrate-create NAME=<name>`).
+2. **Имена таблиц и колонок**: пишутся в `snake_case` в нижнем регистре во множественном числе для таблиц (`accounts`, `profiles`, `group_schedules`).
+3. **Первичные ключи**: `UUID` (`DEFAULT gen_random_uuid()`).
+4. **Временные метки**: `TIMESTAMPTZ` (с часовым поясом), по умолчанию `now()`.
+5. **Откат (`-- +goose Down`)**: каждая миграция обязана корректно откатывать свои изменения и проверяться командой `task migrate-down` (для проверки в локальном стенде).

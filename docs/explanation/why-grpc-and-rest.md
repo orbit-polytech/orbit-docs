@@ -7,9 +7,9 @@
 ```mermaid
 flowchart TD
     subgraph Clients ["Внешние клиенты (Интернет / Публичный периметр)"]
-        Mobile["Orbit Mobile (Flutter)"]
-        Bot["Orbit Bot (aiogram 3)"]
-        Web["Swagger UI / Web"]
+        Mobile["Orbit Mobile (Flutter Android/iOS)"]
+        Web["Orbit Web / PWA (web :8088 -> Nginx -> Gateway)"]
+        Bot["Orbit Bot (aiogram 3, план)"]
     end
 
     subgraph Perimeter ["Периметр безопасности"]
@@ -18,19 +18,21 @@ flowchart TD
 
     subgraph InternalMesh ["Внутренняя Compose-сеть (gRPC / HTTP/2)"]
         Auth["auth-service (:50051)"]
-        Tasks["tasks-service (:50055, план)"]
+        Users["users-service (:50052)"]
         Sched["schedule-service (:50054)"]
-        AI["ai-service (:50057, план)"]
+        AI["ai-service (:50057)"]
+        Tasks["tasks-service (:50055, план)"]
     end
 
-    Mobile ==>|"HTTPS / REST JSON"| GW
-    Bot ==>|"HTTPS / REST JSON"| GW
-    Web ==>|"HTTPS / REST JSON"| GW
+    Mobile ==>|"HTTPS / REST JSON + SSE"| GW
+    Web ==>|"HTTPS / REST JSON + SSE"| GW
+    Bot -.->|"HTTPS / REST JSON"| GW
 
     GW -->|"gRPC / Protobuf"| Auth
-    GW -->|"gRPC / Protobuf"| Tasks
+    GW -->|"gRPC / Protobuf"| Users
     GW -->|"gRPC / Protobuf"| Sched
     GW -->|"gRPC / Protobuf"| AI
+    GW -.->|"gRPC / Protobuf"| Tasks
 ```
 
 ---

@@ -139,15 +139,15 @@ go test -v ./internal/config/...
 
 ### Шаг 5. Проброс переменной в Docker Compose
 
-Если переменная нужна сервису в общем стенде, обновите секцию сервиса в `infra/docker-compose.yml`:
+Если переменная нужна сервису в общем стенде, обновите секцию сервиса в `infra/compose.yaml` (и добавьте значение по умолчанию в `infra/.env.example`), используя YAML-map синтаксис:
 
 ```yaml
   tasks-service:
     environment:
-      - APP_ENV=production
-      - LOG_LEVEL=info
-      - GRPC_PORT=50051
-      - TASK_MAX_LIMIT=100
+      APP_ENV: ${APP_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      GRPC_PORT: 50051
+      TASK_MAX_LIMIT: ${TASK_MAX_LIMIT:-100}
 ```
 
 ---

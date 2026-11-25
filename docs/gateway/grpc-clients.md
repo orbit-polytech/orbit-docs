@@ -1,11 +1,16 @@
-# Маршрутизация и gRPC-клиенты в Gateway
+# Маршрутизация и клиенты внутренних сервисов в Gateway
 
-В текущем `main` подключены Auth, Schedule и AI: `internal/infrastructure/authclient`, `internal/infrastructure/scheduleclient`, `internal/infrastructure/aiclient`. Соединения долгоживущие; таймаут каждого RPC задаётся от HTTP-контекста. Schedule получает `SCHEDULE_GRPC_ADDR` (в Compose `schedule-service:50054`) и `SCHEDULE_RPC_TIMEOUT` (`5s`).
+В текущем `main` (`internal/app/wiring.go`) подключены четыре долгоживущих gRPC-клиента и один HTTP-клиент:
+- `internal/infrastructure/authclient` (`AUTH_GRPC_ADDR`, в Compose `auth-service:50051`, таймауты `AUTH_RPC_TIMEOUT=5s`, `AUTH_SEND_CODE_TIMEOUT=12s`);
+- `internal/infrastructure/usersclient` (`USERS_GRPC_ADDR`, в Compose `users-service:50052`, таймаут `USERS_RPC_TIMEOUT=5s`);
+- `internal/infrastructure/scheduleclient` (`SCHEDULE_GRPC_ADDR`, в Compose `schedule-service:50054`, таймаут `SCHEDULE_RPC_TIMEOUT=5s`);
+- `internal/infrastructure/aiclient` (`AI_GRPC_ADDR`, в Compose `ai-service:50057`, таймаут `AI_RPC_TIMEOUT=120s`, опциональный `INTERNAL_SECRET`);
+- `internal/infrastructure/opsbotclient` — HTTP-клиент для отправки обращений из приложения (`POST /issues/webhook` в `OPS_BOT_WEBHOOK_URL`, в Compose `http://ops-bot:8081`, с Bearer `OPS_BOT_WEBHOOK_TOKEN` и таймаутом `5s`).
 
-Пустые `date_from`/`date_to` передаются в Schedule без вычисления дат в Gateway; фактические границы ответа возвращаются клиенту. Общий маппер находится в `internal/transport/http/httputil/grpc_error.go`.
+Пустые `date_from`/`date_to` передаются в Schedule без вычисления дат в Gateway; фактические границы ответа возвращаются клиенту. Общий маппер gRPC-ошибок находится в `internal/transport/http/httputil/grpc_error.go`.
 
-!!! info "Ниже — учебная схема расширения"
-    Фабрика `internal/clients`, Tasks и код `writeError` ниже показывают возможную организацию будущих интеграций. Это не дерево текущего репозитория. Реальные файлы перечислены в [обзоре Gateway](overview.md).
+!!! info "Ниже — упрощённая учебная схема расширения"
+    Фабрика `internal/clients`, Tasks и код `writeError` ниже показывают возможную организацию будущих интеграций, а не реальное дерево репозитория. В текущем `gateway-service` клиенты разнесены по пакетам `internal/infrastructure/*client` и собираются в `internal/app/wiring.go` (`dialClients`), а ошибки маппятся функцией `httputil.WriteGRPCError`. См. [обзор Gateway](overview.md).
 
 ---
 
@@ -80,7 +85,7 @@ resp, err := h.tasksClient.GetTask(ctx, &tasksv1.GetTaskRequest{Id: taskID})
 | `codes.AlreadyExists` | **409 Conflict** | Ресурс с таким ключом уже создан |
 | `codes.Aborted` | **409 Conflict** | Конфликт параллельного изменения (оптимистичная блокировка) |
 | `codes.FailedPrecondition` | **400 Bad Request** | Действие недопустимо в текущем состоянии |
-| `codes.ResourceExhausted` | **429 Too Many Requests** | Превышен лимит запросов или квота |
+| `codes.ResourceExhausted` | **429 Too Many Requests** | Превышен лимит запросов или квота (при `RetryInfo` добавляются `Retry-After` и `retry_after_sec`) |
 | `codes.Unavailable` | **503 Service Unavailable** | Целевой микросервис временно недоступен |
 | `codes.DeadlineExceeded` | **504 Gateway Timeout** | Время ожидания ответа сервиса истекло |
 | `codes.Internal` | **500 Internal Error** | Непредвиденная внутренняя ошибка |
@@ -88,8 +93,10 @@ resp, err := h.tasksClient.GetTask(ctx, &tasksv1.GetTaskRequest{Id: taskID})
 
 ## Метаданные текущего API расписания
 
-Gateway использует `contracts@v0.5.9` (Schedule API совместим с `v0.5.0`) и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED`. Передаются `published_from` / `published_to`, если известны. См. [публичное API расписания](schedule-api.md).
+Gateway использует `contracts@v0.5.12` (Schedule API совместим с `v0.5.0`) и явно преобразует `ScheduleStatus` в HTTP DTO: `READY`, `PENDING_SYNC` или `UNSPECIFIED`. Передаются `published_from` / `published_to`, если известны. См. [публичное API расписания](schedule-api.md).
 
-## Потоковый и unary AI RPC
+## Потоковый и unary AI RPC, Users и Ops Bot
 
-AI использует долгоживущее соединение (`aiclient`), `AI_GRPC_ADDR` и `AI_RPC_TIMEOUT` (`120s` в Compose). Для потоковой генерации контекст связан с HTTP-запросом и отменяется при разрыве соединения; для коротких unary-вызовов (`Cancel`, `GetConversations`, `GetConversationHistory`, `DeleteConversation`, `SubmitFeedback`) используются отдельные ограниченные таймауты (`5–10s`). Подробнее: [AI API](ai-api.md).
+- **AI (`aiclient`)**: долгоживущее соединение, `AI_GRPC_ADDR` и `AI_RPC_TIMEOUT` (`120s` в Compose). Для потоковой генерации контекст связан с HTTP-запросом и отменяется при разрыве соединения; для коротких unary-вызовов (`Cancel`, `GetConversations`, `GetConversationHistory`, `DeleteConversation`, `SubmitFeedback`) используются отдельные ограниченные таймауты (`5–10s`). Подробнее: [AI API](ai-api.md).
+- **Users (`usersclient`)**: долгоживущее соединение к `users-service:50052` (`USERS_GRPC_ADDR`, `USERS_RPC_TIMEOUT=5s`) с health-проверкой сервиса `orbit.users.v1.UserService`.
+- **Ops Bot (`opsbotclient`)**: HTTP-клиент (`http.Client` с таймаутом `5s`), вызывающий `POST /issues/webhook` с `Authorization: Bearer <OPS_BOT_WEBHOOK_TOKEN>`.

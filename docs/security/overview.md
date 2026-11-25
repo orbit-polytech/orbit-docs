@@ -7,24 +7,28 @@
 
 | Компонент | Ответственность |
 |---|---|
-| `auth-service` | Аккаунты, Email OTP, внешние identities, OAuth state, JWT, refresh-сессии и приватный Ed25519-ключ |
-| `gateway-service` | HTTP-периметр, проверка access JWT, CORS, cookies, очистка служебных заголовков и маршрутизация в gRPC |
+| `auth-service` | Аккаунты, Email OTP, смена email, внешние identities, OAuth state, JWT, refresh-сессии и приватный Ed25519-ключ |
+| `users-service` | Профили пользователей (`display_name`, `username`, группа, курс, аватар) и системные роли (`profiles.role`, в JWT роли не зашиваются) |
+| `gateway-service` | HTTP-периметр, проверка access JWT (`Auth` / `OptionalAuth`), Redis rate limiting (`AI` и `Support`), CORS, cookies, очистка служебных заголовков и маршрутизация в gRPC / `ops-bot` |
 | Бизнес-сервисы | Авторизация конкретных ресурсов и проверка владения объектами |
 
 Gateway получает только публичный ключ. Приватный ключ монтируется исключительно в Auth.
 
-## Публичное чтение
+## Публичные и опционально авторизованные маршруты
 
-`GET /api/v1/schedule/groups` и `GET /api/v1/schedule/groups/{group}` доступны без JWT, регистрации и профиля Users. Это явное исключение из защищённых персональных сценариев, а не ослабление проверки токенов. Schedule не получает JWT-ключи или пользовательский контекст, но использует Redis для кэша и синхронизации. AI уже требует JWT на Gateway; персональные задачи остаются будущим сценарием.
+- `GET /api/v1/schedule/groups` и `GET /api/v1/schedule/groups/{group}` доступны без JWT, регистрации и профиля Users. Это явное исключение из защищённых персональных сценариев, а не ослабление проверки токенов. Schedule не получает JWT-ключи или пользовательский контекст, но использует Redis для кэша и синхронизации.
+- `POST /api/v1/support/issues` использует `middleware.OptionalAuth`: гость может отправить обращение без токена, а при наличии валидного `Authorization: Bearer ...` Gateway подставляет `user_id` и запрашивает email аккаунта в `auth-service` для контекста тикета в `#feedback`. Защита от спама обеспечивается `SupportIssueRateLimit` в Redis (5 запросов за 15 минут с cooldown 30 сек по `user:<id>` или `ip:<ip>`).
+- Профиль (`GET/PUT /api/v1/users/profile`), смена email (`/api/v1/auth/email/change/begin|confirm`), привязка identities и все маршруты AI (`/api/v1/ai/...`) требуют обязательный Bearer JWT (`middleware.Auth`). На `POST /api/v1/ai/chat/stream` дополнительно действует `AIRateLimit` в Redis.
 
-## 2. Реализованные способы входа
+## 2. Реализованные способы входа и чувствительные действия
 
-### Email OTP
+### Email OTP и смена email
 
 1. Клиент запрашивает код через `POST /api/v1/auth/send-code`.
-2. Auth применяет cooldown и TTL, хранит состояние в Redis и отправляет код через Resend.
+2. Auth применяет cooldown и TTL, хранит HMAC-хэш кода в Redis (`auth:otp:data:*`, `auth:otp:cooldown:*`) и отправляет код через Resend.
 3. Клиент подтверждает код через `POST /api/v1/auth/verify-code`.
 4. Auth создаёт аккаунт или сессию и выпускает токены.
+5. Для смены email (`POST /api/v1/auth/email/change/begin` и `/confirm`) дополнительно проверяется `reauth_proof` (подтверждение недавней аутентификации по `auth_time`) и OTP на новый адрес (`email-change:<account_id>:<new_email>`).
 
 OTP не хранится в открытом виде; используется HMAC-секрет стенда.
 

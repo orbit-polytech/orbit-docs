@@ -55,21 +55,25 @@ task status
 | `jwt-keygen` | `Exited (0)` |
 | `postgres-init` | `Exited (0)` |
 | `auth-migrate` | `Exited (0)` |
+| `users-migrate` | `Exited (0)` |
 | `schedule-migrate` | `Exited (0)` |
 | `auth-service` | `Up (healthy)` |
+| `users-service` | `Up (healthy)` |
 | `schedule-service` | `Up (healthy)` |
 | `gateway-service` | `Up (healthy)` |
+| `web` | `Up (healthy)` |
 
-`Exited (0)` для one-shot контейнеров (`jwt-keygen`, `postgres-init`, миграторы) — это норма, значит инициализация прошла успешно.
+`Exited (0)` для one-shot контейнеров (`jwt-keygen`, `postgres-init`, миграторы) — это норма, значит инициализация прошла успешно. Web/PWA-клиент после старта доступен на [http://localhost:8088](http://localhost:8088).
 
-## 4. Проверка Gateway, Auth и расписания
+## 4. Проверка Gateway, Auth, профиля, расписания и Web
 
 ```bash
 curl http://localhost:8080/healthz
 curl http://localhost:8080/readyz
 ```
 
-Swagger UI: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html).
+- Swagger UI: [http://localhost:8080/swagger/index.html](http://localhost:8080/swagger/index.html)
+- Web / PWA клиент: [http://localhost:8088](http://localhost:8088) (Nginx раздаёт статику Flutter Web и проксирует `/api/`, `/healthz` и `/swagger/` на `gateway-service:8080`)
 
 Основные маршруты Auth (префикс `/api/v1/auth`):
 - `POST /api/v1/auth/send-code`
@@ -78,8 +82,13 @@ Swagger UI: [http://localhost:8080/swagger/index.html](http://localhost:8080/swa
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/auth/me`
 - `PATCH /api/v1/auth/preferences`
+- `POST /api/v1/auth/email/change/begin`, `POST /api/v1/auth/email/change/confirm`
 - `GET /api/v1/auth/oauth/{provider}/login`, `callback`, `POST /api/v1/auth/oauth/exchange`
 - `POST /api/v1/auth/identities/link/begin`, `finish`, `GET /identities`, `DELETE /identities/{provider}`
+
+Профиль пользователя (`users-service`, требуют JWT) и поддержка (`ops-bot`):
+- `GET /api/v1/users/profile`, `PUT /api/v1/users/profile`
+- `POST /api/v1/support/issues` (опциональный JWT; отправляет обращение из клиента в `ops-bot`)
 
 Публичное расписание (работает без JWT):
 
@@ -94,15 +103,15 @@ curl "http://localhost:8080/api/v1/schedule/groups/261-334"
 
 | Команда | Назначение |
 |---|---|
-| `task up` | Базовый профиль `apps` (без AI, мониторинга и `ops-bot`) |
+| `task up` | Базовый профиль `apps` (PostgreSQL, Redis, миграции, Auth, `users-service`, Schedule, Gateway и `web :8088`; без AI, мониторинга и `ops-bot`) |
 | `task up:deps` | Только `postgres` и `redis` |
 | `task db:init` | Перезапуск `postgres-init` без удаления данных |
-| `task build` | Сборка локально переопределённых сервисов из `compose.override.yaml` |
+| `task build` | Сборка локально переопределённых сервисов профиля `apps` из `compose.override.yaml` (для `ai-service` или `ops-bot` используйте `docker compose --profile all build <service>`) |
 | `task status` | Список контейнеров профиля `apps` |
 | `task logs` | Логи профиля `apps` |
 | `task down` | Остановка с сохранением томов и ключей |
 | `task clean` | Полный сброс контейнеров и томов |
-| `task tunnel:up` / `task tunnel:down` | Внешний HTTPS-туннель Ngrok для `gateway-service` |
+| `task tunnel:up` / `task tunnel:down` | Внешний HTTPS-туннель Ngrok (проксирует `web:80`: Web/PWA и `/api/` в `gateway-service`) |
 
 !!! danger "Осторожно с `task clean`"
     `task clean` удаляет базы PostgreSQL, Redis, оба JWT-ключа (старые токены перестанут проверяться) и тома мониторинга.
@@ -119,7 +128,7 @@ task build
 docker compose --profile apps up -d --pull never --wait --wait-timeout 120
 ```
 
-Не коммитьте `compose.override.yaml`. Если меняли миграции, оставьте в override также соответствующий `*-migrate` сервис.
+Не коммитьте `compose.override.yaml`. Если меняли миграции, оставьте в override также соответствующий `*-migrate` сервис. Обратите внимание: `task build` запускает `docker compose --profile apps build`, поэтому для локальной сборки `ai-service` или `ops-bot` вызывайте `docker compose --profile all build <service>` и поднимайте их через `--profile all`.
 
 ## 7. Обновление уже запущенного стенда
 
@@ -147,7 +156,7 @@ docker compose --profile all up -d --wait --wait-timeout 180
 docker compose --profile all ps -a
 ```
 
-- **Наружный туннель Ngrok для тестов на телефоне:** заполните `NGROK_AUTHTOKEN` (и при наличии `NGROK_URL`) в `.env` и выполните `task tunnel:up`.
+- **Наружный туннель Ngrok для тестов Web/PWA и API с телефона:** заполните `NGROK_AUTHTOKEN` (и при наличии `NGROK_URL`) в `.env` и выполните `task tunnel:up` (туннель проксирует контейнер `web:80`).
 
 ## 9. Если что-то пошло не так
 

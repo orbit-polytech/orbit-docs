@@ -1,8 +1,7 @@
 # Безопасное хранилище токенов и Сетевой клиент
 
-> **Канонический стандарт проекта:**  
-> Полная спецификация сетевого взаимодействия, реализации Single-Flight Refresh в `Dio` и кэширования в Hive зафиксирована в основном документе:  
-> 📖 [**Хранилище Hive, Cache-First и Сетевой слой**](offline-and-storage.md).
+!!! warning "Архив / Устарело"
+    Актуальная спецификация хранилища Hive (`HiveStorageService`), сетевого клиента `DioClient` и `AuthInterceptor` описана в основном документе [Хранилище Hive, Cache-First и Сетевой слой](offline-and-storage.md). Примеры ниже оставлены как вводная заметка по `flutter_secure_storage`.
 
 В этом разделе рассматриваются механизмы аппаратной защиты токенов сессии и принципы работы с сетевыми DTO.
 
@@ -17,15 +16,17 @@
 * **Android**: **Android KeyStore** с аппаратным шифрованием AES/GCM (ключи шифрования хранятся в изолированном TEE / StrongBox модуле процессора).
 
 ```dart
-// lib/core/storage/secure_storage_service.dart
+// lib/features/auth/data/datasources/session/secure_token_store.dart
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
   const SecureStorageService({FlutterSecureStorage? storage})
       : _storage = storage ??
             const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
-              iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+              aOptions: AndroidOptions(),
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock_this_device,
+              ),
             );
 
   final FlutterSecureStorage _storage;

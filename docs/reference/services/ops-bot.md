@@ -6,7 +6,7 @@
 
 ## Назначение и границы
 
-`ops-bot` — это внутренний служебный бот для команды разработки и дежурных. Он принимает алерты от Alertmanager, отслеживает проблемные вопросы к ИИ и дизлайки студентов, а также присылает ежедневные сводки по расходу токенов.
+`ops-bot` — это внутренний служебный бот для команды разработки и дежурных. Он принимает алерты от Alertmanager, принимает обращения и баг-репорты из клиентского приложения через Gateway (`POST /issues/webhook`), отслеживает проблемные вопросы к ИИ и дизлайки студентов, а также присылает ежедневные сводки по расходу токенов.
 
 !!! note "Не путать с `bot-service`"
     Пользовательский Telegram-бот для студентов (`bot-service`) по-прежнему находится в планах. `ops-bot` предназначен только для администраторов и эксплуатации.
@@ -17,7 +17,7 @@
 |---|---|
 | Runtime | Python 3.13+, `uv`, `uv.lock` |
 | Telegram | `aiogram` 3.x (роутеры команд, inline-клавиатуры разбора, фильтр `ADMIN_IDS`) |
-| Вебхук | `aiohttp` (`0.0.0.0:8081`, маршруты `GET /healthz` и `POST /alerts/webhook`) |
+| Вебхук | `aiohttp` (`0.0.0.0:8081`, маршруты `GET /healthz`, `POST /alerts/webhook` и `POST /issues/webhook` с Bearer-авторизацией) |
 | Метрики | `httpx`-клиент к Prometheus (`http://prometheus:9090`) |
 | База данных | `SQLAlchemy asyncio` + `asyncpg`, роль `orbit_ops_bot` к `orbit_ai` |
 
@@ -29,10 +29,10 @@
 
 | Топик | Переменная env | Откуда приходят события |
 |---|---|---|
-| `#alerts` | `OPS_BOT_TOPIC_ALERTS_ID` | Вебхук Alertmanager: падение сервисов, 5xx, высокая задержка, БД (включая `resolved`) |
+| `#alerts` | `OPS_BOT_TOPIC_ALERTS_ID` | Вебхук Alertmanager (`POST /alerts/webhook`): падение сервисов, 5xx, высокая задержка, БД (включая `resolved`) |
 | `#llm-quotas` | `OPS_BOT_TOPIC_LLM_QUOTAS_ID` | Вебхук Alertmanager: алерты с `category=llm-quota` (остаток квоты < 15% / < 5%, частые `429`) |
 | `#untriaged` | `OPS_BOT_TOPIC_UNTRIAGED_ID` | Фоновый опрос `orbit_ai` каждые `TRIAGE_POLL_INTERVAL_SEC` сек (по умолчанию `30`): вопросы без достаточного контекста или со сбоем |
-| `#feedback` | `OPS_BOT_TOPIC_FEEDBACK_ID` | Негативные оценки студентов (`feedback_rating = down`), включая случаи, когда дизлайк поставили уже после отправки в `#untriaged` |
+| `#feedback` | `OPS_BOT_TOPIC_FEEDBACK_ID` | Негативные оценки студентов (`feedback_rating = down`) и обращения/баг-репорты из приложения (`POST /issues/webhook` от Gateway) |
 | `#digest` | `OPS_BOT_TOPIC_DIGEST_ID` | Ежедневная сводка по расписанию (`DIGEST_HOUR_UTC`, по умолчанию `6`): очередь неразобранного, расход токенов за 24ч и остатки квот |
 
 В карточках в `#untriaged` и `#feedback` есть inline-кнопки: **«✅ В базу знаний / Разобрано»** и **«🚫 Игнор»** — они сразу отмечают запись в БД (`triaged_at`, `triaged_by`), чтобы кейс не всплывал повторно.
@@ -68,6 +68,6 @@ OPS_BOT_TOPIC_FEEDBACK_ID=0
 OPS_BOT_TOPIC_DIGEST_ID=0
 ```
 
-После `docker compose --profile all up -d` или `--profile ops up -d` вебхук слушает внутри Docker-сети на `http://ops-bot:8081/alerts/webhook` и на хост наружу не публикуется.
+После `docker compose --profile all up -d` или `--profile ops up -d` вебхук слушает внутри Docker-сети на `http://ops-bot:8081` (`POST /alerts/webhook` для Alertmanager и `POST /issues/webhook` для обращений от Gateway) и на хост наружу не публикуется.
 
 Подробнее про метрики и алерты, которые питают бота: [Мониторинг и логи](../../contracts-infra/observability.md).

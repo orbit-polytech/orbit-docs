@@ -1,8 +1,8 @@
 # navigation-service (Навигация по корпусам)
 
-**Репозиторий:** [`orbit-polytech/navigation-service`](https://github.com/orbit-polytech/navigation-service)
+**Репозиторий:** `orbit-polytech/navigation-service` *(репозиторий на GitHub ещё не создан)*
 
-!!! info "Целевой сервис, не часть текущего стенда"
+!!! info "Запланировано — целевой сервис, не часть текущего стенда"
     Ниже сохранён проектный паспорт. Прежний порт `50054` уже занят реализованным Schedule. Порт Navigation нужно согласовать до реализации; копировать `50054` в его конфигурацию нельзя. См. [канонические значения](../canonical-values.md).
 
 ---
@@ -13,8 +13,8 @@
 ---
 
 ## 2. Технический стек
-- **Язык:** Go 1.24+ (Clean Architecture)
-- **База данных:** PostgreSQL 16 (`navigation_db`)
+- **Язык:** Go 1.26+ (Clean Architecture)
+- **База данных:** PostgreSQL 16 (`orbit_navigation` / проектное имя `navigation_db`)
 - **Алгоритмы:** Графовый поиск кратчайшего пути (A* / Дейкстра)
 - **Протокол:** gRPC (порт требует согласования)
 - **Контракт:** `orbit.navigation.v1.NavigationService`
@@ -23,7 +23,7 @@
 
 ## 3. Выделенные порты и база данных
 - **gRPC порт:** пока не назначен
-- **База данных:** `navigation_db` в PostgreSQL
+- **База данных:** `navigation_db` в PostgreSQL (уточняется при добавлении в `infra`)
 - **Healthcheck:** `/grpc.health.v1.Health/Check`
 
 ---
@@ -36,9 +36,9 @@ LOG_LEVEL=debug
 # GRPC_PORT=<согласованный-свободный-порт>
 
 DB_HOST=localhost
-DB_PORT=5432
-DB_USER=orbit
-DB_PASSWORD=orbit_dev_secret
+DB_PORT=5434
+DB_USER=orbit_user
+DB_PASSWORD=change_this_app_password
 DB_NAME=navigation_db
 DB_SSLMODE=disable
 ```

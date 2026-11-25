@@ -95,7 +95,7 @@ ssh -T git@github.com
 
 ## 3. Docker и Docker Compose
 
-Все внешние зависимости (PostgreSQL, Redis, RabbitMQ, pgvector) разворачиваются локально в изолированных контейнерах через репозиторий `infra`.
+Все внешние зависимости (PostgreSQL, pgvector, Redis) разворачиваются локально в изолированных контейнерах через репозиторий `infra`.
 
 * **Windows / macOS**: установите [Docker Desktop](https://www.docker.com/products/docker-desktop/). На Windows Docker Desktop сразу интегрируется со стандартным PowerShell и командной строкой, позволяя выполнять команды `docker` и `docker compose` без дополнительных настроек;
 * **Linux**: установите [Docker Engine и Docker Compose v2](https://docs.docker.com/engine/install/ubuntu/) через официальный репозиторий Docker. Обязательно добавьте пользователя в группу `docker`:
@@ -150,9 +150,9 @@ docker run --rm hello-world
     ```
 
 ### 4.2. Установка линтера `golangci-lint`
-Статический анализ кода в Orbit строго автоматизирован:
+Статический анализ кода в Orbit строго автоматизирован (`golangci-lint` v2):
 ```bash
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 golangci-lint --version
 ```
 
@@ -202,7 +202,7 @@ buf --version
        ```
    === "macOS"
        ```bash
-       brew install python@3.12
+       brew install python@3.13
        ```
 
 2. **Менеджер пакетов `uv` (рекомендуется)**:

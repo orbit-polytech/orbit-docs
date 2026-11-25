@@ -1,6 +1,9 @@
 # notification-service (Сервис уведомлений)
 
-**Репозиторий:** [`orbit-polytech/notification-service`](https://github.com/orbit-polytech/notification-service)
+**Репозиторий:** `orbit-polytech/notification-service` *(репозиторий на GitHub ещё не создан)*
+
+!!! info "Запланировано"
+    Сервис уведомлений и брокер RabbitMQ пока не реализованы и не входят в текущий стенд. Ниже приведён проектный паспорт на будущее.
 
 ---
 
@@ -10,7 +13,7 @@
 ---
 
 ## 2. Технический стек
-- **Язык:** Go 1.24+ (Clean Architecture)
+- **Язык:** Go 1.26+ (Clean Architecture)
 - **Брокер сообщений:** RabbitMQ (AMQP 0-9-1 консьюмер с ручным Ack/Nack и DLQ)
 - **База данных:** PostgreSQL 16 (`notification_db`) — история уведомлений и предпочтения пользователей
 - **Интеграции:** FCM SDK (Google Firebase), Telegram Bot API
@@ -19,8 +22,8 @@
 
 ## 3. Выделенные порты и очереди
 - **gRPC порт:** `50056`
-- **База данных:** `notification_db` в PostgreSQL
-- **Очереди RabbitMQ:**
+- **База данных:** `notification_db` в PostgreSQL (уточняется при добавлении в `infra`)
+- **Очереди RabbitMQ *(план)*:**
   * `notification.task_events` (биндинг к exchange `tasks.events`, routing key: `task.*`)
   * `notification.schedule_events` (биндинг к exchange `schedule.events`)
 
@@ -34,9 +37,9 @@ LOG_LEVEL=debug
 GRPC_PORT=50056
 
 DB_HOST=localhost
-DB_PORT=5432
-DB_USER=orbit
-DB_PASSWORD=orbit_dev_secret
+DB_PORT=5434
+DB_USER=orbit_user
+DB_PASSWORD=change_this_app_password
 DB_NAME=notification_db
 DB_SSLMODE=disable
 

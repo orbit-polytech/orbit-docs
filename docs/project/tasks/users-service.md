@@ -1,5 +1,8 @@
 # Техническое задание: Разработка сервиса профилей (users-service) и gRPC-контрактов
 
+!!! success "Архив / Выполнено"
+    Это исходное техническое задание сохранено для истории. Сервис `users-service` уже реализован в `main`, подключён к `gateway-service` (`GET/PUT /api/v1/users/profile`) и профилю `apps` в `infra` (gRPC `:50052`, метрики `:9096`, миграции `00001`–`00002`). Актуальный статус и описание см. на странице [«Текущее состояние»](../current-state.md) и в [паспорте `users-service`](../../reference/services/users.md).
+
 - **Исполнитель**: Илья Мозжухин (Backend / Database Engineer)
 - **Tech Lead & Software Architect:** Данил Мусатов
 - **Проект**: Orbit AI

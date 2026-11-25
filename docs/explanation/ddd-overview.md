@@ -5,7 +5,7 @@
 ---
 
 !!! info "Границы текущего среза"
-    Схема событий ниже — целевая. Сейчас работают Auth и публичный Schedule, RabbitMQ и остальные контексты ещё не развёрнуты.
+    Сейчас в контуре работают контексты `auth-service`, `users-service`, `schedule-service`, `ai-service` (с RAG на `pgvector` размерности 384), а также `gateway-service`, `web` и `ops-bot`. Контексты задач (`tasks-service`), уведомлений и асинхронная шина RabbitMQ остаются целевым развитием.
 
 ## 1. Стратегический уровень: Ограниченные контексты (Bounded Contexts)
 
@@ -15,38 +15,48 @@
 flowchart LR
     subgraph AuthContext ["Контекст: Аутентификация (auth-service)"]
         direction TB
-        A1["Сущность: Account"]
-        A2["Понятие: TelegramID, JTI"]
+        A1["Сущность: Account, Session"]
+        A2["Понятие: Email OTP, Google OAuth, RefreshToken"]
     end
 
-    subgraph TasksContext ["Контекст: Задачи (tasks-service)"]
+    subgraph UsersContext ["Контекст: Профили (users-service)"]
+        direction TB
+        U1["Сущность: Profile"]
+        U2["Понятие: DisplayName, Username, Avatar, Group"]
+    end
+
+    subgraph ScheduleContext ["Контекст: Расписание (schedule-service)"]
+        direction TB
+        S1["Сущность: Lesson, ScheduleSnapshot"]
+        S2["Понятие: GroupTitle, Room, SyncGeneration"]
+    end
+
+    subgraph AIContext ["Контекст: ИИ и База знаний (ai-service)"]
+        direction TB
+        AI1["Сущность: Conversation, KnowledgeChunk"]
+        AI2["Понятие: Vector 384, Prompt, Feedback"]
+    end
+
+    subgraph TasksContext ["Контекст: Задачи (tasks-service, план)"]
         direction TB
         T1["Сущность: Task"]
         T2["Понятие: OwnerID, Deadline"]
     end
 
-    subgraph ScheduleContext ["Контекст: Расписание (schedule-service)"]
-        direction TB
-        S1["Сущность: Lesson"]
-        S2["Понятие: GroupCode, RoomCode"]
-    end
-
-    subgraph AIContext ["Контекст: База знаний (ai-service)"]
-        direction TB
-        AI1["Сущность: KnowledgeChunk"]
-        AI2["Понятие: Vector 768, Prompt"]
-    end
-
-    AuthContext -.->|"Асинхронные события RabbitMQ"| TasksContext
-    TasksContext -.->|"Асинхронные события RabbitMQ"| AIContext
+    AuthContext -.->|"Синхронно через Gateway / gRPC"| UsersContext
+    AuthContext -.->|"Целевые события RabbitMQ"| TasksContext
+    TasksContext -.->|"Целевые события RabbitMQ"| AIContext
 ```
 
 ### Принцип расщепления понятий
 В монолитах часто пытаются создать одну гигантскую универсальную сущность `User` с сотней полей (логин, пароль, номер группы, задачи, средний балл, домашний адрес).  
 В DDD у каждого ограниченного контекста **своя собственная модель понятия**:
-- Для текущего `auth-service` пользователь — это `Account`, связанный с OTP-входом, внешними identities и сессиями; парольный вход не реализован.
-- Для `tasks-service` пользователь — это просто непрозрачный `OwnerID` (владелец задачи).
-- Текущий `schedule-service` вообще не моделирует пользователя: его понятия — группа, снимок и занятие. Членство в группе и роли старосты — отдельная будущая область, не условие публичного чтения расписания.
+- Для `auth-service` пользователь — это `Account`, связанный с Email OTP-входом, внешними провайдерами (`Google OAuth`, в планах — Telegram) и сессиями; парольный вход не реализован.
+- Для `users-service` пользователь — это `Profile` (`display_name`, `username`, аватар, учебная группа, курс, роль).
+- Для `ai-service` база знаний строится на `KnowledgeChunk` с эмбеддингами размерности **`Vector 384`** (модель `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`).
+- Для будущего `tasks-service` пользователь — это просто непрозрачный `OwnerID` (владелец задачи).
+- Текущий `schedule-service` вообще не моделирует пользователя: его понятия — группа, снимок и занятие. Членство в группе и подтверждённая роль старосты — отдельная область, не условие публичного чтения расписания.
+- Вспомогательные контуры `web` (Flutter Web/PWA за Nginx) и `ops-bot` (Telegram-бот для алертов Alertmanager и триажа фидбэка AI) изолированы от бизнес-доменов и не лезут напрямую в доменные таблицы других сервисов.
 
 ---
 

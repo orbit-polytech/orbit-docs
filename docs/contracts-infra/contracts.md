@@ -29,21 +29,22 @@ contracts/
 └── README.md
 ```
 
-Актуальный тег — **`v0.5.9`**:
-- `gateway-service` и `ai-service` используют `v0.5.9`;
-- `auth-service` использует `v0.5.5` (OTP, JWT, Google OAuth, identities, `GetAccount`, `UpdateAccountPreferences`);
+Актуальный тег — **`v0.5.12`**:
+- `gateway-service` и `users-service` используют `v0.5.12`;
+- `auth-service` использует `v0.5.11` (OTP, смена email, JWT, Google OAuth, identities, `GetAccount`, `UpdateAccountPreferences`);
+- `ai-service` использует `v0.5.10` (`ChatStream` с `retry_after_sec`, отмена, диалоги, оценки);
 - `schedule-service` использует `v0.5.0` (`SearchGroups`, `GetGroupSchedule`, `date_from`/`date_to`, `ScheduleStatus`: `UNSPECIFIED`, `READY`, `PENDING_SYNC`, `published_from`/`published_to`);
-- в `proto/orbit/users/v1/users.proto` уже описан контракт `UserService` для разрабатываемого `users-service`;
+- `proto/orbit/users/v1/users.proto` описывает контракт `UserService` для работающего `users-service` (`GetProfile`, `UpdateProfile`, внутренний `GetBatchProfiles`, поля `display_name`, `username`, `academic_group`, `course`, `avatar_url`, `role`);
 - учебные схемы `Tasks` лежат отдельно в `orbit-docs/examples/tasks-service` и будут перенесены в `contracts` при проектировании production-сервиса.
 
 Подключение Go-модуля из корня репозитория сервиса:
 
 ```bash
-go get github.com/orbit-polytech/contracts@v0.5.9
+go get github.com/orbit-polytech/contracts@v0.5.12
 go mod tidy
 ```
 
-Пример импорта: `github.com/orbit-polytech/contracts/gen/go/orbit/schedule/v1`. При этом `v0.5.9` — тег Go-модуля, а `orbit.schedule.v1` — версия protobuf-пакета.
+Пример импорта: `github.com/orbit-polytech/contracts/gen/go/orbit/schedule/v1`. При этом `v0.5.12` — тег Go-модуля, а `orbit.schedule.v1` — версия protobuf-пакета.
 
 > [!IMPORTANT]
 > Путь к `.proto` файлу обязан совпадать с именем пакета: файл с `package orbit.tasks.v1;` должен лежать в `proto/orbit/tasks/v1/`.
@@ -110,28 +111,29 @@ Dart-кодогенерация по `.proto` не используется — 
 
 ```bash
 buf lint
-buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.5.8' # актуальный базовый тег перед изменением
+buf breaking --against 'https://github.com/orbit-polytech/contracts.git#tag=v0.5.11' # актуальный базовый тег перед изменением
 buf generate
 ```
 
 ---
 
-## 4. `orbit.auth.v1` и `orbit.ai.v1` (актуальный срез)
+## 4. `orbit.auth.v1`, `orbit.users.v1` и `orbit.ai.v1` (актуальный срез)
 
-- **`orbit.auth.v1.AuthService`**: помимо `SendCode`, `VerifyCode`, `RefreshToken`, `Logout`, OAuth и управления внешними identities, содержит `GetAccount` и `UpdateAccountPreferences` (поля `primary_group` и `favorite_groups` с флагами обновления `update_primary_group` / `update_favorite_groups`).
+- **`orbit.auth.v1.AuthService`**: помимо `SendCode`, `VerifyCode`, `RefreshToken`, `Logout`, OAuth и управления внешними identities, содержит `GetAccount`, `UpdateAccountPreferences` (`primary_group`, `favorite_groups`), а также `BeginEmailChange` и `ConfirmEmailChange` (с `reauth_proof`).
+- **`orbit.users.v1.UserService`**: `GetProfile`, `UpdateProfile` (`display_name`, `username`, `academic_group`, `course`, `avatar_url`; устаревшие `first_name`/`last_name`/`middle_name` помечены `deprecated`) и внутренний `GetBatchProfiles`.
 - **`orbit.ai.v1.AIService`**:
-  - `ChatStream` (server streaming со стадиями `START`, `RETRIEVAL`, `DELTA`, `CITATIONS`, `DONE`, `ERROR`, `CANCELLED` и полем `duration_ms`);
+  - `ChatStream` (server streaming со стадиями `START`, `RETRIEVAL`, `DELTA`, `CITATIONS`, `DONE`, `ERROR`, `CANCELLED`, полями `duration_ms` и `retry_after_sec`);
   - `CancelGeneration`;
   - `GetConversations`, `GetConversationHistory`, `DeleteConversation`;
   - `SubmitFeedback` (`FeedbackRating`: `UP`, `DOWN`, `UNSPECIFIED`).
 
-В `ai-service/pyproject.toml` зависимость `orbit-contracts` закреплена Git-тегом:
+В `ai-service/pyproject.toml` зависимость `orbit-contracts` закреплена Git-тегом `v0.5.10`:
 
 ```toml
 [tool.uv.sources]
-orbit-contracts = { git = "https://github.com/orbit-polytech/contracts.git", tag = "v0.5.9" }
+orbit-contracts = { git = "https://github.com/orbit-polytech/contracts.git", tag = "v0.5.10" }
 ```
 
 В `ai-service` используйте `uv sync --locked`. Пакет включает `gen/python/orbit`, `.pyi` и `py.typed`. Руками сгенерированные файлы править нельзя: любые изменения делаются в `.proto` и перегенерируются через `task generate` и `task check`.
 
-Исходники: [ai.proto](https://github.com/orbit-polytech/contracts/blob/main/proto/orbit/ai/v1/ai.proto), [auth.proto](https://github.com/orbit-polytech/contracts/blob/main/proto/orbit/auth/v1/auth.proto), [buf.gen.yaml](https://github.com/orbit-polytech/contracts/blob/main/buf.gen.yaml), [pyproject.toml](https://github.com/orbit-polytech/contracts/blob/main/pyproject.toml).
+Исходники: [ai.proto](https://github.com/orbit-polytech/contracts/blob/main/proto/orbit/ai/v1/ai.proto), [auth.proto](https://github.com/orbit-polytech/contracts/blob/main/proto/orbit/auth/v1/auth.proto), [users.proto](https://github.com/orbit-polytech/contracts/blob/main/proto/orbit/users/v1/users.proto), [buf.gen.yaml](https://github.com/orbit-polytech/contracts/blob/main/buf.gen.yaml), [pyproject.toml](https://github.com/orbit-polytech/contracts/blob/main/pyproject.toml).

@@ -1,6 +1,9 @@
 # 03. Подключение к Gateway через REST API с JWT
 
-Мобильное приложение Orbit Mobile взаимодействует со всеми бэкенд-сервисами исключительно через **API Gateway** по протоколу HTTPS.
+!!! note "Актуальная реализация в `mobile`"
+    Ниже разобран учебный вариант с `QueuedInterceptor` и `_tokenDio` для понимания паттерна Single-Flight Refresh. В реальной кодовой базе `mobile` (`lib/core/network/auth_interceptor.dart`) интерцептор наследуется от `Interceptor`, использует интерфейс `AuthTokenProvider`, пропускает публичные эндпоинты через `options.extra['skipAuth']` и эндпоинты Email OTP / Google OAuth (`/api/v1/auth/email/*`, `/api/v1/auth/oauth/*`), а также распознаёт `REAUTH_REQUIRED`. Подробнее: [Хранилище Hive, Cache-First и Сетевой слой](../../mobile-flutter/offline-and-storage.md).
+
+Мобильное приложение Orbit взаимодействует со всеми бэкенд-сервисами исключительно через **API Gateway** по протоколу HTTPS.
 
 В этой главе мы реализуем сетевой слой на базе библиотеки **`Dio`**, защищённое хранение токенов через **`flutter_secure_storage`** и автоматическое обновление сессии (Refresh Token Flow) с помощью интерцепторов.
 
@@ -34,8 +37,10 @@ class SecureTokenStorageImpl implements TokenStorage {
   SecureTokenStorageImpl({FlutterSecureStorage? storage})
       : _storage = storage ??
             const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
-              iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
+              aOptions: AndroidOptions(),
+              iOptions: IOSOptions(
+                accessibility: KeychainAccessibility.first_unlock_this_device,
+              ),
             );
 
   @override
@@ -122,7 +127,6 @@ import 'package:dio/dio.dart';
 import '../storage/token_storage.dart';
 
 class AuthInterceptor extends QueuedInterceptor {
-  final Dio _dio;
   final TokenStorage _tokenStorage;
   final String _tokenRefreshUrl;
   final Dio _tokenDio;
@@ -133,8 +137,7 @@ class AuthInterceptor extends QueuedInterceptor {
     required Dio dio,
     required TokenStorage tokenStorage,
     required String tokenRefreshUrl,
-  })  : _dio = dio,
-        _tokenStorage = tokenStorage,
+  })  : _tokenStorage = tokenStorage,
         _tokenRefreshUrl = tokenRefreshUrl,
         _tokenDio = Dio(BaseOptions(
           baseUrl: dio.options.baseUrl,

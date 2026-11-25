@@ -2,7 +2,7 @@
 
 **Репозиторий:** [`orbit-polytech/auth-service`](https://github.com/orbit-polytech/auth-service)
 
-**Статус:** работает сейчас в `main` (`contracts@v0.5.5`), входит в профиль Compose `apps` / `all`.
+**Статус:** работает сейчас в `main` (`contracts@v0.5.11`), входит в профиль Compose `apps` / `all`.
 
 ## Назначение и границы
 
@@ -10,6 +10,7 @@
 
 Что уже реализовано:
 - Email OTP (отправка через Resend, HMAC-хэширование, cooldown и TTL в Redis);
+- смена email с подтверждением личности (`BeginEmailChange`, `ConfirmEmailChange` по OTP на новый адрес и проверкой `reauth_proof`);
 - выпуск access JWT с подписью **Ed25519**;
 - refresh-сессии в PostgreSQL с ротацией и отзывом всего семейства при повторном использовании старого токена;
 - Google OAuth/OIDC (`BeginOAuthLogin`, `FinishOAuthLogin` — web и mobile);
@@ -19,7 +20,7 @@
 - gRPC Health Checking Protocol.
 
 За что **не отвечает**:
-- ФИО, аватар, курс и роль старосты (это зона разрабатываемого `users-service`; поля `primary_group` и `favorite_groups` временно живут в `auth-service`, чтобы синхронизация выбранных групп в мобилке работала уже сейчас);
+- пользовательский профиль (`display_name`, `@username`, курс, аватар и роль — за это отвечает работающий [`users-service`](users.md); при этом `primary_group` и `favorite_groups` сохраняются в `auth-service` для синхронизации расписания);
 - расписание, задачи, AI и навигация.
 
 ## Интерфейсы и зависимости
